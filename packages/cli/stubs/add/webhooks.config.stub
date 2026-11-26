@@ -1,0 +1,6 @@
+import { defineConfig } from '@cslug/core'
+
+/** One entry per sender: `verifySignature('payments')` on its route. */
+export default defineConfig({
+  // payments: { secret: env.PAYMENTS_WEBHOOK_SECRET, header: 'X-Signature', format: 't={timestamp},v1={signature}' },
+})

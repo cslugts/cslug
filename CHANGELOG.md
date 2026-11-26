@@ -4,6 +4,10 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/cli
+- `cslug add <names>` (`queue`, `mail`, `storage`, `notification`, `webhook`, `tailwind`): installs the packages at
+  the CLI's version, adds their providers and config files, the worker and scheduler for `queue`; idempotent.
+
 ### create-cslug
 - `bun create cslug <dir>` with presets `--api`, `--web` (default) and `--full`, plus `--tailwind`; writes `.env`
   with a fresh `APP_KEY`, pins every `@cslug/*` package to the release version, runs `bun install` and `git init`.

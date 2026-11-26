@@ -1,0 +1,11 @@
+import { defineConfig } from '@cslug/core'
+
+export default defineConfig({
+  from: { address: 'hello@example.com' },
+  transport: 'log', // 'smtp' (Mailpit in development), 'resend', 'postmark' or 'brevo' in production
+  transports: {
+    log: {},
+    smtp: { host: 'localhost', port: 1025 },
+  },
+  queue: 'default',
+})
