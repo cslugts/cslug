@@ -75,6 +75,8 @@ export class Supervisor {
       cwd: string
       /** Extra `bun` flags (`--watch` for `cslug dev`). */
       bunFlags?: string[]
+      /** Extra environment for the children (`CSLUG_DEV=1` under `cslug dev`). */
+      env?: Record<string, string>
       /** Seconds a child gets after SIGTERM (default 30). */
       shutdownTimeout?: number
       log?: (line: string) => void
@@ -107,7 +109,7 @@ export class Supervisor {
       [process.execPath, ...(this.options.bunFlags ?? []), this.options.bin ?? BIN, ...child.spec.argv],
       {
         cwd: this.options.cwd,
-        env: { ...process.env, CSLUG_ROLE: child.spec.name },
+        env: { ...process.env, ...this.options.env, CSLUG_ROLE: child.spec.name },
         stdout: prefix ? 'pipe' : 'inherit',
         stderr: prefix ? 'pipe' : 'inherit',
         stdin: 'ignore',
@@ -190,6 +192,7 @@ async function supervise(
   flags: Command.Args<{ args: typeof roleFlags }>,
   bunFlags: string[],
   banner: string,
+  env: Record<string, string> = {},
 ): Promise<number> {
   const config = await loadConfig(cmd.app.rootDir)
   const planned = plannedProcesses(config.processes, flags)
@@ -208,6 +211,7 @@ async function supervise(
   cmd.line(`  cslug  ${banner}  (supervisor pid ${process.pid})`)
   const supervisor = new Supervisor(specs, {
     cwd: cmd.app.rootDir,
+    env,
     bunFlags,
     shutdownTimeout: config.shutdownTimeout,
     log: (l) => cmd.line(l),
@@ -243,6 +247,6 @@ export class DevCommand extends Command {
   static args = roleFlags
 
   handle(flags: Command.Args<typeof DevCommand>) {
-    return supervise(this, flags, ['--watch', '--no-clear-screen'], 'dev')
+    return supervise(this, flags, ['--watch', '--no-clear-screen'], 'dev', { CSLUG_DEV: '1' })
   }
 }

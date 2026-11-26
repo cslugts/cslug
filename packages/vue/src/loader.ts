@@ -20,6 +20,10 @@ export function registerVueLoader(root: string = process.cwd(), options: { produ
   Bun.plugin({
     name: 'cslug-vue-server',
     setup(build) {
+      // `@/…` → resources/… (as in the browser build)
+      build.onResolve({ filter: /^@\// }, (args) => ({
+        path: Bun.resolveSync(`${root}/resources/${args.path.slice(2)}`, root),
+      }))
       build.onLoad({ filter: /\.vue$/ }, ({ path }) => {
         let compiled: CompiledSfc
         try {

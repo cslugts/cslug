@@ -85,3 +85,9 @@ Config `http`: `port`, `host`, `shutdownTimeout`, `bodyLimit`, `trustedProxies`,
 |---|---|
 | `throttle('5/min', key?)` | Through the `RateLimiter` (memory, or Redis). Key: route + (user, else IP), or your function. `X-RateLimit-Limit/Remaining`; over → 429 with `Retry-After` |
 | `locale()` | `:locale` param → `locale` cookie → `Accept-Language` (weighted, region stripped) → default; only `config('i18n.locales')`. Sets `ctx.locale` and the ambient locale (`t()`) |
+
+## Static files
+
+GET/HEAD requests that match no route are served from `public/` (`config('http.public')`: a folder name, or
+`false`). Dotfiles and paths escaping the folder are refused. Hashed build files (`name-1a2b3c4d.js`) get
+`Cache-Control: public, max-age=31536000, immutable`; others revalidate with `Last-Modified` / 304.

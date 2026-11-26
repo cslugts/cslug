@@ -6,6 +6,10 @@ import type { Row, Table } from './table'
 
 export type DatabaseConfig = {
   url: string
+  /**
+   * `max` connections for queries, and as many again for transactions (a separate pool that is only used
+   * through `reserve()`, see `transactionPool`).
+   */
   pool?: { max?: number; idleTimeout?: string | number; connectTimeout?: string | number }
   /** Queries slower than this are logged as warnings (text only, never parameters). Default 200 ms. */
   slowQueryMs?: number
@@ -14,7 +18,8 @@ export type DatabaseConfig = {
 type Driver = {
   unsafe(text: string, params?: unknown[]): Promise<Record<string, unknown>[] & { count?: number }>
 }
-type BunTransaction = Driver & { savepoint<T>(fn: (sp: BunTransaction) => Promise<T>): Promise<T> }
+/** A connection reserved from the pool for one transaction. */
+type Reserved = Driver & { release(): void }
 
 const camel = (s: string) => s.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase())
 const camelKeys = (row: Record<string, unknown>) =>
@@ -99,7 +104,7 @@ export class Transaction extends Queryable implements TransactionHooks {
   readonly hooks: (() => unknown)[] = []
 
   constructor(
-    readonly handle: BunTransaction,
+    readonly handle: Driver,
     protected readonly log: Logger,
     protected readonly slowQueryMs: number,
     readonly depth = 0,
@@ -122,6 +127,13 @@ export class Transaction extends Queryable implements TransactionHooks {
  */
 export class Database extends Queryable {
   readonly pool: SQL
+  /**
+   * Transactions get connections from their own pool, only ever through `reserve()`. Bun.sql (1.3.14) can,
+   * while a pool opens its connections under concurrency, run a plain pooled query on a connection that is
+   * reserved for a transaction: the query lands inside someone else's transaction and both stall ("idle in
+   * transaction"). With no plain queries in this pool, that cannot happen. See docs/open-questions.md.
+   */
+  readonly transactionPool: SQL
   protected readonly slowQueryMs: number
 
   constructor(
@@ -130,12 +142,14 @@ export class Database extends Queryable {
   ) {
     super()
     this.slowQueryMs = config.slowQueryMs ?? 200
-    this.pool = new SQL(config.url, {
+    const options = {
       bigint: true, // int8 as bigint (money!), not strings
       max: config.pool?.max ?? 10,
       idleTimeout: seconds(config.pool?.idleTimeout, 30),
       connectionTimeout: seconds(config.pool?.connectTimeout, 5),
-    })
+    }
+    this.pool = new SQL(config.url, options)
+    this.transactionPool = new SQL(config.url, options)
   }
 
   /** Set by `pin()` (the test kit): queries without an ambient transaction use it. */
@@ -155,30 +169,17 @@ export class Database extends Queryable {
    */
   async pin(): Promise<{ release(): Promise<void> }> {
     if (this.pinned) throw new Error('A transaction is already pinned')
-    const ROLLBACK = Symbol('rollback')
-    let release!: () => void
-    const held = new Promise<void>((r) => {
-      release = r
-    })
-    let opened!: (tx: Transaction) => void
-    const ready = new Promise<Transaction>((r) => {
-      opened = r
-    })
-    const done = this.pool
-      .begin(async (handle) => {
-        opened(new Transaction(handle as unknown as BunTransaction, this.log, this.slowQueryMs))
-        await held
-        throw ROLLBACK
-      })
-      .catch((e) => {
-        if (e !== ROLLBACK) throw e
-      })
-    this.pinned = await ready
+    const conn = (await this.transactionPool.reserve()) as unknown as Reserved
+    await conn.unsafe('begin')
+    this.pinned = new Transaction(conn, this.log, this.slowQueryMs)
     return {
       release: async () => {
         this.pinned = undefined
-        release()
-        await done
+        try {
+          await conn.unsafe('rollback')
+        } finally {
+          conn.release()
+        }
       },
     }
   }
@@ -200,37 +201,54 @@ export class Database extends Queryable {
   async transaction<T>(fn: (tx: Transaction) => Promise<T> | T, options: TransactionOptions = {}): Promise<T> {
     const parent = this.current
     const ctx = currentContext()
-    // Bun.sql runs transaction callbacks outside the caller's async context, so it is re-entered here
     const enter = (tx: Transaction) => runInContext({ ...(ctx ?? {}), tx } as Context, () => fn(tx))
-
-    if (parent) {
-      let child: Transaction | undefined
-      const result = await parent.handle.savepoint(async (sp) => {
-        child = new Transaction(sp, this.log, this.slowQueryMs, parent.depth + 1)
-        return enter(child)
-      })
-      // a released savepoint's hooks belong to the parent, except under a pin, where it counts as committed
-      if (child && parent === this.pinned) await this.runHooks(child)
-      else if (child) parent.hooks.push(...child.hooks)
-      return result
-    }
+    if (parent) return this.savepoint(parent, enter)
 
     for (let attempt = 0; ; attempt++) {
+      // a connection of the transaction pool, with explicit BEGIN/COMMIT (see `transactionPool`)
+      const conn = (await this.transactionPool.reserve()) as unknown as Reserved
       let tx: Transaction | undefined
+      let committed = false
       try {
-        const begin = options.isolation ? `isolation level ${options.isolation}` : ''
-        const run = async (handle: unknown) => {
-          tx = new Transaction(handle as BunTransaction, this.log, this.slowQueryMs)
-          return enter(tx)
-        }
-        const result = (begin ? await this.pool.begin(begin, run) : await this.pool.begin(run)) as T
+        await conn.unsafe(options.isolation ? `begin isolation level ${options.isolation}` : 'begin')
+        tx = new Transaction(conn, this.log, this.slowQueryMs)
+        const result = await enter(tx)
+        await conn.unsafe('commit')
+        committed = true
+        conn.release()
         await this.runHooks(tx)
         return result
       } catch (error) {
-        if (attempt < (options.retry ?? 0) && isRetryable(error)) continue
+        if (!committed) {
+          await conn.unsafe('rollback').catch(() => {})
+          conn.release()
+        }
+        if (!committed && attempt < (options.retry ?? 0) && isRetryable(error)) continue
         throw error
       }
     }
+  }
+
+  private savepoints = 0
+
+  /** A nested transaction: a savepoint on the parent's connection. */
+  private async savepoint<T>(parent: Transaction, enter: (tx: Transaction) => Promise<T> | T): Promise<T> {
+    const name = `cslug_sp_${++this.savepoints}`
+    await parent.handle.unsafe(`savepoint ${name}`)
+    const child = new Transaction(parent.handle, this.log, this.slowQueryMs, parent.depth + 1)
+    let result: T
+    try {
+      result = await enter(child)
+    } catch (error) {
+      await parent.handle.unsafe(`rollback to savepoint ${name}`).catch(() => {})
+      await parent.handle.unsafe(`release savepoint ${name}`).catch(() => {})
+      throw error
+    }
+    await parent.handle.unsafe(`release savepoint ${name}`)
+    // a released savepoint's hooks belong to the parent, except under a pin, where it counts as committed
+    if (parent === this.pinned) await this.runHooks(child)
+    else parent.hooks.push(...child.hooks)
+    return result
   }
 
   private async runHooks(tx: Transaction | undefined): Promise<void> {
@@ -262,7 +280,7 @@ export class Database extends Queryable {
       await tx.exec(new SqlFragment(['select pg_advisory_xact_lock(hashtextextended(', ', 0))'], [key]))
       return fn()
     }
-    const conn = await this.pool.reserve()
+    const conn = await this.transactionPool.reserve() // reserve-only pool (see transactionPool)
     try {
       await conn.unsafe('select pg_advisory_lock(hashtextextended($1, 0))', [key])
       try {
@@ -310,6 +328,6 @@ export class Database extends Queryable {
   }
 
   async close(): Promise<void> {
-    await this.pool.close()
+    await Promise.all([this.pool.close(), this.transactionPool.close()])
   }
 }

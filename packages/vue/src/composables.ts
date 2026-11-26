@@ -5,6 +5,7 @@
 import { currentApp, currentLocale, formatDate, formatMoney, Translator, t, tr } from '@cslug/core'
 import { route as httpRoute, Router, type UrlOptions } from '@cslug/http'
 import { renderState } from './render'
+import { formatDurationIn } from './shared/format'
 
 export type RequestInfo = {
   locale: string
@@ -86,13 +87,7 @@ export function useT() {
 export const route = (name: string, params?: Record<string, unknown>, options?: UrlOptions): string =>
   httpRoute(name, params, options)
 
-/** Minutes as "2 h 30" (locale-aware unit names via Intl). */
-export function formatDuration(minutes: number, locale = currentLocale()): string {
-  const h = Math.floor(minutes / 60)
-  const m = Math.round(minutes % 60)
-  const fmt = (n: number, unit: 'hour' | 'minute') =>
-    new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'narrow' }).format(n)
-  return h && m ? `${fmt(h, 'hour')} ${fmt(m, 'minute')}` : h ? fmt(h, 'hour') : fmt(m, 'minute')
-}
+/** Minutes as "2 h 30 min" (locale-aware unit names via Intl). */
+export const formatDuration = (minutes: number, locale = currentLocale()): string => formatDurationIn(locale, minutes)
 
 export { formatDate, formatMoney }

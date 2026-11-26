@@ -30,7 +30,7 @@ export const graph: Record<string, PackageSpec> = {
   },
   vue: {
     description: 'Vue views rendered on the server, components hydrated as islands, composables and asset build.',
-    requires: ['core', 'http'],
+    requires: ['core', 'http', 'validation'],
     externalPeers: {
       vue: { range: '^3.5.0' },
       sass: { range: '^1.80.0', optional: true },

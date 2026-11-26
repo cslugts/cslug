@@ -12,7 +12,14 @@
 | `useT()` | `t`, `tr`, `locale`, `formatMoney`, `formatDate` in the current locale |
 | `route(name, params?, options?)` | |
 | `formatDuration(minutes)`, `formatMoney`, `formatDate` | |
-| `VueProvider` | Registers the `.vue` loader |
+| `useForm(initial)` | `data`, `errors`, `error`, `processing`, `response`, `post/put/patch/delete(url)` → boolean, `reset`, `clearErrors`; JSON with `X-CSRF-Token` |
+| `csrfHeaders()` | For hand-written `fetch` |
+| `defineStore(name, init, { persist? })` | State shared by the page's islands (fresh per call on the server) |
+| `mountIslands({ setup? })` | Browser: hydrate the page's islands (`resources/client.ts`) |
+| `buildAssets({ root, entries?, dev?, tailwind? })` | Also at `@cslug/vue/build` with `findIslands` and `aliasPlugin` |
+| `cslug build [--dev]`, `cslug typecheck` | Commands (vue-tsc must be installed for `typecheck`) |
+| `config('vue.routes')` | Name prefixes of the routes sent to the browser (default: all named routes) |
+| `VueProvider` | Registers the `.vue` loader and the commands; dev mode under `cslug dev` |
 | `registerVueLoader(root)` | What the provider and `@cslug/vue/register` call |
 | `compileSfc(file, { root, ssr })`, `rewriteIslands(source, file)` | Used by the loader and the build |
 

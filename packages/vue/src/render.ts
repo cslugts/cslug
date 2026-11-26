@@ -1,9 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { currentApp, currentContext, Logger } from '@cslug/core'
-import type { HttpContext, Responsable } from '@cslug/http'
+import { currentApp, currentContext, currentLocale, Logger, Translator } from '@cslug/core'
+import { type HttpContext, type Responsable, Router } from '@cslug/http'
 import { Comment, type Component, createSSRApp, defineComponent, h, useSSRContext } from 'vue'
 import { renderToString } from 'vue/server-renderer'
+import type { PageData } from './client/data'
+import { liveReloadUrl } from './dev'
 import { componentStyles } from './loader'
 import { serialize } from './serialize'
 
@@ -14,6 +16,8 @@ export type RenderState = {
   modules: Set<string>
   /** Islands on the page. */
   islands: Set<string>
+  /** Translation namespaces the page's islands declared (`defineOptions({ lang })`). */
+  lang: Set<string>
   /** Render islands as plain HTML (renderStandalone, mail). */
   static?: boolean
   dev: boolean
@@ -37,12 +41,13 @@ export const CslugIsland = defineComponent({
   setup(props, { attrs, slots }) {
     const state = renderState()
     return () => {
-      const component = props.islandComponent as Component & { __cslugId?: string; __file?: string }
+      const component = props.islandComponent as Component & { __cslugId?: string; __file?: string; lang?: string[] }
       const id = component.__cslugId
       if (!id) throw new Error('hydrate="…" was used on a component that is not a .vue file compiled by cslug')
       const data = serialize({ ...attrs }, state?.dev ? (p) => warn(`<${id} hydrate> prop ${p}`) : undefined)
       if (props.islandHydrate === 'none' || state?.static) return h(component, data)
       state?.islands.add(id)
+      for (const ns of component.lang ?? []) state?.lang.add(ns)
       const marker = {
         'data-island': id,
         'data-hydrate': props.islandHydrate,
@@ -103,6 +108,10 @@ function assetsHtml(entry: string, state: RenderState, root: string): string {
   if (state.islands.size) {
     out.push('<style>cslug-island{display:contents}</style>')
     if (assets?.js) {
+      const data = pageData(state, manifest as AssetManifest)
+      out.push(
+        `<script type="application/json" id="cslug-data">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`,
+      )
       for (const island of state.islands) {
         const chunk = manifest?.islands[island]
         if (chunk) out.push(`<link rel="modulepreload" href="${escapeAttr(chunk)}">`)
@@ -115,6 +124,33 @@ function assetsHtml(entry: string, state: RenderState, root: string): string {
     }
   }
   return out.join('')
+}
+
+/** What islands need in the browser: locale, their translation namespaces, named routes, chunk URLs. */
+function pageData(state: RenderState, manifest: AssetManifest): PageData {
+  const app = currentApp()
+  const translator = app.resolve(Translator)
+  const locale = state.http?.locale ?? currentLocale()
+  const messages: Record<string, string> = {}
+  for (const ns of state.lang) Object.assign(messages, translator.messagesFor(ns, locale))
+  const allowed = app.config<string[] | undefined>('vue.routes')
+  const routes: PageData['routes'] = {}
+  for (const r of app.resolve(Router).routes) {
+    if (!r.name || (allowed && !allowed.some((p) => r.name === p || r.name?.startsWith(`${p}.`)))) continue
+    routes[r.name] = r.domain ? { path: r.path, domain: r.domain } : { path: r.path }
+  }
+  const islands: Record<string, string> = {}
+  for (const id of state.islands) if (manifest.islands[id]) islands[id] = manifest.islands[id] as string
+  const live = liveReloadUrl()
+  return {
+    locale,
+    chain: translator.chain(locale),
+    messages,
+    routes,
+    appUrl: app.config<string | undefined>('app.url'),
+    islands,
+    ...(live ? { live } : {}),
+  }
 }
 
 const isMissing = (ctx: HttpContext) => ctx.session.constructor.name === 'MissingSession'
@@ -133,6 +169,7 @@ export async function renderPage(
     http: options.http ?? (currentContext()?.http as HttpContext | undefined),
     modules: new Set(),
     islands: new Set(),
+    lang: new Set(),
     static: options.static,
     dev: app.config('app.env') !== 'production',
   }

@@ -113,7 +113,7 @@ export function componentId(filename: string, root: string): string {
 }
 
 /** SCSS → CSS with `sass` (optional peer), `@/` resolving to `resources/`. */
-function compileScss(source: string, filename: string, root: string): string {
+export function compileScss(source: string, filename: string, root: string): string {
   let sass: typeof import('sass')
   try {
     sass = createRequire(join(root, 'package.json'))('sass')

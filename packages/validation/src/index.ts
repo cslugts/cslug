@@ -23,6 +23,7 @@ export {
   parseSize,
   sniffType,
 } from './domain'
+export { formatIcu } from './icu'
 export { formatMessage, type Issue, interpolate, type Translate, ValidationError } from './issue'
 export {
   BigIntSchema,
