@@ -112,7 +112,7 @@ SQL files `database/migrations/YYYYMMDD_HHMMSS_name.sql` with `-- up` / `-- down
 and `$$` bodies are fine). A first line `-- cslug:no-transaction` runs the file outside a transaction (needed for
 `create index concurrently`).
 
-| `Migrator(db, { paths?, env?, log? })` | |
+| `Migrator(db, { paths?, env?, log?, packageMigrations? })` | `packageMigrations` defaults to the folders added with `addMigrations()` |
 |---|---|
 | `migrate()` | Pending migrations, each in its own transaction, recorded in `cslug_migrations` with a batch number. The whole run holds an advisory lock: concurrent runs execute each migration **once** |
 | `rollback({ steps? })` | Undo the last `steps` batches (default 1), newest first; fails clearly without a `-- down` |

@@ -47,9 +47,15 @@ export class Migrator {
 
   constructor(
     private readonly db: Database,
-    options: { paths?: string[]; env?: string; log?: Logger } = {},
+    options: {
+      paths?: string[]
+      env?: string
+      log?: Logger
+      /** Package migration folders (default: those added with `addMigrations()` in this process). */
+      packageMigrations?: readonly string[]
+    } = {},
   ) {
-    this.paths = [FRAMEWORK_MIGRATIONS, ...packageMigrations, ...(options.paths ?? [])]
+    this.paths = [FRAMEWORK_MIGRATIONS, ...(options.packageMigrations ?? packageMigrations), ...(options.paths ?? [])]
     this.env = options.env ?? 'development'
     this.log = options.log ?? Logger.null()
   }
