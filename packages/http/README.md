@@ -1,5 +1,7 @@
 # @cslug/http
 
-Router, middleware, HttpContext, sessions, CSRF, error rendering on Bun.serve.
+Routing, middleware, `HttpContext`, request validation, responses, RFC 9457 errors, sessions, CSRF, form errors
+with old input, throttling, locale detection and graceful shutdown, on `Bun.serve`.
 
-> Not implemented yet. Part of [cslug](https://github.com/cslugts/cslug).
+Part of [cslug](https://github.com/cslugts/cslug). Docs: [docs/README.md](docs/README.md), [docs/api.md](docs/api.md),
+guides [05](../../guides/05-routing-and-middleware.md), [06](../../guides/06-controllers.md).

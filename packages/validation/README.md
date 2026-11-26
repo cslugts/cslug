@@ -1,5 +1,7 @@
 # @cslug/validation
 
-Schemas and validators (Zod-like API, Standard Schema, JSON Schema export).
+Schemas and validators with a Zod-like API and no dependencies. Every schema implements
+[Standard Schema](https://standardschema.dev) and exports JSON Schema.
 
-> Not implemented yet. Part of [cslug](https://github.com/cslugts/cslug).
+Part of [cslug](https://github.com/cslugts/cslug). Docs: [docs/README.md](docs/README.md), [docs/api.md](docs/api.md),
+[guide 07](../../guides/07-validation.md).

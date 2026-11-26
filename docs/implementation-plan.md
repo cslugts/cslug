@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-26):** approved. Phase 0, the spikes, M1 and M2 are done; next is milestone M3 (`cli`, `http`, `testing`).
+> **Status (2026-11-26):** approved. Phase 0, the spikes and M1–M5 are done; 0.1.0 is released. Next is milestone M6 (`queue`).
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
@@ -16,7 +16,7 @@
 | M2 database | ✅ Database, sql tag, tables, ambient transactions, query builder, Repository, preload, migrations (concurrent-safe), factories, seeders, idempotent, encrypted columns (49 tests on real PostgreSQL) |
 | M3 cli, http, testing (base) | ✅ M3a http core · M3b sessions, CSRF, form errors, throttle, locale · M3c testing base + cli (kernel, `Command` in core, package commands, generators, `migrate*`, `db:seed`, `serve`, `routes`, `start` supervisor, `dev`). Done criteria met on a fixture app (422 shape, SIGTERM drain for `serve` and `start`); the starter kit itself runs from M5. Deferred: `serve --with-worker/--with-scheduler` (M6, queue), `repl`, `describe` (M9) |
 | M4 vue | ✅ M4a server rendering (loader, `view()`, islands with serialized props, `<Assets>`, `useRequest`/`useT`/`route`, `renderStandalone`) · M4b browser (`browser` export condition, `mountIslands`, `useT` with ICU from validation, `route`, `useForm` + CSRF, `defineStore`), `Bun.build` with one chunk per island + manifest, `public/` serving, `cslug build`/`typecheck`, dev rebuild + live reload; hydration verified in headless Chrome. Deferred: precompiled server templates, `cslug add tailwind` (plugin wired, untested without the package), nested islands; the starter-kit page check moves to M5 (needs auth) |
-| M5 redis, auth → 0.1.0 | ✅ M5a `@cslug/redis` · M5b `@cslug/auth` (session + token guards, `Hash`, `attempt` with throttle and rehash, magic links without a table, API tokens, policies typed from their methods, gates, `auth/guest/ability/can` middleware), `t.actingAs`, group middleware tags in http, package migrations in database. Release 0.1.0 waits for your go. Deferred: TOTP; the starter-kit run (needs queue + mail, M6–M7) |
+| M5 redis, auth → 0.1.0 | ✅ M5a `@cslug/redis` · M5b `@cslug/auth` (session + token guards, `Hash`, `attempt` with throttle and rehash, magic links without a table, API tokens, policies typed from their methods, gates, `auth/guest/ability/can` middleware), `t.actingAs`, group middleware tags in http, package migrations in database. **Released as 0.1.0.** Deferred: TOTP; the starter-kit run (needs queue + mail, M6–M7) |
 | M6 queue | ⬜ |
 | M7 webhook, mail → 0.2.0 | ⬜ |
 | M8 notification, storage → 0.3.0 | ⬜ |
