@@ -4,4 +4,64 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
-- Repository set up: docs, guides, starter kit, package skeletons, CI, release script.
+## 0.1.0 (2026-11-26)
+
+First release: web apps with pages, auth and PostgreSQL (milestones M1–M5). Packages are published as
+TypeScript source for Bun ≥ 1.3.14.
+
+### @cslug/validation
+- Schemas and validators with a Zod-like API and no dependencies.
+- Every schema implements Standard Schema and exports JSON Schema.
+
+### @cslug/core
+- `Application`, the container with standard `@inject(A, B)`, scopes and tokens.
+- Service providers with topological boot, rollback and shutdown.
+- The ambient context on `AsyncLocalStorage`, with `afterCommit` hooks.
+- Config and env validation, typed errors, `Clock`, `Money` (bigint minor units).
+- Events, the logger with redaction, and i18n (`t`, ICU plurals, `Intl`).
+- `Cache` / `Lock` / `RateLimiter` / `SessionStore` contracts with in-memory drivers, and `Command`.
+
+### @cslug/database
+- PostgreSQL on `Bun.sql`: typed tables, the `sql` tag, ambient transactions with savepoints,
+  `lockForUpdate`, advisory locks.
+- The single-table query builder, `Repository`, `preload`, pagination.
+- SQL-file migrations with an advisory-locked runner (concurrent `migrate` runs once), plus package migrations.
+- Factories, seeders, `idempotent()`, encrypted columns.
+
+### @cslug/http
+- Router (groups, names, domains, resources), middleware with group tags, `HttpContext`, `request.validate`,
+  responses.
+- RFC 9457 errors with request IDs, and redirect-back with form errors and old input.
+- Sessions, CSRF, `throttle`, locale detection, health endpoints, graceful shutdown on `Bun.serve`.
+
+### @cslug/testing
+- `testApp()` with requests that need no port, HTTP assertions, and per-test DB isolation (rollback or
+  truncate).
+- `t.actingAs`.
+
+### @cslug/cli
+- The `cslug` binary and kernel. Packages can contribute commands.
+- `make:*` generators, `key:generate`.
+- `migrate*`, `db:seed`, `routes`.
+- `serve`, `dev`, and the `start` supervisor, with SIGTERM drain.
+
+### @cslug/vue
+- Server rendering: the `.vue` loader, `view()` with layouts and slots, and islands with serialized props.
+- `<Assets>`, `renderStandalone`, and the `useRequest` / `useT` / `route` composables.
+- In the browser: `mountIslands`, `useForm` with CSRF, and `defineStore`.
+- `Bun.build` with one chunk per island plus a manifest, and `public/` serving.
+- `cslug build` and `cslug typecheck`, with dev rebuild and live reload.
+
+### @cslug/redis
+- Connections on `Bun.redis`, a Lua script helper, and Redis drivers for `Cache`, `Lock`, `RateLimiter` and
+  `SessionStore`.
+
+### @cslug/auth
+- Session and token guards, `Hash`, and `attempt` with throttling and rehash.
+- Magic links (no table needed) and API tokens.
+- Policies typed from their methods, gates, and the `auth` / `guest` / `ability` / `can` middleware.
+
+### Not implemented yet
+`@cslug/queue`, `@cslug/webhook`, `@cslug/mail`, `@cslug/notification`, `@cslug/storage` and `@cslug/ai`
+are published as empty placeholders to keep the lockstep version. They arrive in 0.2.0 (queue, webhook, mail),
+0.3.0 (notification, storage) and later (ai).
