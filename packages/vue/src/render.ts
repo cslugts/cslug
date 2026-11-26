@@ -84,6 +84,7 @@ export type AssetManifest = {
 }
 
 let manifestCache: { path: string; mtime: number; value: AssetManifest } | undefined
+/** `public/build/manifest.json` from `cslug build` (re-read when it changes); undefined before a build. */
 export function readManifest(root: string): AssetManifest | undefined {
   const path = join(root, 'public/build/manifest.json')
   if (!existsSync(path)) return undefined
@@ -153,7 +154,7 @@ function pageData(state: RenderState, manifest: AssetManifest): PageData {
   }
 }
 
-const isMissing = (ctx: HttpContext) => ctx.session.constructor.name === 'MissingSession'
+const isMissing = (ctx: HttpContext) => !ctx.session.available
 
 export type RenderOptions = { http?: HttpContext; static?: boolean; root?: string }
 
@@ -228,6 +229,7 @@ type PropsOf<C> = C extends new (
   ? Omit<P, `on${string}` | 'key' | 'ref' | 'class' | 'style'>
   : Record<string, unknown>
 
+/** Return a page from a handler: `return view(BookingShow, { booking })`. Props are typed from the page. */
 export function view<C extends Component>(
   page: C,
   props: PropsOf<C> | Record<string, unknown> = {},

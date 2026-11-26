@@ -32,6 +32,7 @@ const MOBILE: Record<string, [string, string[]]> = {
 
 const hashCache = new Map<string, string>()
 
+/** The generator: `new Fake(seed)`; factories share one seeded at 42. */
 export class Fake {
   private state: number
 

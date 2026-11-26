@@ -115,6 +115,7 @@ export const encode = (value: unknown): string =>
     return v
   })
 
+/** Reverse of `encode()`: restores bigint and Date values; undefined for a missing key. */
 export const decode = <T>(text: string | null | undefined): T | undefined =>
   text === null || text === undefined
     ? undefined

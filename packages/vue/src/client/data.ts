@@ -16,6 +16,7 @@ export type PageData = {
 }
 
 let cached: PageData | undefined
+/** The data the server embedded in the page (`#cslug-data`): locale, messages, routes, islands. Read once. */
 export function pageData(): PageData {
   if (cached) return cached
   const el = typeof document === 'undefined' ? null : document.getElementById('cslug-data')

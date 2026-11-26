@@ -8,6 +8,8 @@ const randomId = (bytes = 32) => Buffer.from(crypto.getRandomValues(new Uint8Arr
  * Flash values live for the next request only.
  */
 export class Session {
+  /** False on the placeholder a route without the `session()` middleware gets (`MissingSession`). */
+  readonly available: boolean = true
   private data: SessionData
   private dirty = false
   private destroyed: string[] = []
@@ -130,6 +132,7 @@ export class Session {
 
 /** Placeholder until the `session()` middleware runs: every use explains how to fix it. */
 export class MissingSession extends Session {
+  override readonly available = false
   constructor() {
     super('', {}, true)
   }

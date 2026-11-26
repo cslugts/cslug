@@ -5,6 +5,7 @@ import { route, type UrlOptions } from './url'
 export interface Responsable {
   toResponse(ctx: HttpContext): Response | Promise<Response>
 }
+/** Duck-typed so responsables from other packages (vue views) need no shared base class. */
 export const isResponsable = (v: unknown): v is Responsable =>
   typeof v === 'object' && v !== null && typeof (v as Responsable).toResponse === 'function'
 

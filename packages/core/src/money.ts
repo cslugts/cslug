@@ -163,7 +163,7 @@ export class Money {
   /** Localised: `format('fr')` → `2 200,00 €`. Exact for any size (formats the decimal string). */
   format(locale = 'en', options: Omit<Intl.NumberFormatOptions, 'style' | 'currency'> = {}): string {
     const f = new Intl.NumberFormat(locale, { ...options, style: 'currency', currency: this.currency })
-    return f.format(this.toDecimal() as unknown as number)
+    return f.format(this.toDecimal() as `${number}`)
   }
 
   /** JSON has no bigint: `{ amount: "220000", currency: "EUR" }`. */

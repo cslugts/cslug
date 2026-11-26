@@ -16,9 +16,7 @@ export function formatMoneyIn(
   const negative = minor < 0n
   const abs = (negative ? -minor : minor).toString().padStart(d + 1, '0')
   const decimal = `${negative ? '-' : ''}${d ? `${abs.slice(0, -d)}.${abs.slice(-d)}` : abs}`
-  return new Intl.NumberFormat(locale, { style: 'currency', currency: value.currency }).format(
-    decimal as unknown as number,
-  )
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: value.currency }).format(decimal as `${number}`)
 }
 
 const STYLES = {

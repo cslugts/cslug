@@ -37,6 +37,13 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Runs: typechecks with `vue-tsc`, 14 feature tests, and an end-to-end test in real processes (migrate, build,
   `cslug start`, register, add a todo, run the reminder, the email arrives in Mailpit). `bun run check:starter`.
 
+### Code quality
+- `@cslug/http`: `Session.available` (false on the placeholder of a route without `session()`), used by auth and
+  vue instead of comparing class names.
+- `@cslug/auth`: its dependencies are registered in the container (no property on the application object);
+  `UserSource` declares the optional `update()` it uses to store a rehashed password.
+- Doc comments on the exports whose behaviour is not obvious from their name.
+
 ### @cslug/testing
 - `t.auth.check()` / `t.auth.user()`, `t.tokens.create()`, `assertView(View, fn)`, `assertIsland(name, props)`.
 - Fakes listed in `testApp({ fakes })` are typed as present; `.json()` writes carry the CSRF token like an
