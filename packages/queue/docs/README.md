@@ -66,5 +66,40 @@ from config, else 1) · `queue:failed [--json]` · `queue:retry <id|all>` · `qu
 `assertNotPushed`, `assertPushedCount`, `assertNothingPushed`, `of(Job)`, `pushed`, and `drain()`, which runs
 every recorded job (delays ignored), including those they push. A rolled-back dispatch is never recorded.
 
-Not yet (M6b): `.durable()` (outbox), chains and batches, per-queue `rateLimit`, the scheduler,
-`queue:health`, `serve --with-worker`.
+## Scheduler
+
+List `ScheduleProvider` after `QueueProvider`. It loads `routes/schedule.ts` at boot
+([guide 12](../../../guides/12-scheduler.md)):
+
+```ts
+export default defineSchedule((s) => {
+  s.job(DispatchDailyCheckinsJob).dailyAt('08:00').timezone('Indian/Antananarivo')
+  s.call('cache:prune-fx', async ({ resolve }) => resolve(Cache).tags(['fx']).flush()).hourly()
+  s.cron('0 */6 * * *', 'db:vacuum-webhook-inbox', VacuumWebhookInboxJob)
+})
+```
+
+- **Cron:** cslug's own 5-field parser (lists, ranges, steps, month and day names, 0 or 7 for Sunday; day of month
+  OR day of week when both are set). Times are wall-clock in the entry's zone (`.timezone()`, else
+  `schedule.timezone`, else UTC), DST included.
+- **Once per tick:** before running, an instance takes the lock `schedule:<name>:<tick>` (core's `Lock`, Redis with
+  `RedisProvider`) and keeps it 10 min, so any number of schedulers run an entry once per minute.
+- **No overlap:** a job entry is dispatched with `unique('schedule:<name>')` (skipped while the last one waits or
+  runs); an inline task holds `schedule:<name>:running`. `.allowOverlap()` turns both off.
+- **Names:** from the job class (`DispatchDailyCheckinsJob` → `dispatch-daily-checkins`), the first argument of
+  `s.call` / `s.cron`, or `.as(name)`. Two entries with one name are refused.
+- **History:** the last 100 runs per entry in Redis (`schedule:history:<name>` under the queue prefix): `name`,
+  `scheduledFor`, `startedAt`, `finishedAt`, `status` (`dispatched`, `ok`, `failed`, `skipped`), `error`.
+- **`catchUp('once')`:** when the loop starts, an entry whose next tick after its last recorded run is already past
+  runs once for that tick. Other missed ticks are skipped.
+- **The loop** (`schedule:work`) ticks at the start of every minute, writes a heartbeat, and stops after the current
+  tick at shutdown.
+
+Commands: `schedule:work`, `schedule:run` (one tick, for an external cron), `schedule:list [--json]`,
+`schedule:history <name> [--last=10]`, `schedule:test <name>` (run now, ignoring the schedule and the tick lock).
+
+In tests: `t.schedule.runDue()` runs what is due at `t.clock`'s time, without the tick lock, so a test can replay a
+tick.
+
+Not yet (M6c): `.durable()` (outbox), chains and batches, per-queue `rateLimit`, `queue:health`,
+`serve --with-worker/--with-scheduler`.

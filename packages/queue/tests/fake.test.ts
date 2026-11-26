@@ -17,7 +17,7 @@ beforeEach(reset)
 
 describe('dispatch (guide 11) with the fake', () => {
   test('dispatch() is typed from Job<Payload> and recorded with its options', async () => {
-    t.clock.travelTo('2027-05-14T08:00:00Z').freeze()
+    t.clock.travelTo('2027-05-14T08:00:00Z')
     const id = await RecordJob.dispatch({ n: 1 })
     expect(id).toMatch(/^[0-9a-f-]{36}$/)
     await RecordJob.dispatch({ n: 2 }).delay('3d')

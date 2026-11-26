@@ -13,10 +13,14 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Failed store with retention; `queue:work`, `queue:failed`, `queue:retry`, `queue:forget`, `queue:clear`,
   `queue:stats`; workers discover `app/jobs/` and `app/listeners/`.
 - Queued `@listener`s run as jobs.
+- Scheduler: `defineSchedule` in `routes/schedule.ts`, own cron parser with time zones, frequency helpers and
+  filters, once-per-tick locks across instances, no overlap, `catchUp('once')`, run history; `schedule:work`,
+  `schedule:run`, `schedule:list`, `schedule:history`, `schedule:test`.
 
 ### @cslug/testing
 - `fakes: ['queue']`: `QueueFake` with `assertPushed`, `assertNotPushed`, `assertPushedCount`, `assertNothingPushed`
   and `drain()`.
+- `t.schedule.runDue()`: run what is due at the fake clock's time.
 
 ## 0.1.0 (2026-11-26)
 
