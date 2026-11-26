@@ -172,6 +172,12 @@ CMD ["bun", "@cslug/core", "start"]           # overridden per service by the st
 2. Roll web, worker and scheduler (one service or three).
 3. Graceful drain as described above.
 
+## Requirements
+
+- **Bun** ≥ 1.3.14
+- **PostgreSQL** ≥ 15 (tested on 17)
+- **Redis** ≥ 6.2 (the queue uses `XAUTOCLAIM`; tested on 8.0). Redis Cluster is not supported in v1.
+
 ## Health
 
 | Endpoint / command | Checks |
