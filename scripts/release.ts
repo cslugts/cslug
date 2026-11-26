@@ -55,7 +55,8 @@ async function publish(dryRun: boolean) {
       write(name, pinWorkspacePeers(read(name), version))
       const args = ['npm', 'publish', '--access', 'public', ...provenance, ...(dryRun ? ['--dry-run'] : [])]
       console.log(`→ ${dryRun ? '[dry-run] ' : ''}@cslug/${name}@${version}`)
-      const res = Bun.spawnSync(args, { cwd: join(root, 'packages', name), stdout: 'inherit', stderr: 'inherit' })
+      // stdin too: npm asks for the 2FA code (or opens the browser) only when it can talk to a terminal
+      const res = Bun.spawnSync(args, { cwd: join(root, 'packages', name), stdio: ['inherit', 'inherit', 'inherit'] })
       if (res.exitCode !== 0) throw new Error(`npm publish failed for @cslug/${name}`)
     } finally {
       writeFileSync(pkgPath(name), original)

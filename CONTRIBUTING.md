@@ -35,7 +35,10 @@ All packages share one version.
 
 **First publish of a package.** npm trusted publishing is configured per package, and a package must exist
 before it can be configured. For the first release, a maintainer publishes once from their machine
-(`npm login`, then `bun scripts/release.ts publish`). Then, for each package on npmjs.com: Settings → Trusted
+(`npm login`, then `bun scripts/release.ts publish`). With 2FA on writes, npm asks for a confirmation for each
+package: approve it in the browser (tick the option to skip 2FA for the next few minutes if npm offers it), or pass
+a code with `npm_config_otp=123456 bun scripts/release.ts publish`. A run that stops partway can be repeated: published
+packages are skipped. Then, for each package on npmjs.com: Settings → Trusted
 publishing → GitHub Actions, repository `cslugts/cslug`, workflow `release.yml`, environment `npm`. Every later
 release runs from CI only.
 
