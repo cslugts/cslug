@@ -1,0 +1,9 @@
+# Development services: `docker compose up -d`
+services:
+  postgres:
+    image: postgres:17
+    environment: { POSTGRES_USER: cslug, POSTGRES_PASSWORD: cslug, POSTGRES_DB: {{db}} }
+    ports: ["5432:5432"]
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]

@@ -23,7 +23,7 @@ installs `@cslug/ai`.
 | `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake) | core, validation · optional: queue | `fetch` |
 | `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `dev`, `start` supervisor | core | `Bun.spawn` |
 | `@cslug/testing` | `testApp()`, HTTP/HTML assertions, DB isolation, fakes, time travel | peers: every package it fakes | `bun test` |
-| `create-cslug` | `bun create cslug` scaffolder (literal template files) | — | — |
+| `create-cslug` | `bun create cslug` scaffolder: presets `--api`, `--web`, `--full`, `--tailwind` (literal template files) | — | — |
 
 No package has a runtime dependency outside `@cslug/*`. The only third-party packages are `vue` (a peer of
 `@cslug/vue`) and the optional asset compilers.
@@ -111,4 +111,5 @@ Doc comments are encouraged, not penalised.
 | storage, webhook | 600 |
 | ai | 1,000 |
 | cli + testing | 1,800 |
+| create-cslug (templates not counted) | 200 |
 | **Total** | **~17,000** |
