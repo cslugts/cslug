@@ -1,6 +1,7 @@
 /**
- * @cslug/testing: Test kit: testApp(), HTTP and HTML assertions, database isolation, fakes, time travel.
- *
- * Not implemented yet. See docs/packages.md and docs/implementation-plan.md.
+ * @cslug/testing: `testApp()` (the app per test file, isolated per test), HTTP requests without a port and
+ * their assertions, database helpers, the fake clock, and the fake registry other packages plug into.
  */
-export {}
+export { EventFake, type FakeInstaller, registerFake, type TestFakes } from './fakes'
+export { CookieJar, PendingRequest, TestResponse } from './request'
+export { type TestApp, type TestAppOptions, testApp } from './test-app'

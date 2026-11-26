@@ -138,10 +138,49 @@ export class Database extends Queryable {
     })
   }
 
-  /** The transaction open in the current context, if any. */
+  /** Set by `pin()` (the test kit): queries without an ambient transaction use it. */
+  private pinned?: Transaction
+
+  /** The transaction open in the current context, else the pinned one, if any. */
   get current(): Transaction | undefined {
     const tx = currentContext()?.tx
-    return tx instanceof Transaction ? tx : undefined
+    return tx instanceof Transaction ? tx : this.pinned
+  }
+
+  /**
+   * Open a transaction that stays open until `release()`, and route every query that has no ambient transaction
+   * to it. `release()` rolls it back. The test kit pins one per test, so tests never leave data behind.
+   * Nested `transaction()` calls become savepoints, and their `afterCommit` hooks run when the savepoint is
+   * released (as if committed), so after-commit behaviour stays testable.
+   */
+  async pin(): Promise<{ release(): Promise<void> }> {
+    if (this.pinned) throw new Error('A transaction is already pinned')
+    const ROLLBACK = Symbol('rollback')
+    let release!: () => void
+    const held = new Promise<void>((r) => {
+      release = r
+    })
+    let opened!: (tx: Transaction) => void
+    const ready = new Promise<Transaction>((r) => {
+      opened = r
+    })
+    const done = this.pool
+      .begin(async (handle) => {
+        opened(new Transaction(handle as unknown as BunTransaction, this.log, this.slowQueryMs))
+        await held
+        throw ROLLBACK
+      })
+      .catch((e) => {
+        if (e !== ROLLBACK) throw e
+      })
+    this.pinned = await ready
+    return {
+      release: async () => {
+        this.pinned = undefined
+        release()
+        await done
+      },
+    }
   }
 
   protected driver(): Driver {
@@ -170,7 +209,9 @@ export class Database extends Queryable {
         child = new Transaction(sp, this.log, this.slowQueryMs, parent.depth + 1)
         return enter(child)
       })
-      if (child) parent.hooks.push(...child.hooks) // released savepoint: its hooks belong to the parent now
+      // a released savepoint's hooks belong to the parent, except under a pin, where it counts as committed
+      if (child && parent === this.pinned) await this.runHooks(child)
+      else if (child) parent.hooks.push(...child.hooks)
       return result
     }
 
