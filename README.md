@@ -1,6 +1,8 @@
 # cslug
 
-A small, Laravel-flavoured web framework for **Bun + TypeScript + PostgreSQL + Redis + Vue**.
+A full-stack TypeScript framework built on **Bun**, with **PostgreSQL**, **Redis** and **Vue**. One process model,
+one CLI, and a small set of packages that cover what a web product needs: routing, validation, a typed database
+layer, auth, background jobs, scheduled tasks, email and webhooks.
 
 ```ts
 @inject(BookingRepository, EscrowService)
@@ -15,18 +17,26 @@ export class BookingController {
 }
 ```
 
-- **Laravel's shape:** container with `@inject`, service providers, controllers, validators, policies, jobs,
-  mail, a scheduler, one CLI (`cslug`).
-- **Bun first, almost zero dependencies:** `Bun.serve`, `Bun.sql`, `Bun.redis`, `Bun.password`, `Bun.s3`.
-  The only third-party runtime package is `vue`, for apps with HTML pages.
-- **Vue everywhere:** pages rendered on the server, components hydrated as islands where you add `hydrate`.
-- **Correct by default for money:** ambient transactions, after-commit dispatch, idempotent webhooks,
-  once-per-tick schedules, integer money.
-- **Install only what you use:** 15 packages under `@cslug/*`; an API never installs Vue, an app without AI
-  never installs `@cslug/ai`.
+## Why cslug
 
-> **Status: in development.** The specification is complete; packages are being implemented milestone by
-> milestone. See [docs/implementation-plan.md](./docs/implementation-plan.md).
+- **Structure you don't have to invent.** Classes are wired by a typed container (`@inject`); providers register
+  each package; controllers, validators, policies, jobs and mailables each have their place. The `cslug` CLI
+  runs, builds, migrates and generates.
+- **Built on what Bun already does well.** HTTP, SQL, Redis, password hashing and S3 come from Bun itself.
+  Vue is the only third-party runtime dependency, and only for apps that render pages.
+- **Server-rendered Vue.** Pages are rendered on the server; a component becomes interactive only where you mark it
+  with `hydrate`, so most pages ship little or no JavaScript.
+- **Safe defaults where mistakes cost money.** Transactions follow the request, jobs dispatched inside one wait
+  for COMMIT, webhooks are processed exactly once, a scheduled task runs once per tick across servers, and
+  amounts are integers in minor units.
+- **Pay for what you use.** 15 packages under `@cslug/*`: an API never installs Vue, an app without AI never
+  installs `@cslug/ai`.
+
+## Status
+
+Version **0.2.0** is on npm: HTTP, validation, database, Vue pages, auth, Redis, queue and scheduler, mail and
+webhooks. Notifications and storage come next; see the
+[implementation plan](./docs/implementation-plan.md) for the roadmap.
 
 ## Read
 
