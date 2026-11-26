@@ -1,7 +1,7 @@
 # @cslug/http
 
-Routing, controllers, request validation, responses and error rendering on `Bun.serve`. Sessions, CSRF and
-throttling come in M3b.
+Routing, controllers, request validation, responses, error rendering, sessions, CSRF, form errors with old
+input, throttling and locale detection, on `Bun.serve`.
 
 ```ts
 // routes/web.ts

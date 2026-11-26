@@ -2,6 +2,7 @@ import { AppError, type Application, Logger, t, validationTranslator } from '@cs
 import { ValidationError } from '@cslug/validation'
 import type { HttpContext } from './context'
 import { json } from './responses'
+import { MissingSession } from './session'
 
 /** A renderer may return a Response for an error, or undefined to let the next one try. */
 export type ErrorRenderer = (error: unknown, ctx: HttpContext) => Response | undefined | Promise<Response | undefined>
@@ -56,7 +57,29 @@ export class ExceptionHandler {
       const response = await renderer(error, ctx)
       if (response) return response
     }
+    const back = this.formRedirect(error, ctx)
+    if (back) return back
     return this.defaultResponse(error, ctx, status)
+  }
+
+  /**
+   * A failed HTML form post goes back to the form with the errors and the input flashed, so the page can show
+   * them. JSON clients, GET requests and routes without a session get problem+json instead.
+   */
+  protected formRedirect(error: unknown, ctx: HttpContext): Response | undefined {
+    if (!(error instanceof ValidationError) || ctx.request.wantsJson() || ctx.request.method === 'GET') return undefined
+    if (ctx.session instanceof MissingSession) return undefined
+    ctx.session.flash('_errors', error.messages(validationTranslator(ctx.locale)))
+    ctx.session.flash('_old', this.oldInput(ctx))
+    return new Response(null, { status: 303, headers: { location: ctx.request.header('referer') ?? '/' } })
+  }
+
+  /** The submitted input to show again: without passwords, tokens and files. */
+  protected oldInput(ctx: HttpContext): Record<string, unknown> {
+    const body = ctx.request.parsedBody ?? {}
+    return Object.fromEntries(
+      Object.entries(body).filter(([k, v]) => !/password|token|^_/.test(k.toLowerCase()) && !(v instanceof Blob)),
+    )
   }
 
   protected problem(error: unknown, ctx: HttpContext, status: number) {

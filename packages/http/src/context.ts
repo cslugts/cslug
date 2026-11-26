@@ -1,6 +1,7 @@
 import { type Application, BadRequestError, type Container, type Logger, type Resolved, type Token } from '@cslug/core'
 import { type Output, type Schema, type Validatable, Validator, validate } from '@cslug/validation'
 import { coerceForm, nestKeys } from './body'
+import type { Session } from './session'
 
 type ValidatorClass = abstract new (...args: never[]) => Validator
 /** What `request.validate()` accepts: a schema, a Validator instance or class, a Standard Schema. */
@@ -37,6 +38,23 @@ export class HttpRequest {
   /** Client IP (from the socket; `X-Forwarded-For` only behind trusted proxies, handled by the kernel). */
   ip(): string | undefined {
     return this.ip_
+  }
+
+  private cookieJar?: Map<string, string>
+  /** A cookie sent by the client. */
+  cookie(name: string): string | undefined {
+    if (!this.cookieJar) {
+      this.cookieJar = new Map()
+      for (const part of (this.header('cookie') ?? '').split(';')) {
+        const i = part.indexOf('=')
+        if (i > 0) {
+          try {
+            this.cookieJar.set(part.slice(0, i).trim(), decodeURIComponent(part.slice(i + 1).trim()))
+          } catch {}
+        }
+      }
+    }
+    return this.cookieJar.get(name)
   }
 
   /** One query parameter. */
@@ -83,9 +101,15 @@ export class HttpRequest {
 
   /** The parsed body: JSON, or a form (nested keys, files as File). GET/HEAD → the query string. */
   body(): Promise<Record<string, unknown>> {
-    this.parsed ??= this.parse()
+    this.parsed ??= this.parse().then((b) => {
+      this.parsedBody = b
+      return b
+    })
     return this.parsed
   }
+
+  /** The parsed body once it has been read (sync access for error renderers); undefined before. */
+  parsedBody?: Record<string, unknown>
 
   private async parse(): Promise<Record<string, unknown>> {
     if (this.method === 'GET' || this.method === 'HEAD') return this.queryAll()
@@ -199,6 +223,8 @@ export interface HttpContext {
   readonly log: Logger
   /** The current locale (set by the locale middleware; the default locale otherwise). */
   locale: string
+  /** The session (needs the `session()` middleware, which routes/web.ts has). */
+  session: Session
   /** Name of the matched route. */
   readonly routeName?: string
   /** Resolve from the request scope. */

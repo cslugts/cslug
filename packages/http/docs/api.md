@@ -1,4 +1,4 @@
-# @cslug/http: API (M3a)
+# @cslug/http: API
 
 ## Routes
 
@@ -39,7 +39,7 @@ Return a `Response`, a `Responsable` (`toResponse(ctx)`), an object/array (JSON:
 `toJSON()`), a string (`text/plain`), or `null`/`undefined` (204). Helpers: `json`, `created`, `accepted`,
 `noContent`, `download(content, filename, type?)`, `stream(asyncIterable)`, `sse(asyncIterable)`,
 `redirect().route(name, params) / .to(url) / .away(url) / .back(fallback) / .intended(fallback) / .with(key, value)`
-(303 after non-GET; flash needs sessions, M3b).
+(303 after non-GET; `.with()` and `.intended()` need the session).
 
 ## Errors (`ExceptionHandler`)
 
@@ -64,3 +64,24 @@ the database's). One log line per request: method, path, status, ms, route, requ
 
 Config `http`: `port`, `host`, `shutdownTimeout`, `bodyLimit`, `trustedProxies`, `cors` (api group),
 `groups.{web,api}`, `middleware`, `problemBase`, `health`.
+
+## Sessions, CSRF, forms (web group)
+
+`routes/web.ts` routes get `session()` and `csrf()`.
+
+| | |
+|---|---|
+| `session(options?)` | Loads the session from its cookie (`config('session')`: `cookie` (`cslug_session`), `lifetime` (`14d`), `sameSite`, `domain`), saves what changed, sends an HttpOnly cookie (Secure in production). Errors are rendered inside it so flashes are saved |
+| `ctx.session` | `get`, `put`, `has`, `forget`, `pull`, `flash`, `reflash`, `flashed()`, `errors()`, `old(key?)`, `token()`, `verifyToken()`, `regenerate()` (on login), `invalidate()` (on logout). Without the middleware, using it throws an explanation |
+| `csrf({ except? })` | 419 for POST/PUT/PATCH/DELETE without the session token (`_token` form field or `X-CSRF-Token` header) |
+| form errors | A `ValidationError` on a non-JSON, non-GET request with a session → **303 back** (Referer) with `_errors` (translated) and `_old` (input without passwords, tokens, files) flashed |
+| method spoofing | A form POST with `_method=PUT/PATCH/DELETE` is routed as that method |
+| `redirect().with(k, v)` / `.intended(fallback)` | Flash / go to `session('url.intended')` |
+| `request.cookie(name)` | |
+
+## Throttle and locale
+
+| | |
+|---|---|
+| `throttle('5/min', key?)` | Through the `RateLimiter` (memory, or Redis). Key: route + (user, else IP), or your function. `X-RateLimit-Limit/Remaining`; over → 429 with `Retry-After` |
+| `locale()` | `:locale` param → `locale` cookie → `Accept-Language` (weighted, region stripped) → default; only `config('i18n.locales')`. Sets `ctx.locale` and the ambient locale (`t()`) |

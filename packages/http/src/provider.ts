@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { Logger, ServiceProvider } from '@cslug/core'
 import { ExceptionHandler } from './errors'
 import { HttpKernel } from './kernel'
-import { bodyLimit, cors, securityHeaders } from './middleware'
+import { bodyLimit, cors, csrf, securityHeaders, session } from './middleware'
 import { type GroupOptions, type Middleware, type RouteRegistrar, Router } from './router'
 
 export type HttpConfig = {
@@ -51,7 +51,7 @@ export class HttpProvider extends ServiceProvider {
       })
     }
     const groups: [file: string, group: GroupOptions][] = [
-      ['routes/web.ts', { middleware: config.groups?.web ?? [], group: 'web' }],
+      ['routes/web.ts', { middleware: [session(), csrf(), ...(config.groups?.web ?? [])], group: 'web' }],
       [
         'routes/api.ts',
         { middleware: [...(config.cors ? [cors(config.cors)] : []), ...(config.groups?.api ?? [])], group: 'api' },

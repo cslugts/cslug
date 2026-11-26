@@ -235,7 +235,7 @@ export const noIndex = (): Middleware => async (_ctx, next) => {
 | `logRequests()` | global | One structured line per request |
 | `securityHeaders()` | global | CSP, HSTS (prod), frame, referrer, nosniff |
 | `bodyLimit('1mb')` | global | Per route: `.middleware(bodyLimit('20mb'))` for uploads |
-| `session()`, `csrf()`, `oldInput()` | `web` group | Redis-backed session |
+| `session()`, `csrf()` | `web` group | Session in the `SessionStore` (Redis with `@cslug/redis`); 419 without the CSRF token (`_token` field or `X-CSRF-Token`). A failed form post redirects back with errors and old input automatically |
 | `cors(...)` | `api` group | From `config/http.ts` |
 | `auth(guard?)`, `guest()` | — | `auth('token')` for API tokens |
 | `can(ability)` | — | Gate check (see [guide 15](./15-auth-and-authorization.md)) |

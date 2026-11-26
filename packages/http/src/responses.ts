@@ -1,11 +1,9 @@
+import type { HttpContext } from './context'
 import { route, type UrlOptions } from './url'
 
 /** Anything a handler returns that knows how to become a Response (views, redirects…). */
 export interface Responsable {
-  toResponse(ctx: {
-    request: { header(n: string): string | undefined }
-    response: { headers: Headers }
-  }): Response | Promise<Response>
+  toResponse(ctx: HttpContext): Response | Promise<Response>
 }
 export const isResponsable = (v: unknown): v is Responsable =>
   typeof v === 'object' && v !== null && typeof (v as Responsable).toResponse === 'function'
@@ -82,12 +80,14 @@ export class Redirect implements Responsable {
     return this
   }
   /** After login: the page the user wanted, else `fallback` (needs sessions). */
+  private useIntended = false
+  /** After login: the page the user wanted before being sent to login, else `fallback`. */
   intended(fallback: string): this {
     this.target = fallback
-    this.flashes.__intended = true
+    this.useIntended = true
     return this
   }
-  /** Flash a value for the next request (needs the session middleware). */
+  /** Flash a value for the next request: `.with('success', t('saved'))` (needs the session middleware). */
   with(key: string, value: unknown): this {
     this.flashes[key] = value
     return this
@@ -97,12 +97,11 @@ export class Redirect implements Responsable {
     return this
   }
 
-  toResponse(ctx: {
-    request: { header(n: string): string | undefined; method?: string }
-    response: { headers: Headers }
-  }): Response {
+  toResponse(ctx: HttpContext): Response {
     const referrer = this.toReferrer ? ctx.request.header('referer') : undefined
-    const location = referrer ?? this.target ?? '/'
+    let location = referrer ?? this.target ?? '/'
+    if (this.useIntended) location = ctx.session.pull<string>('url.intended') ?? location
+    for (const [k, v] of Object.entries(this.flashes)) ctx.session.flash(k, v)
     // 303 after non-GET so the browser follows with GET
     const status =
       this.status === 302 && ctx.request.method && !['GET', 'HEAD'].includes(ctx.request.method) ? 303 : this.status

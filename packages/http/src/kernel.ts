@@ -12,6 +12,7 @@ import { type HttpContext, HttpRequest, ResponseBuilder } from './context'
 import type { ExceptionHandler } from './errors'
 import { isResponsable, json } from './responses'
 import type { Middleware, MiddlewareFn, Next, RouteDef, Router } from './router'
+import { MissingSession } from './session'
 
 type Compiled = { route: RouteDef; path: RegExp; domain?: RegExp; score: number[] }
 
@@ -126,6 +127,7 @@ export class HttpKernel {
       signal: request.signal,
       log: this.log.child({ requestId }),
       locale: defaultLocale,
+      session: new MissingSession(),
       resolve: <K extends Token>(token: K) => scope.resolve(token) as never,
     }
     let status = 500
@@ -135,7 +137,14 @@ export class HttpKernel {
         { ...(currentContext() ?? {}), app: this.app, scope, requestId, locale: defaultLocale, http: ctx },
         async () => {
           const run = async (): Promise<Response> => {
-            const { route, params, allowed } = this.match(request.method, host, url.pathname)
+            // HTML forms can only send GET/POST: `<input name="_method" value="PUT">` spoofs the others
+            let method = request.method
+            if (method === 'POST' && req.isForm) {
+              const spoofed = (await req.body())._method
+              if (typeof spoofed === 'string' && ['PUT', 'PATCH', 'DELETE'].includes(spoofed.toUpperCase()))
+                method = spoofed.toUpperCase()
+            }
+            const { route, params, allowed } = this.match(method, host, url.pathname)
             if (!route) {
               if (allowed.size) {
                 const allow = [...allowed, ...(allowed.has('GET') ? ['HEAD'] : [])].join(', ')
