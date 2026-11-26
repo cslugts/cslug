@@ -107,12 +107,17 @@ syntax, and metadata emission differs between tools. The side-by-side comparison
 
 ---
 
-## D3. HTTP: own thin router on `Bun.serve` routes —
+## D3. HTTP: own router and kernel; `Bun.serve` for the socket —
 
-A Laravel-style routes file compiles to `Bun.serve({ routes })`. cslug adds named routes, groups,
-middleware, resource routes, controller tuples, **domain routing** (`r.group({ domain: ':operator.albastr.com' })`)
-and URL generation. That is about 600 lines with no dependency. `Bun.serve` routes match paths only, so domain groups
-are matched on the `Host` header inside the compiled route handler, and domain-bound routes are tried first.
+A Laravel-style routes file (named routes, groups, middleware, resources, controller tuples, domain routing,
+constraints, URL generation and signed URLs) is compiled into cslug's own matcher. `Bun.serve` only handles the
+socket and calls the kernel.
+
+**Changed during implementation (M3a):** the routes were first meant to compile to `Bun.serve({ routes })`. The
+kernel matches them itself instead:
+- the same pipeline then runs in tests **without a port** (`kernel.handle(request)`);
+- domain routing, 405 with `Allow`, `HEAD`→`GET` and parameter constraints need cslug logic anyway;
+- matching is negligible next to request handling (spike d: ~23k req/s either way).
 
 **Alternatives.** Hono: excellent, but it is a dependency and brings a second context object.
 

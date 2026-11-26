@@ -60,7 +60,8 @@ async show({ request, params, auth, session, response, locale, signal, log }: Ht
 | Return | Becomes |
 |---|---|
 | `view(Page, props)` | HTML rendered from a Vue view on the server (props checked by `cslug typecheck`) |
-| plain object / array | `200` JSON (bigint → string, Date → ISO) |
+| plain object / array | `200` JSON (bigint → string, Date → ISO, `Money` as `{ amount, currency }`) |
+| a string | `200` `text/plain` |
 | `created(data)`, `accepted(data)` | `201` / `202` JSON |
 | `null` / `undefined` | `204` |
 | `redirect()…` | `302`/`303` (`303` after PUT/PATCH/DELETE) |
