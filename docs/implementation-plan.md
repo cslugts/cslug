@@ -14,7 +14,7 @@
 | S Spikes | ✅ (a) [Vue islands](../spikes/a-vue-islands/README.md) · (b) decorators (verified during design) · (c) [Redis Streams](../spikes/c-redis-streams/README.md) · (d) [async context](../spikes/d-async-context/README.md) |
 | M1 validation, core | ✅ `@cslug/validation` (62 tests) · `@cslug/core` (container, providers, config/env, errors, Clock, Money, events, logger, i18n, contracts; 87 tests) |
 | M2 database | ✅ Database, sql tag, tables, ambient transactions, query builder, Repository, preload, migrations (concurrent-safe), factories, seeders, idempotent, encrypted columns (49 tests on real PostgreSQL) |
-| M3 cli, http, testing (base) | ◐ M3a ✅ http core · M3b ✅ sessions, CSRF, form errors + old input, method spoofing, throttle, locale · M3c next: testing base + cli |
+| M3 cli, http, testing (base) | ◐ M3a ✅ http core · M3b ✅ sessions, CSRF, form errors + old input, method spoofing, throttle, locale · M3c-1 ✅ testing base (`testApp`, requests + assertions, DB pin/truncate, fakes registry, events fake) · M3c-2 next: cli |
 | M4 vue | ⬜ |
 | M5 redis, auth → 0.1.0 | ⬜ |
 | M6 queue | ⬜ |
