@@ -5,18 +5,6 @@ import { MagicLinks } from '../src'
 import { BookingRepository, fixtureApp, Hash, Tokens, UserRepository } from './fixture/app'
 
 const hasDb = !!process.env.DATABASE_URL
-let drop = async () => {}
-const t = testApp({
-  async create() {
-    const f = await fixtureApp()
-    drop = f.drop
-    return f.app
-  },
-})
-afterAll(async () => {
-  await drop()
-})
-
 const makeUser = async (values: Partial<{ email: string; name: string; role: string; password: string }> = {}) =>
   resolve(UserRepository).create({
     email: values.email ?? 'ada@example.test',
@@ -26,6 +14,19 @@ const makeUser = async (values: Partial<{ email: string; name: string; role: str
   })
 
 describe.skipIf(!hasDb)('auth (guide 15)', () => {
+  // inside the skipped block: testApp's hooks need DATABASE_URL
+  let drop = async () => {}
+  const t = testApp({
+    async create() {
+      const f = await fixtureApp()
+      drop = f.drop
+      return f.app
+    },
+  })
+  afterAll(async () => {
+    await drop()
+  })
+
   test('login with a password: session regenerated, intended URL, then the user is known', async () => {
     await makeUser()
     // a guest asking for /dashboard is sent to the login route, which remembers where they wanted to go
