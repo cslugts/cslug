@@ -9,7 +9,7 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { graph, topoOrder } from './package-graph'
+import { graph, npmName, topoOrder } from './package-graph'
 
 /** Documented subpath exports; anything else under @cslug/<pkg>/… is a deep import. */
 const ALLOWED_SUBPATHS = new Set(['@cslug/http/middleware', '@cslug/vue/build', '@cslug/vue/register'])
@@ -42,7 +42,7 @@ export function checkGraph(root: string): string[] {
     const pkg = JSON.parse(readFileSync(join(packagesDir, name, 'package.json'), 'utf8')) as PackageJson
     const where = `packages/${name}/package.json`
 
-    if (pkg.name !== `@cslug/${name}`) problems.push(`${where}: name must be "@cslug/${name}"`)
+    if (pkg.name !== npmName(name)) problems.push(`${where}: name must be "${npmName(name)}"`)
     if (pkg.dependencies && Object.keys(pkg.dependencies).length > 0) {
       problems.push(`${where}: runtime "dependencies" are not allowed (use peerDependencies)`)
     }

@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### create-cslug
+- `bun create cslug <dir>` with presets `--api`, `--web` (default) and `--full`, plus `--tailwind`; writes `.env`
+  with a fresh `APP_KEY`, pins every `@cslug/*` package to the release version, runs `bun install` and `git init`.
+- Each preset is checked in CI: scaffolded, typechecked, built and tested (`bun run check:create`).
+
 ## 0.3.0 (2026-11-27)
 
 The MVP's remaining packages (milestone M8): storage and notifications.

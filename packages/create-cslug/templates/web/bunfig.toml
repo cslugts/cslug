@@ -1,0 +1,3 @@
+# `bun test` compiles .vue files from the first import (a test may import a mailable or a view directly)
+[test]
+preload = ["@cslug/vue/register"]

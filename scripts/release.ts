@@ -10,7 +10,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { topoOrder } from './package-graph'
+import { npmName, topoOrder } from './package-graph'
 
 const root = join(import.meta.dir, '..')
 const pkgPath = (name: string) => join(root, 'packages', name, 'package.json')
@@ -46,18 +46,18 @@ async function publish(dryRun: boolean) {
 
   for (const name of order) {
     const original = readFileSync(pkgPath(name), 'utf8')
-    const published = Bun.spawnSync(['npm', 'view', `@cslug/${name}@${version}`, 'version'], { stderr: 'ignore' })
+    const published = Bun.spawnSync(['npm', 'view', `${npmName(name)}@${version}`, 'version'], { stderr: 'ignore' })
     if (published.stdout.toString().trim() === version) {
-      console.log(`- @cslug/${name}@${version} already published, skipping`)
+      console.log(`- ${npmName(name)}@${version} already published, skipping`)
       continue
     }
     try {
       write(name, pinWorkspacePeers(read(name), version))
       const args = ['npm', 'publish', '--access', 'public', ...provenance, ...(dryRun ? ['--dry-run'] : [])]
-      console.log(`→ ${dryRun ? '[dry-run] ' : ''}@cslug/${name}@${version}`)
+      console.log(`→ ${dryRun ? '[dry-run] ' : ''}${npmName(name)}@${version}`)
       // stdin too: npm asks for the 2FA code (or opens the browser) only when it can talk to a terminal
       const res = Bun.spawnSync(args, { cwd: join(root, 'packages', name), stdio: ['inherit', 'inherit', 'inherit'] })
-      if (res.exitCode !== 0) throw new Error(`npm publish failed for @cslug/${name}`)
+      if (res.exitCode !== 0) throw new Error(`npm publish failed for ${npmName(name)}`)
     } finally {
       writeFileSync(pkgPath(name), original)
     }

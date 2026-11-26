@@ -1,0 +1,7 @@
+# Used by `bun test` (Bun loads .env.test). Variables already set in the environment win.
+# Test-only values: never use this key anywhere else.
+APP_ENV=test
+APP_URL=http://localhost:3000
+APP_KEY={{testKey}}
+DATABASE_URL=postgres://cslug:cslug@localhost:5432/{{db}}_test
+REDIS_URL=redis://localhost:6379/15

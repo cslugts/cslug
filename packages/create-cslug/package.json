@@ -1,0 +1,34 @@
+{
+  "name": "create-cslug",
+  "version": "0.3.0",
+  "description": "Create a cslug app: bun create cslug <dir>.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cslugts/cslug.git",
+    "directory": "packages/create-cslug"
+  },
+  "homepage": "https://github.com/cslugts/cslug/tree/main/packages/create-cslug",
+  "keywords": [
+    "cslug",
+    "bun",
+    "framework",
+    "create"
+  ],
+  "bin": {
+    "create-cslug": "src/bin.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "templates",
+    "docs",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.3.14"
+  }
+}

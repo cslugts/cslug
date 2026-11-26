@@ -1,0 +1,7 @@
+{
+  "app": { "name": "{{title}}" },
+  "validation": {
+    "required": "This field is required.",
+    "unique": "This value is already taken."
+  }
+}

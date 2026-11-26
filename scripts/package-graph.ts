@@ -9,6 +9,8 @@
  */
 export type PackageSpec = {
   description: string
+  /** The npm name, when it is not `@cslug/<folder>` (create-cslug: `bun create cslug` needs that name). */
+  npmName?: string
   requires: string[]
   optional?: string[]
   externalPeers?: Record<string, { range: string; optional?: boolean }>
@@ -99,6 +101,12 @@ export const graph: Record<string, PackageSpec> = {
       'cli',
     ],
   },
+  // published last: it pins the version of everything above
+  'create-cslug': {
+    description: 'Create a cslug app: bun create cslug <dir>.',
+    npmName: 'create-cslug',
+    requires: [],
+  },
 }
 
 /** Packages in dependency order (required + optional edges), for publishing. Throws on cycles. */
@@ -118,3 +126,6 @@ export function topoOrder(): string[] {
   for (const name of Object.keys(graph)) visit(name, [])
   return order
 }
+
+/** The npm name of a package folder. */
+export const npmName = (name: string): string => graph[name]?.npmName ?? `@cslug/${name}`
