@@ -6,7 +6,7 @@
 | `renderPage(Page, props, { http?, static? })` | `{ html, state }` (`state.islands`, `state.modules`) |
 | `renderStandalone(Page, props)` | One self-contained HTML file: no scripts, CSS and `public/` images inlined, islands as plain HTML |
 | `<Assets entry="client" />` | In the layout `<head>` |
-| `hydrate="load \| idle \| visible \| media:(…) \| none"` | On any component use; `:ssr="false"` + `<template #fallback>` to skip server rendering |
+| `hydrate="load \| idle \| visible \| media:(…) \| none"` | On any component use; `idle` waits at most 2 s; `:ssr="false"` + `<template #fallback>` to skip server rendering |
 | `serialize(value)` / `Serialized<T>` | What an island receives (bigint → string, Date → ISO); type island props per prop: `defineProps<{ day: Serialized<Day> }>()` |
 | `useRequest()` | `locale`, `user`, `csrfToken`, `errors` (first message per field), `old`, `flash`, `url`, `alternates` |
 | `useT()` | `t`, `tr`, `locale`, `formatMoney`, `formatDate` in the current locale |
