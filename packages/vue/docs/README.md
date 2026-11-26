@@ -22,4 +22,5 @@ per island component, writing hashed files and `manifest.json` to `public/build/
 process builds at start, rebuilds on change and serves live reload at `/__cslug/live`.
 
 Tests that import views statically need the loader from the first line:
-`[test] preload = ["@cslug/vue/register"]` in `bunfig.toml`.
+`[test] preload = ["@cslug/vue/register"]` in `bunfig.toml`. Several app roots can register the loader in one process (a test
+suite with several fixture apps): each `.vue` file compiles against the registered root that contains it.

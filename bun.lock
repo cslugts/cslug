@@ -99,6 +99,14 @@
     "packages/mail": {
       "name": "@cslug/mail",
       "version": "0.1.0",
+      "devDependencies": {
+        "@cslug/http": "workspace:*",
+        "@cslug/queue": "workspace:*",
+        "@cslug/redis": "workspace:*",
+        "@cslug/testing": "workspace:*",
+        "@cslug/vue": "workspace:*",
+        "vue": "^3.5.0",
+      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/queue": "workspace:*",

@@ -39,5 +39,13 @@
     "@cslug/queue": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@cslug/testing": "workspace:*",
+    "@cslug/http": "workspace:*",
+    "@cslug/redis": "workspace:*",
+    "vue": "^3.5.0",
+    "@cslug/vue": "workspace:*",
+    "@cslug/queue": "workspace:*"
   }
 }
