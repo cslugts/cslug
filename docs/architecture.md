@@ -72,10 +72,11 @@ if it has `@inject(...)`, otherwise throws `BindingNotFoundError` naming the tok
 
 ```
 BindingNotFoundError: Cannot resolve PaymentGateway
-  required by EscrowService (app/services/escrow-service.ts)
-  required by BookingController (app/controllers/booking-controller.ts)
-  Hint: PaymentGateway is abstract — bind an implementation in a provider:
-        this.app.singleton(PaymentGateway, MangopayGateway)
+  required by EscrowService
+  required by BookingController
+  Hint: if PaymentGateway is a class you wrote, add @inject(...) to it.
+        If it is abstract (an interface), bind an implementation in a provider:
+        this.app.singleton(PaymentGateway, YourPaymentGatewayImplementation)
 ```
 
 Auto-built classes are **scoped by default** (fresh per request/job), and their singleton dependencies come

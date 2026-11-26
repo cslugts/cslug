@@ -173,11 +173,20 @@ app.swap(PaymentGateway, new FakePaymentGateway({ failNextRelease: true }))   //
 
 ```
 BindingNotFoundError: Cannot resolve PaymentGateway
-  required by EscrowService (app/services/escrow-service.ts)
-  required by BookingController (app/controllers/booking-controller.ts)
-  Hint: PaymentGateway is abstract. Bind an implementation in a provider:
-        this.app.singleton(PaymentGateway, MangopayGateway)
+  required by EscrowService
+  required by BookingController
+  Hint: if PaymentGateway is a class you wrote, add @inject(...) to it.
+        If it is abstract (an interface), bind an implementation in a provider:
+        this.app.singleton(PaymentGateway, YourPaymentGatewayImplementation)
 ```
+
+Other container errors are just as explicit:
+
+| Error | When |
+|---|---|
+| `CircularDependencyError` | `A → B → A`, with the full chain |
+| `ScopeViolationError` | A singleton depends on a scoped class |
+| `ProviderError` | `resolve()` called inside a provider's `register()`, duplicate or missing providers, provider cycles, a failing `boot()` |
 
 ## Limits
 
