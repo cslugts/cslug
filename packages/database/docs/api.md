@@ -1,4 +1,4 @@
-# @cslug/database: API (M2a)
+# @cslug/database: API
 
 ## Columns
 
@@ -67,3 +67,41 @@ visible inside. Tested with 200 concurrent units.
 ## `DatabaseProvider`
 
 Binds `Database` from `config('database')`, pings at boot, closes at shutdown.
+
+## Query builder (one table)
+
+`repo.where({...})` / `repo.query()` → `Query<T, R>` (immutable).
+
+| | |
+|---|---|
+| `where({ key: value \| null \| op })` | AND of conditions; `null` → IS NULL; `undefined` keys ignored (so `...(cond && {…})` works). Keys and value types are checked against the table |
+| operators | `eq ne gt gte lt lte between inList notIn like ilike isNull notNull not(op)`. `inList([])` matches nothing |
+| `orWhere({...})` / `whereSql(sql\`…\`)` | OR group / raw condition |
+| `orderBy(key, 'asc' \| 'desc', { nulls: 'first' \| 'last' })` | Chainable |
+| `limit`, `offset`, `select(...keys)` | `select` narrows the row type to `Pick<Row, K>` |
+| `lockForUpdate({ skipLocked?, noWait? })` | Must be inside a transaction (clear error otherwise) |
+| `withTrashed()` / `onlyTrashed()` | Soft-deleted rows are hidden by default when the table has `deletedAt` |
+| `all()`, `first()`, `count()`, `exists()` | |
+| `update(values)` / `delete()` / `forceDelete()` | Bulk; return the number of rows; `updatedAt` refreshed; `delete` is soft when possible |
+| `paginate(page, perPage)` | `{ data, meta: { page, perPage, total, lastPage } }` |
+| `cursor({ after?, limit, orderBy? })` | Keyset pagination → `{ data, next }` |
+| `each({ batch? })` | Async iterator over every matching row |
+| `toSql()` | The SELECT as a fragment |
+
+## `Repository(table)`
+
+```ts
+@inject()
+export class BookingRepository extends Repository(bookings) { /* domain queries */ }
+```
+
+The base resolves `Database` itself. Methods: `find`, `findOrFail` (`NotFoundError`, code `<singular>.not_found`),
+`findBy`, `findByOrFail`, `existsBy`, `count`, `all`, `create` / `createMany` (generated ids, short codes,
+timestamps, defaults; `RETURNING *`), `update(id, values)`, `upsert(values, { conflict, update? })`,
+`delete` (soft if possible), `forceDelete`, `restore`, `lockForUpdate(id, opts)`, `paginate({ page, perPage, where, orderBy, dir })`,
+`where`, `query`, `withTrashed`, `onlyTrashed`, `using(tx)` (explicit transaction), `table`, `db`.
+
+## `preload`
+
+`preload(rows, { operator: belongsTo(operators, 'operatorId'), todos: hasMany(todos, 'operatorId', { orderBy }) })`:
+one query per relation, typed results (`Row | null` for belongsTo, `Row[]` for hasMany).

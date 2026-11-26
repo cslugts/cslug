@@ -13,7 +13,7 @@
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
 | S Spikes | ✅ (a) [Vue islands](../spikes/a-vue-islands/README.md) · (b) decorators (verified during design) · (c) [Redis Streams](../spikes/c-redis-streams/README.md) · (d) [async context](../spikes/d-async-context/README.md) |
 | M1 validation, core | ✅ `@cslug/validation` (62 tests) · `@cslug/core` (container, providers, config/env, errors, Clock, Money, events, logger, i18n, contracts; 87 tests) |
-| M2 database | ◐ M2a ✅ (Database, sql tag, tables, ambient transactions, advisory locks; context survives transactions); M2b query builder + Repository next |
+| M2 database | ◐ M2a ✅ Database, sql, tables, transactions · M2b ✅ query builder, Repository, preload, pagination, row locks · M2c next: migrations, factories, seeders, idempotent, encrypted columns |
 | M3 cli, http, testing (base) | ⬜ |
 | M4 vue | ⬜ |
 | M5 redis, auth → 0.1.0 | ⬜ |
