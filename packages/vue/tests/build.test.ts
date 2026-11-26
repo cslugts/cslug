@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Application } from '@cslug/core'
-import { buildAssets, findIslands } from '../src/build-entry'
-import { FIXTURE, vueApp } from './support'
+import { findIslands } from '../src/build-entry'
+import { build, FIXTURE, vueApp } from './support'
 
 const OUT = join(FIXTURE, 'public/build')
 
@@ -19,7 +19,7 @@ describe('the asset build (guide 08 § asset pipeline)', () => {
   })
 
   test('production: hashed entry + CSS, one chunk per island, Vue shared, browser-only code', async () => {
-    const { manifest } = await buildAssets({ root: FIXTURE })
+    const { manifest } = await build()
     expect(manifest.entries.client?.js).toMatch(/^\/build\/resources\/client-[a-z0-9]{8}\.js$/)
     expect(manifest.entries.client?.css).toEqual([
       expect.stringMatching(/^\/build\/resources\/client-[a-z0-9]{8}\.css$/),
@@ -42,13 +42,13 @@ describe('the asset build (guide 08 § asset pipeline)', () => {
   })
 
   test('dev: readable names, source maps', async () => {
-    const { manifest } = await buildAssets({ root: FIXTURE, dev: true })
+    const { manifest } = await build({ dev: true })
     expect(manifest.entries.client?.js).toBe('/build/resources/client.js')
     expect(existsSync(join(OUT, 'resources/client.js.map'))).toBe(true)
   })
 
   test('a missing entry is a clear error', async () => {
-    await expect(buildAssets({ root: FIXTURE, entries: { admin: 'resources/admin.ts' } })).rejects.toThrow(
+    await expect(build({ entries: { admin: 'resources/admin.ts' } })).rejects.toThrow(
       'resources/admin.ts does not exist',
     )
   })
@@ -58,7 +58,7 @@ describe('serving the build', () => {
   let app: Application | undefined
   let call: (path: string, init?: RequestInit) => Promise<Response>
   beforeAll(async () => {
-    await buildAssets({ root: FIXTURE })
+    await build()
     const h = await vueApp()
     app = h.app
     call = h.call

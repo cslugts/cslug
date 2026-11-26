@@ -5,8 +5,8 @@ import { join } from 'node:path'
 import type { Application } from '@cslug/core'
 import { HttpKernel } from '@cslug/http'
 import { csrf, session } from '@cslug/http/middleware'
-import { buildAssets, view } from '../src'
-import { FIXTURE, load, vueApp } from './support'
+import { view } from '../src'
+import { build, FIXTURE, load, vueApp } from './support'
 
 const chrome = Bun.which('google-chrome') ?? Bun.which('chromium')
 
@@ -39,7 +39,7 @@ describe.skipIf(!chrome)('islands in a real browser (Chrome headless)', () => {
   let app: Application | undefined
   let base = ''
   beforeAll(async () => {
-    await buildAssets({ root: FIXTURE, dev: true })
+    await build({ dev: true })
     const Page = await load('views/islands-page')
     const h = await vueApp((r) => {
       r.group({ middleware: [session(), csrf()] }, (r) => {

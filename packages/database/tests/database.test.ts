@@ -3,7 +3,7 @@ import { Application, currentContext, Event, inject, Logger, listener, runInCont
 import {
   amount,
   currency,
-  type Database,
+  Database,
   DatabaseProvider,
   date,
   id,
@@ -51,6 +51,25 @@ describeDb('Database (real PostgreSQL)', () => {
   const insert = (bookingId: string, kind: string, amountMinor: bigint) =>
     db.exec(sql`insert into ${ledger} (id, booking_id, kind, amount, currency, entry_date, meta)
       values (${Bun.randomUUIDv7()}, ${bookingId}, ${kind}, ${amountMinor}, 'EUR', ${'2027-05-14'}, ${sql.json({ reference: `ref-${bookingId}`, tags: ['a', 'b'] })})`)
+
+  test('no stall while a fresh pool warms up under concurrent queries and transactions (Bun.sql race)', async () => {
+    // Bun.sql 1.3.14 could, while a pool opened its connections, run a plain pooled query on a connection reserved
+    // for a transaction ("idle in transaction" + a stall). Transactions now use their own reserve-only pool; this
+    // repeats the warm-up that triggered it (it failed ~1 run in 25 before, 0 in 60 after).
+    for (let round = 0; round < 5; round++) {
+      const fresh = new Database({ url: t.url, pool: { max: 8 } }, Logger.null())
+      const work = Promise.all(
+        Array.from({ length: 200 }, async () => {
+          await fresh.value(sql`select pg_sleep(${Math.random() * 0.003})`)
+          await fresh.transaction(() => fresh.transaction(() => fresh.value(sql`select 1`)))
+        }),
+      )
+      const stalled = await Promise.race([work.then(() => false), Bun.sleep(4000).then(() => true)])
+      expect(stalled, `round ${round}: the work stalled`).toBe(false)
+      const closed = await Promise.race([fresh.close().then(() => true), Bun.sleep(4000).then(() => false)])
+      expect(closed, `round ${round}: close() hung`).toBe(true)
+    }
+  }, 30_000)
 
   test('the context survives queries and transactions (the open question from spike d)', async () => {
     const wrong = { query: 0, transaction: 0, savepoint: 0, after: 0 }

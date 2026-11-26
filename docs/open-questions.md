@@ -27,10 +27,31 @@
 | Q11 | Escrow payment partner (guides use "Mangopay" as a placeholder) | Confirm with the legal/escrow work | `app/payments` |
 | Q12 | WhatsApp: Meta Cloud API directly or a provider? | Start manual (per MVP); keep the `whatsapp` channel | `@cslug/notification` |
 
-## Intermittent hang: 200 concurrent transactions in CI (seen 2026-11-26)
+## ✅ Resolved: Bun.sql runs a pooled query inside another transaction (found 2026-11-26)
 
-`packages/database/tests/database.test.ts` › "the context survives queries and transactions" timed out once (5 s) in
-CI on PR #16, and its `afterAll` (drop database) hung too. It passed on re-run. Locally it never failed in 37
-runs, including 25 pinned to one CPU. Suspect: `Bun.sql` pool (max 8) under 200 concurrent `begin` + savepoints
-on a slow runner. **To do:** if it recurs, capture `pg_stat_activity` on timeout and try to reproduce with a
-standalone `Bun.sql` script; report upstream if confirmed.
+**Symptom.** `database.test.ts` › "the context survives…" hung in CI twice (PRs #16, #19), and its `afterAll` too.
+
+**Cause (Bun 1.3.14).** While a pool opens its connections under concurrency, `Bun.sql` can hand a connection
+that is reserved for a transaction (by `begin()` or `reserve()`) to a plain pooled query. `pg_stat_activity`
+then shows that connection as `idle in transaction` with the plain query (`select pg_sleep($1)`) as its last
+statement. That query never resolves in JS, and the transaction never finishes. Beyond the hang, this means an
+unrelated query can run **inside someone else's transaction**. Reproduced with plain `Bun.sql`, no cslug code
+involved:
+- `begin()`: 3 stalls in 17 runs of 100 rounds, always on the first warm-up.
+- `reserve()` with explicit `BEGIN`: about 1 in 25 runs under `bun test`.
+
+**Fix in @cslug/database.** Transactions, savepoints, `pin()` and session advisory locks use a second pool,
+`transactionPool`, which is only ever used through `reserve()`, with explicit `BEGIN`/`SAVEPOINT`/`COMMIT`.
+Plain queries never touch it, so they can't land on a reserved connection: 0 stalls in 60 runs. The
+regression test "no stall while a fresh pool warms up…" repeats the triggering warm-up. Cost: up to
+`pool.max` extra connections.
+
+**To do:** report upstream to Bun with the standalone reproduction; drop the second pool once a fixed Bun is
+the minimum.
+
+## Bun.build fails on a second build inside `bun test` (found 2026-11-26)
+
+Under `bun test` (Bun 1.3.14), once the test process has loaded a source file at runtime (here
+`@cslug/validation`), a later `Bun.build` that bundles the same file fails with `Unexpected reading file`. The
+first build in the process works, and `bun run` is unaffected (so `cslug build` and `cslug dev` are fine). The
+vue tests run builds in a child process. **To do:** report upstream.
