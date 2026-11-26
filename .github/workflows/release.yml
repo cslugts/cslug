@@ -36,6 +36,10 @@ jobs:
       SMTP_HOST: localhost
       SMTP_PORT: 1025
       MAILPIT_URL: http://localhost:8025
+      S3_ENDPOINT: http://localhost:9000
+      S3_BUCKET: cslug
+      S3_ACCESS_KEY_ID: cslug
+      S3_SECRET_ACCESS_KEY: cslug-secret
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -46,6 +50,14 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
       - run: npm install -g npm@latest
+      # MinIO for the S3 disk tests (a service container cannot be given `server /data`)
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER=cslug -e MINIO_ROOT_PASSWORD=cslug-secret \
+            minio/minio server /data
+          for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/live && break; sleep 1; done
+          docker run --rm --network host --entrypoint sh minio/mc -c \
+            "mc alias set local http://localhost:9000 cslug cslug-secret && mc mb local/cslug"
       - run: bun install --frozen-lockfile
       - run: bun run check
       - name: Tag matches package versions

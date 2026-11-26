@@ -93,7 +93,7 @@ await app.queue.drain()
 app.mail.assertQueued(BookingConfirmedMail)
 app.notify.assertSentTo(traveller, CheckinDueNotification, { channel: 'whatsapp' })
 app.events.assertEmitted(BookingDepositPaid)
-app.storage.assertExists(`operators/${operatorId}/licence/…`)
+app.storage.assertExists(`operators/${operatorId}/licence/`)          // a file under it (generated name)
 app.swap(PaymentGateway, new FakePaymentGateway({ failNextRelease: true }))
 ```
 

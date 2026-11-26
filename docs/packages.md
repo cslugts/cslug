@@ -18,7 +18,7 @@ installs `@cslug/ai`.
 | `@cslug/auth` | Session and token guards, `Hash` (argon2id), magic links, TOTP, `Policy`, `gate`, `ability()` middleware | core, http, database | `Bun.password`, Web Crypto |
 | `@cslug/mail` | `Mailer`, `Mailable`, CSS inlining + text part, transports: SMTP (own client), Resend/Postmark/Brevo (`fetch`), `log`, `array` | core · optional: vue (templates), queue (queued mail) | `Bun.connect`, `fetch` |
 | `@cslug/notification` | `Notifier`, `Notification`, channels: mail, database, whatsapp, sms; delivery records | core · optional: mail, queue, database | — |
-| `@cslug/storage` | `Storage` disks (local, s3), signed URLs, upload type sniffing | core | `Bun.file`, `Bun.s3` |
+| `@cslug/storage` | `Storage` disks (local, s3, memory), signed URLs, direct uploads, upload type sniffing | core · optional: http (serves local signed URLs) | `Bun.file`, `Bun.s3` |
 | `@cslug/webhook` | `verifySignature()`, `WebhookInbox` (exactly-once receipt), replay command | http, database | Web Crypto |
 | `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake) | core, validation · optional: queue | `fetch` |
 | `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `dev`, `start` supervisor | core | `Bun.spawn` |
@@ -43,6 +43,7 @@ No package has a runtime dependency outside `@cslug/*`. The only third-party pac
       └──────────────────► @cslug/webhook (http + database)
 
   @cslug/mail ··► vue, queue (optional)        @cslug/notification ··► mail, queue, database (optional)
+  @cslug/storage ··► http (optional)
   ─► required     ··► optional peer
 ```
 

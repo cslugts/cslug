@@ -65,7 +65,11 @@ export const graph: Record<string, PackageSpec> = {
     requires: ['core'],
     optional: ['mail', 'queue', 'database'],
   },
-  storage: { description: 'Local and S3 disks, signed URLs, upload type sniffing.', requires: ['core'] },
+  storage: {
+    description: 'Local and S3 disks, signed URLs, upload type sniffing.',
+    requires: ['core'],
+    optional: ['http'],
+  },
   webhook: {
     description: 'Webhook signature verification and an exactly-once inbox.',
     requires: ['core', 'http', 'database'],

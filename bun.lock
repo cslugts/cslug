@@ -160,9 +160,17 @@
     "packages/storage": {
       "name": "@cslug/storage",
       "version": "0.2.0",
+      "devDependencies": {
+        "@cslug/http": "workspace:*",
+        "@cslug/testing": "workspace:*",
+      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
+        "@cslug/http": "workspace:*",
       },
+      "optionalPeers": [
+        "@cslug/http",
+      ],
     },
     "packages/testing": {
       "name": "@cslug/testing",

@@ -28,6 +28,16 @@
     "bun": ">=1.3.14"
   },
   "peerDependencies": {
-    "@cslug/core": "workspace:*"
+    "@cslug/core": "workspace:*",
+    "@cslug/http": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@cslug/http": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@cslug/testing": "workspace:*",
+    "@cslug/http": "workspace:*"
   }
 }

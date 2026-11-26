@@ -6,7 +6,7 @@
  *   bun scripts/starter-kit.ts
  */
 import { join } from 'node:path'
-import { SQL } from 'bun'
+import { RedisClient, SQL } from 'bun'
 
 const app = join(import.meta.dir, '../apps/starter-kit')
 /** DATABASE_URL from the environment (CI), else from the root .env.test (local; only `bun test` loads it). */
@@ -26,6 +26,14 @@ const admin = new SQL(Object.assign(new URL(base), { pathname: '/postgres' }).to
 if (!(await admin`select 1 from pg_database where datname = 'starter_kit_test'`).length)
   await admin.unsafe('create database starter_kit_test')
 await admin.close()
+
+// Redis-backed stores (rate limits, cache) outlive a run; start from the test app's own empty Redis database
+const redisUrl = /^REDIS_URL=(.+)$/m.exec(await Bun.file(join(app, '.env.test')).text())?.[1]?.trim()
+if (redisUrl) {
+  const redis = new RedisClient(redisUrl)
+  await redis.send('FLUSHDB', [])
+  redis.close()
+}
 
 const step = async (label: string, cmd: string[]) => {
   console.log(`starter kit: ${label}`)
