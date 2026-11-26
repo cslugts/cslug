@@ -165,3 +165,33 @@ Bound as a singleton from `config('log')` (`{ level?, format?, redact? }`); inje
 | redaction | Keys containing `password`, `secret`, `token`, `authorization`, `cookie`, `apikey`, `api_key`, `cardnumber`, `cvv` (case-insensitive, any depth), plus `redact` (e.g. `secretKeys(envShape)`) |
 | safe serialisation | bigint → string, Date → ISO, `toJSON()` (Money), errors with `code`/`status`/`cause`/`stack`, cycles cut |
 | `Logger.null()` | Writes nothing |
+
+## i18n
+
+`Translator` is bound from `resources/lang/` and `config('i18n')` (`{ locales, default, fallback }`).
+Files: `<locale>.json`, and `<locale>/<namespace>.json` merged under the file name.
+
+| | |
+|---|---|
+| `t(key, params?, locale?)` | In the current locale (the context's `locale`, else the default). Missing key → the key |
+| messages | ICU subset: `{name}`, `{count, plural, =0 {…} one {# x} other {# xs}}`, `{gender, select, female {…} other {…}}`, nesting |
+| fallback | `chain('it')` → `['it', 'en']` from `fallback`, then the default |
+| `withLocale(locale, fn)` | Run with another locale (mail to a recipient, a job for a user) |
+| `currentLocale()` | |
+| `tr(value)` | Pick a locale from translated content (`{ fr, en, it }`), with the fallback chain |
+| `validationTranslator(locale?)` | Pass to `ValidationError.messages(…)`; built-in English when a key is missing |
+| `formatMoney(amount \| Money, currency?, locale?)` | |
+| `formatDate(value, style?, { tz?, locale? })` | `'YYYY-MM-DD'` shown as is; a `Date` in `tz` (default `config('app.timezone')`). Styles: `short`, `medium`, `long`, `full`, or Intl options |
+| `Translator`: `translate`, `has`, `keys`, `add`, `fromDirectory` | |
+
+## Contracts (in-memory drivers by default; `@cslug/redis` replaces them)
+
+| Contract | Methods |
+|---|---|
+| `Cache` | `get`, `set(key, value, ttl?)`, `has`, `forget`, `increment`/`decrement`, `remember(key, ttl, fn)` (concurrent misses run `fn` once), `flexible(key, [fresh, stale], fn)`, `tags([...])` (+ `flush()`), `flush()` |
+| `Lock` | `acquire(key, ttl)` → handle or null; `run(key, { ttl, wait? }, fn)`; released only by its owner; expires; `LockTimeoutError` |
+| `RateLimiter` | `hit(key, '5/min')` → `{ allowed, remaining, retryAfter }`; `attempt(key, limit, fn)` → boolean; `enforce(key, limit)` → throws `TooManyRequestsError`; `reset(key)`. `parseRate('3/10min')` |
+| `SessionStore` | `read(id)`, `write(id, data, ttl)`, `destroy(id)` |
+
+Memory drivers: `MemoryCache` (values cloned, bigint and Date supported), `MemoryLock`, `MemoryRateLimiter`
+(sliding window), `MemorySessionStore`. Each is one per application.

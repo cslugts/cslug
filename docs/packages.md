@@ -9,7 +9,7 @@ installs `@cslug/ai`.
 | Package | Owns | Depends on | Built on |
 |---|---|---|---|
 | `@cslug/validation` | `v` (schemas, coercion, refinements, JSON Schema export, Standard Schema), `Validator`, `ValidationError` | — | — |
-| `@cslug/core` | `Application`, container, `@inject`, `token`, `ServiceProvider`, config + env, events, logger, typed errors, ambient context, `Clock`, `Money`, **i18n** (`t()`, formatting), **contracts** (`Cache`, `Lock`, `RateLimiter`, `SessionStore`, `Hasher`) with in-memory drivers | validation | `AsyncLocalStorage`, `Intl` |
+| `@cslug/core` | `Application`, container, `@inject`, `token`, `ServiceProvider`, config + env, events, logger, typed errors, ambient context, `Clock`, `Money`, **i18n** (`t()`, formatting), **contracts** (`Cache`, `Lock`, `RateLimiter`, `SessionStore`) with in-memory drivers | validation | `AsyncLocalStorage`, `Intl` |
 | `@cslug/http` | Router (incl. domain routing), middleware, `HttpContext`, request/response, cookies, sessions (via `SessionStore`), CSRF, CORS, `throttle()` (via `RateLimiter`), error rendering, static files, `/health/*` | core | `Bun.serve` |
 | `@cslug/vue` | `view()`, `renderStandalone()`, server `.vue` loader, `hydrate` → island transform, composables (`useT`, `useRequest`, `useForm`, `defineStore`), `route()`, formatters, `<Assets>`, `serialize()`, `Serialized<T>`, `mountIslands()`; build plugins at `@cslug/vue/build` | http · **peer: `vue`** · optional peers: `sass`, `tailwindcss`, `bun-plugin-tailwind` | `vue/server-renderer`, `vue/compiler-sfc`, `Bun.build` |
 | `@cslug/database` | `Database`, column builders, `Row`/`NewRow`, query builder, `sql` tag, `Repository`, `preload`, transactions (+ `afterCommit` hooks in core context), locks, idempotency, migrations + differ, factories, seeders | core | `Bun.sql` |
@@ -48,7 +48,7 @@ No package has a runtime dependency outside `@cslug/*`. The only third-party pac
 
 ## Rules
 
-1. **Contracts live in core, drivers in packages.** `Cache`, `Lock`, `RateLimiter`, `SessionStore` and `Hasher`
+1. **Contracts live in core, drivers in packages.** `Cache`, `Lock`, `RateLimiter` and `SessionStore`
    are abstract classes in `@cslug/core` with in-memory implementations. `@cslug/redis` binds Redis
    implementations when its provider is listed. `@cslug/http`'s `throttle()` and sessions therefore work without
    Redis in development and tests.
@@ -93,7 +93,10 @@ Albastr uses `--full` + notification + webhook. AI is added after the MVP.
 
 ## Size budget
 
-| Package | Lines (excl. tests) |
+Budgets count **lines of code**: no tests, comments or blank lines (`grep -cvE '^\s*(//|\*|/\*\*|\*/)|^\s*$'`).
+Doc comments are encouraged, not penalised.
+
+| Package | Lines of code |
 |---|---|
 | validation | 1,500 |
 | core (incl. i18n, contracts) | 2,000 |

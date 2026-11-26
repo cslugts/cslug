@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-26):** approved. Phase 0 and the spikes are done; next is milestone M1 (`validation`, `core`).
+> **Status (2026-11-26):** approved. Phase 0, the spikes and M1 are done; next is milestone M2 (`database`).
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
@@ -12,7 +12,7 @@
 | 0.3 `albastr` repository | ✅ `liviathan/albastr-app` (private): product documents; the app is created from the starter kit at 0.1.0 |
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
 | S Spikes | ✅ (a) [Vue islands](../spikes/a-vue-islands/README.md) · (b) decorators (verified during design) · (c) [Redis Streams](../spikes/c-redis-streams/README.md) · (d) [async context](../spikes/d-async-context/README.md) |
-| M1 validation, core | ◐ `@cslug/validation` ✅ · `@cslug/core`: container + providers ✅, config + env + errors + Clock + Money ✅, events + logger ✅; i18n and cache/lock/rate-limit contracts next |
+| M1 validation, core | ✅ `@cslug/validation` (62 tests) · `@cslug/core` (container, providers, config/env, errors, Clock, Money, events, logger, i18n, contracts; 87 tests) |
 | M2 database | ⬜ |
 | M3 cli, http, testing (base) | ⬜ |
 | M4 vue | ⬜ |
