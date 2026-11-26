@@ -192,7 +192,7 @@ statically may take real rows.
 | Value | Hydrates |
 |---|---|
 | `load` | as soon as the page loads |
-| `idle` | when the browser is idle (`requestIdleCallback`) |
+| `idle` | when the browser is idle (`requestIdleCallback`), at the latest after 2 s |
 | `visible` | when it scrolls into view (`IntersectionObserver`) |
 | `media:(max-width: 48rem)` | when the media query matches |
 | `none` | never; useful to render a component statically and say so explicitly |

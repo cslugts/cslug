@@ -55,6 +55,9 @@ export function useRequest(): never {
   throw new Error('useRequest() runs on the server only: pass what the island needs as props')
 }
 
+/** Longest wait for an idle period before a `hydrate="idle"` island hydrates anyway. */
+const IDLE_TIMEOUT_MS = 2000
+
 type MountOptions = { setup?: (app: App, island: { id: string; element: HTMLElement }) => void }
 
 /**
@@ -82,8 +85,11 @@ export function mountIslands(options: MountOptions = {}): void {
       mount().catch((e) => console.error(e))
     }
     if (mode === 'load') run()
-    else if (mode === 'idle') ('requestIdleCallback' in window ? requestIdleCallback : setTimeout)(run)
-    else if (mode === 'visible') {
+    else if (mode === 'idle') {
+      // the timeout bounds the wait: a page that is never idle (busy main thread) still hydrates
+      if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: IDLE_TIMEOUT_MS })
+      else setTimeout(run)
+    } else if (mode === 'visible') {
       const observer = new IntersectionObserver((entries) => {
         if (entries.some((e) => e.isIntersecting)) {
           observer.disconnect()
