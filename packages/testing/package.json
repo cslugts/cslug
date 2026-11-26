@@ -1,6 +1,6 @@
 {
   "name": "@cslug/testing",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Test kit: testApp(), HTTP and HTML assertions, database isolation, fakes, time travel.",
   "license": "MIT",
   "type": "module",
