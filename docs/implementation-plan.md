@@ -1,14 +1,14 @@
 # Implementation plan
 
-> **Status (2026-11-26):** approved. Step 0.4 is done. Step 0.1: npm is done, GitHub is waiting on the product owner.
+> **Status (2026-11-26):** approved. Steps 0.1, 0.2 and 0.4 are done; next are 0.3 (`albastr` repo) and the spikes.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
 
 | Step | State |
 |---|---|
-| 0.1 Accounts (npm org, GitHub, `gh`) | ◐ npm done (user `cslugdev` owns org `cslug`; `create-cslug` claimed); GitHub + `gh` pending |
-| 0.2 `cslug` repository + skeleton + CI + release | ◐ local repo built and green (`bun run check`); GitHub repo + first push pending |
+| 0.1 Accounts (npm org, GitHub, `gh`) | ✅ npm org `cslug` (owner `cslugdev`), `create-cslug` claimed; GitHub org `cslugts` (`cslugdev`, `liviathan`) |
+| 0.2 `cslug` repository + skeleton + CI + release | ✅ [cslugts/cslug](https://github.com/cslugts/cslug): 15 package skeletons, CI green, graph check, release script, `main` protected |
 | 0.3 `albastr` repository | ⬜ not started |
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
 | S Spikes | ⬜ |
@@ -44,8 +44,8 @@ npm is not logged in. The current `bun/` folder is not a git repo.
 ### 0.1 Accounts (done by you; needs your identity and 2FA)
 1. **npm:** create an account (2FA on). Create the **free org `cslug`**, which also claims the `@cslug` scope. If
    `cslug` is taken, fall back to another org name (for example `cslugjs`) before anything is published.
-2. **GitHub:** create the org **`cslug`** (free) or use your personal account. Install `gh` and run
-   `! gh auth login`.
+2. ✅ **GitHub:** org **`cslugts`** (`cslug` was taken by an unrelated organization), owners `cslugdev` and
+   `liviathan`; `gh` logged in as `cslugdev`, git pushes over SSH as `liviathan`.
 3. ✅ Done. `create-cslug` is published as a placeholder (`0.0.0-stage`), so `bun create cslug` will resolve to it.
    The unscoped name **`cslug` is unavailable**: npm's anti-typosquatting check rejects it as too similar to
    `slug`, `clui` and `tslog`. Not needed: all packages are scoped, and the `cslug` command comes from
