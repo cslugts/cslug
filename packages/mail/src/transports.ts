@@ -10,6 +10,7 @@ export interface Transport {
 const messageId = (from: string) => `${Bun.randomUUIDv7()}@${from.split('@')[1] ?? 'localhost'}`
 const recipients = (m: Message) => [...m.to, ...m.cc, ...m.bcc].map((a) => a.address)
 
+/** Any SMTP server (Mailpit, SES, a relay), through the built-in client. */
 export class SmtpTransport implements Transport {
   constructor(private readonly config: SmtpConfig) {}
   async send(message: Message) {
@@ -152,6 +153,7 @@ export class BrevoTransport implements Transport {
 /** `config/mail.ts` → `transports.<name>`: the driver is the name unless `driver` says otherwise. */
 export type TransportConfig = { driver?: string } & Record<string, unknown>
 
+/** The transport for `config/mail.ts` → `transports.<name>`. */
 export function createTransport(name: string, config: TransportConfig, log: Logger): Transport {
   switch (config.driver ?? name) {
     case 'smtp':

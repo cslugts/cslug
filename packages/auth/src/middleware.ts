@@ -1,18 +1,17 @@
-import { ForbiddenError, UnauthorizedError } from '@cslug/core'
+import { ForbiddenError, token, UnauthorizedError } from '@cslug/core'
 import { type HttpContext, type MiddlewareFn, Router, redirect, route } from '@cslug/http'
 import { Auth, type AuthDeps } from './auth'
 import type { AuthConfig } from './config'
 
 /** Deps for `Auth`, registered by `AuthProvider`. */
-export const AUTH_DEPS = Symbol.for('cslug.auth.deps')
+export const AUTH_DEPS = token<AuthDeps>('cslug.auth.deps')
 
 async function ensureAuth(ctx: HttpContext): Promise<Auth> {
-  const existing = (ctx as { auth?: Auth }).auth
+  const existing = ctx.auth as Auth | undefined // unset until this middleware runs
   if (existing?.loaded) return existing
-  const deps = (ctx.app as unknown as Record<symbol, AuthDeps | undefined>)[AUTH_DEPS]
-  if (!deps) throw new Error('Auth middleware needs AuthProvider in bootstrap/providers.ts')
-  const auth = new Auth(ctx, deps)
-  ;(ctx as { auth?: Auth }).auth = auth
+  if (!ctx.app.has(AUTH_DEPS)) throw new Error('Auth middleware needs AuthProvider in bootstrap/providers.ts')
+  const auth = new Auth(ctx, ctx.app.resolve(AUTH_DEPS))
+  ctx.auth = auth
   await auth.load()
   return auth
 }
@@ -32,8 +31,7 @@ export const auth =
   async (ctx, next) => {
     const a = await ensureAuth(ctx)
     if (a.check() && (!guard || a.guard === guard)) return next()
-    if (ctx.request.wantsJson() || guard === 'token' || ctx.session.constructor.name === 'MissingSession')
-      throw new UnauthorizedError()
+    if (ctx.request.wantsJson() || guard === 'token' || !ctx.session.available) throw new UnauthorizedError()
     if (ctx.request.method === 'GET') {
       const url = new URL(ctx.request.url)
       ctx.session.put('url.intended', url.pathname + url.search)

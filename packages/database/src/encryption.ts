@@ -27,6 +27,7 @@ export function encrypt(plain: string): string {
   )
 }
 
+/** Reverse of `encrypt()`; throws `db.decrypt_failed` on a tampered value or a wrong APP_KEY. */
 export function decrypt(stored: string): string {
   const [version, iv, tag, data] = stored.split('.')
   if (version !== 'v1' || !iv || !tag || data === undefined)

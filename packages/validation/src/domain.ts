@@ -157,6 +157,7 @@ export class PhoneSchema extends Schema<string> {
 // ── uploaded file ───────────────────────────────────────────────────────────────────────────────────
 const SIZE = /^(\d+(?:\.\d+)?)\s*(b|kb|mb|gb)$/i
 const UNITS: Record<string, number> = { b: 1, kb: 1024, mb: 1024 ** 2, gb: 1024 ** 3 }
+/** `'2mb'` → 2097152 bytes (b, kb, mb, gb; powers of 1024). */
 export const parseSize = (size: string | number): number => {
   if (typeof size === 'number') return size
   const [, amount, unit] = SIZE.exec(size.trim()) ?? []

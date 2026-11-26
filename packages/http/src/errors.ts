@@ -2,7 +2,6 @@ import { AppError, type Application, Logger, t, validationTranslator } from '@cs
 import { ValidationError } from '@cslug/validation'
 import type { HttpContext } from './context'
 import { json } from './responses'
-import { MissingSession } from './session'
 
 /** A renderer may return a Response for an error, or undefined to let the next one try. */
 export type ErrorRenderer = (error: unknown, ctx: HttpContext) => Response | undefined | Promise<Response | undefined>
@@ -68,7 +67,7 @@ export class ExceptionHandler {
    */
   protected formRedirect(error: unknown, ctx: HttpContext): Response | undefined {
     if (!(error instanceof ValidationError) || ctx.request.wantsJson() || ctx.request.method === 'GET') return undefined
-    if (ctx.session instanceof MissingSession) return undefined
+    if (!ctx.session.available) return undefined
     ctx.session.flash('_errors', error.messages(validationTranslator(ctx.locale)))
     ctx.session.flash('_old', this.oldInput(ctx))
     return new Response(null, { status: 303, headers: { location: ctx.request.header('referer') ?? '/' } })

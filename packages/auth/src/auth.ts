@@ -18,7 +18,7 @@ export const SESSION_KEY = 'auth.id'
 export type AuthDeps = {
   config: AuthConfig
   users: () => Promise<UserSource>
-  hash: Hash
+  hash: () => Hash
   tokens: () => Tokens
 }
 
@@ -40,7 +40,7 @@ export class Auth {
   ) {}
 
   private get hasSession(): boolean {
-    return this.ctx.session.constructor.name !== 'MissingSession'
+    return this.ctx.session.available
   }
 
   /** Load the user from a Bearer token, else the session (called by `authenticate()`). */
@@ -67,7 +67,7 @@ export class Auth {
     this.token = token
     const store = currentContext()
     if (store) store.userId = user ? idOf(user) : undefined
-    ;(this.ctx as unknown as { user: AuthUser | null }).user = user
+    this.ctx.user = user
   }
 
   /** The signed-in user; throws `UnauthorizedError` (401) for guests. */
@@ -114,7 +114,8 @@ export class Auth {
    * whether or not the email exists, rehashes on login when the hashing parameters changed. Null on failure.
    */
   async attempt(email: string, password: string): Promise<AuthUser | null> {
-    const { config, hash } = this.deps
+    const { config } = this.deps
+    const hash = this.deps.hash()
     const limiter = this.ctx.resolve(RateLimiter)
     const key = `login:${email.trim().toLowerCase()}|${this.ctx.request.ip() ?? ''}`
     const hit = await limiter.hit(key, config.throttle ?? '5/min')
@@ -132,8 +133,7 @@ export class Auth {
     }
     await limiter.reset(key)
     if (config.passwords?.rehashOnLogin !== false && hash.needsRehash(stored)) {
-      const update = (users as unknown as { update?: (id: unknown, v: object) => Promise<unknown> }).update
-      if (update) await update.call(users, field(user, 'id'), { [passwordField]: await hash.make(password) })
+      await users.update?.(field(user, 'id'), { [passwordField]: await hash.make(password) })
     }
     await this.login(user as AuthUser)
     return user as AuthUser

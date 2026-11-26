@@ -101,6 +101,7 @@ const clockOrDefault = (): Clock => {
   }
 }
 
+/** `factory(users, ({ seq, fake }) => ({ … }))`: builds and inserts test rows (guide 09). */
 export const factory = <T extends Table>(table: T, definition: Definition<T>) => new Factory(table, definition)
 
 /** Seeders: `export default seeder(async () => { … })`, run by `cslug db:seed`. */

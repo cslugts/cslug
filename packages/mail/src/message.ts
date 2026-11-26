@@ -21,6 +21,7 @@ export type Message = {
   headers: Record<string, string>
 }
 
+/** Normalise `'a@b.c'`, `{ email, name }` or `{ address, name }`; throws `mail.bad_address`. */
 export function address(value: AddressLike): Address {
   const a =
     typeof value === 'string'
@@ -37,6 +38,7 @@ export function address(value: AddressLike): Address {
 const encodeWord = (text: string) =>
   /^[\x20-\x7e]*$/.test(text) ? text : `=?UTF-8?B?${Buffer.from(text).toString('base64')}?=`
 
+/** `"Ada" <ada@example.com>` for a header, encoding a non-ASCII name. */
 export const formatAddress = (a: Address) =>
   a.name ? `${/^[\w .-]*$/.test(a.name) ? `"${a.name}"` : encodeWord(a.name)} <${a.address}>` : a.address
 

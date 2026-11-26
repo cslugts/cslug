@@ -80,6 +80,7 @@ type SqlTag = {
   empty: SqlFragment<unknown>
 }
 
+/** Tagged template: values become bound parameters, `SqlIdentifier`s and fragments are inlined. */
 export const sql: SqlTag = Object.assign(
   <T = Record<string, unknown>>(strings: TemplateStringsArray, ...values: unknown[]) =>
     new SqlFragment<T>([...strings], values),

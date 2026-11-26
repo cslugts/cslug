@@ -12,6 +12,7 @@ export async function readSession(app: Application, jar: CookieJar): Promise<Rec
   return id ? ((await app.resolve(SessionStore).read(id)) ?? undefined) : undefined
 }
 
+/** The session behind a test client's cookie jar (created when missing), to read and seed it. */
 export async function testSession(app: Application, jar: CookieJar) {
   const name = app.config<string | undefined>('session.cookie') ?? 'cslug_session'
   const store = app.resolve(SessionStore)

@@ -4,6 +4,7 @@ export const settings = {
   today: (): string => new Date().toISOString().slice(0, 10),
 }
 
+/** Replace the hooks in `settings` (called by @cslug/core at boot). */
 export function configure(options: Partial<typeof settings>): void {
   Object.assign(settings, options)
 }

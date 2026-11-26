@@ -9,4 +9,5 @@ export type CslugConfig = {
   /** Seconds a child gets to finish after SIGTERM before it is killed (default 30). */
   shutdownTimeout?: number
 }
+/** Typed helper for `cslug.config.ts`: `export default defineCslugConfig({ … })`. */
 export const defineCslugConfig = (config: CslugConfig): CslugConfig => config

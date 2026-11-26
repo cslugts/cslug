@@ -2,7 +2,6 @@ import { join } from 'node:path'
 import { type Application, Clock, CslugError, Lock, ServiceProvider, token } from '@cslug/core'
 import { addMigrations } from '@cslug/database'
 import { API_MIDDLEWARE, type MiddlewareFn, WEB_MIDDLEWARE } from '@cslug/http'
-import type { AuthDeps } from './auth'
 import { type AuthConfig, isClass, type UserSource } from './config'
 import { Hash } from './hash'
 import { MagicLinks } from './magic-links'
@@ -53,8 +52,11 @@ export class AuthProvider extends ServiceProvider {
     this.app.instance(AUTHENTICATE, authenticate())
     this.app.tag([AUTHENTICATE], WEB_MIDDLEWARE)
     this.app.tag([AUTHENTICATE], API_MIDDLEWARE)
-    const deps: AuthDeps = { config, users, hash: undefined as unknown as Hash, tokens: () => this.app.resolve(Tokens) }
-    Object.defineProperty(deps, 'hash', { get: () => this.app.resolve(Hash) })
-    ;(this.app as unknown as Record<symbol, AuthDeps>)[AUTH_DEPS] = deps
+    this.app.instance(AUTH_DEPS, {
+      config,
+      users,
+      hash: () => this.app.resolve(Hash),
+      tokens: () => this.app.resolve(Tokens),
+    })
   }
 }

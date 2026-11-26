@@ -4,6 +4,8 @@ import type { Class } from '@cslug/core'
 export type UserSource = {
   find(id: unknown): Promise<object | null>
   findBy(where: Record<string, unknown>): Promise<object | null>
+  /** Used to store a rehashed password on login; without it the old hash stays. */
+  update?(id: unknown, values: object): Promise<unknown>
 }
 
 export type AuthConfig = {
@@ -27,11 +29,13 @@ export type AuthConfig = {
   home?: string
 }
 
+/** True for a `class` (not a lazy-import function): `config.users` accepts both. */
 export const isClass = (v: unknown): v is Class =>
   typeof v === 'function' && /^class[\s{]/.test(Function.prototype.toString.call(v))
 
 /** Field value from a user row, by name. */
 export const field = (user: object, name: string): unknown => (user as Record<string, unknown>)[name]
+/** The user's `id` as a string; throws when the row has none. */
 export const idOf = (user: object): string => {
   const id = field(user, 'id')
   if (id === undefined || id === null) throw new Error('The user has no id')

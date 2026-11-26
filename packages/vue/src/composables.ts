@@ -38,7 +38,7 @@ export function useRequest(): RequestInfo {
       alternates: [],
     }
   }
-  const hasSession = ctx.session.constructor.name !== 'MissingSession'
+  const hasSession = ctx.session.available
   const errors = hasSession
     ? Object.fromEntries(Object.entries(ctx.session.errors()).map(([k, v]) => [k, v[0] ?? '']))
     : {}

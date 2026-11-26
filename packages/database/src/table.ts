@@ -33,6 +33,7 @@ type IndexBuilder<C extends Columns> = {
   unique(...keys: (keyof C & string)[]): IndexDef
 }
 
+/** A typed table: columns, keys and indexes; `table()` creates one. */
 export class Table<C extends Columns = Columns> implements SqlIdentifier {
   readonly [IDENT]: string
   /** Column references for the sql tag: `${bookings.c.startDate}` → `"bookings"."start_date"`. */

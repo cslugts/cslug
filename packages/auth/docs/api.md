@@ -13,5 +13,6 @@
 | `MagicLinks` | `create(user, { redirect?, lifetime? })` → `{ token, expiresAt }`; `consume(token)` → `{ user, redirectTo }` or `MagicLinkError` (400: invalid, expired, used) |
 | Middleware | `authenticate()`, `auth(guard?)`, `guest()`, `ability(...)`, `can(gate)` |
 | `AuthProvider` | Config `auth`: `users`, `fields`, `passwords`, `magicLinks`, `throttle`, `loginRoute`, `home` |
+| `UserSource` | What `users` must provide: `find(id)`, `findBy(where)`, and optionally `update(id, values)` (stores a rehashed password on login; a database repository has it) |
 
 Type the user once: `declare module '@cslug/core' { interface AuthUser extends User {} }`.

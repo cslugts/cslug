@@ -133,6 +133,7 @@ export function compileScss(source: string, filename: string, root: string): str
   }).css
 }
 
+/** Compile one `.vue` file to a module (server or client build), with its scoped CSS. */
 export function compileSfc(filename: string, options: CompileOptions): CompiledSfc {
   const source = rewriteIslands(readFileSync(filename, 'utf8'), filename)
   const id = componentId(filename, options.root)

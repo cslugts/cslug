@@ -23,6 +23,7 @@ export class SerializationError extends QueryError {}
 export class RowCountError extends CslugError {}
 
 const RETRYABLE = new Set(['40001', '40P01'])
+/** Serialization failure or deadlock (40001, 40P01): the transaction can be run again. */
 export const isRetryable = (e: unknown) =>
   e instanceof SerializationError || RETRYABLE.has((e as { errno?: string })?.errno ?? '')
 

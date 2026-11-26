@@ -173,6 +173,7 @@ export abstract class Lock {
   }
 }
 
+/** In-process `Lock` (tests and single-process apps); `@cslug/redis` provides the shared one. */
 export class MemoryLock extends Lock {
   private readonly held = new Map<string, { token: string; expires: number }>()
 
@@ -240,6 +241,7 @@ export abstract class RateLimiter {
   }
 }
 
+/** In-process `RateLimiter` (sliding window); `@cslug/redis` provides the shared one. */
 export class MemoryRateLimiter extends RateLimiter {
   private readonly hits = new Map<string, number[]>()
 
@@ -273,6 +275,7 @@ export abstract class SessionStore {
   abstract destroy(id: string): Promise<void>
 }
 
+/** In-process `SessionStore`: sessions are lost on restart (tests, development). */
 export class MemorySessionStore extends SessionStore {
   private readonly cache = new MemoryCache()
 
