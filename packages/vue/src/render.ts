@@ -1,0 +1,211 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { currentApp, currentContext, Logger } from '@cslug/core'
+import type { HttpContext, Responsable } from '@cslug/http'
+import { Comment, type Component, createSSRApp, defineComponent, h, useSSRContext } from 'vue'
+import { renderToString } from 'vue/server-renderer'
+import { componentStyles } from './loader'
+import { serialize } from './serialize'
+
+/** What one render collects (Vue's SSR context). */
+export type RenderState = {
+  http?: HttpContext
+  /** Components that rendered (their CSS goes into the page). */
+  modules: Set<string>
+  /** Islands on the page. */
+  islands: Set<string>
+  /** Render islands as plain HTML (renderStandalone, mail). */
+  static?: boolean
+  dev: boolean
+}
+
+export const renderState = (): RenderState | undefined => useSSRContext<RenderState>()
+
+/**
+ * The server side of `<X hydrate="…">` (the compiler rewrites the tag to this). Renders the component with the
+ * *serialized* props, exactly what the browser will get, so hydration matches. `hydrate="none"` and static
+ * renders produce the component's HTML only.
+ */
+export const CslugIsland = defineComponent({
+  name: 'CslugIsland',
+  inheritAttrs: false,
+  props: {
+    islandComponent: { type: [Object, Function], required: true },
+    islandHydrate: { type: String, default: 'load' },
+    ssr: { type: Boolean, default: true },
+  },
+  setup(props, { attrs, slots }) {
+    const state = renderState()
+    return () => {
+      const component = props.islandComponent as Component & { __cslugId?: string; __file?: string }
+      const id = component.__cslugId
+      if (!id) throw new Error('hydrate="…" was used on a component that is not a .vue file compiled by cslug')
+      const data = serialize({ ...attrs }, state?.dev ? (p) => warn(`<${id} hydrate> prop ${p}`) : undefined)
+      if (props.islandHydrate === 'none' || state?.static) return h(component, data)
+      state?.islands.add(id)
+      const marker = {
+        'data-island': id,
+        'data-hydrate': props.islandHydrate,
+        'data-props': JSON.stringify(data),
+        ...(props.ssr ? {} : { 'data-ssr': 'false' }),
+      }
+      return h('cslug-island', marker, [props.ssr ? h(component, data) : (slots.fallback?.() ?? null)])
+    }
+  },
+})
+
+const warn = (message: string) => {
+  try {
+    currentApp().resolve(Logger).warn('vue.island_props', { message })
+  } catch {
+    console.warn(message)
+  }
+}
+
+/** `<Assets entry="client" />` in the layout's `<head>`: CSS, the CSRF meta tag, and JS only if the page has islands. */
+export const Assets = defineComponent({
+  // biome-ignore lint/style/useVueMultiWordComponentNames: the name guide 08 documents
+  name: 'Assets',
+  props: { entry: { type: String, default: 'client' } },
+  setup(props) {
+    return () => h(Comment, `cslug-assets:${props.entry}`)
+  },
+})
+
+/** `public/build/manifest.json`, written by `cslug build` (and `cslug dev`). */
+export type AssetManifest = {
+  entries: Record<string, { js?: string; css?: string[] }>
+  islands: Record<string, string>
+}
+
+let manifestCache: { path: string; mtime: number; value: AssetManifest } | undefined
+export function readManifest(root: string): AssetManifest | undefined {
+  const path = join(root, 'public/build/manifest.json')
+  if (!existsSync(path)) return undefined
+  const mtime = Bun.file(path).lastModified
+  if (manifestCache?.path !== path || manifestCache.mtime !== mtime)
+    manifestCache = { path, mtime, value: JSON.parse(readFileSync(path, 'utf8')) }
+  return manifestCache.value
+}
+
+const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+
+/** What `<Assets>` becomes once the whole page has rendered (only then is it known which islands it has). */
+function assetsHtml(entry: string, state: RenderState, root: string): string {
+  const manifest = readManifest(root)
+  const out: string[] = []
+  const token = state.http && !isMissing(state.http) ? state.http.session.token() : undefined
+  if (token) out.push(`<meta name="csrf-token" content="${escapeAttr(token)}">`)
+  const assets = manifest?.entries[entry]
+  for (const css of assets?.css ?? []) out.push(`<link rel="stylesheet" href="${escapeAttr(css)}">`)
+  const styles = [...state.modules].map((m) => componentStyles.get(m)).filter(Boolean)
+  if (styles.length) out.push(`<style data-cslug>${styles.join('\n')}</style>`)
+  if (state.islands.size) {
+    out.push('<style>cslug-island{display:contents}</style>')
+    if (assets?.js) {
+      for (const island of state.islands) {
+        const chunk = manifest?.islands[island]
+        if (chunk) out.push(`<link rel="modulepreload" href="${escapeAttr(chunk)}">`)
+      }
+      out.push(`<script type="module" src="${escapeAttr(assets.js)}"></script>`)
+    } else if (state.dev) {
+      out.push(
+        `<!-- cslug: this page has islands but public/build/manifest.json has no "${entry}" entry: run cslug dev or cslug build -->`,
+      )
+    }
+  }
+  return out.join('')
+}
+
+const isMissing = (ctx: HttpContext) => ctx.session.constructor.name === 'MissingSession'
+
+export type RenderOptions = { http?: HttpContext; static?: boolean; root?: string }
+
+/** Render a page component to a full HTML document. */
+export async function renderPage(
+  page: Component,
+  props: Record<string, unknown> = {},
+  options: RenderOptions = {},
+): Promise<{ html: string; state: RenderState }> {
+  const app = currentApp()
+  const root = options.root ?? app.rootDir
+  const state: RenderState = {
+    http: options.http ?? (currentContext()?.http as HttpContext | undefined),
+    modules: new Set(),
+    islands: new Set(),
+    static: options.static,
+    dev: app.config('app.env') !== 'production',
+  }
+  const vue = createSSRApp(page, props)
+  vue.component('CslugIsland', CslugIsland)
+  vue.component('Assets', Assets)
+  let html = await renderToString(vue, state)
+  let placed = false
+  html = html.replace(/<!--cslug-assets:([\w-]+)-->/g, (_m, entry: string) => {
+    placed = true
+    return assetsHtml(entry, state, root)
+  })
+  // a page without <Assets> still gets its component CSS
+  if (!placed && state.modules.size) {
+    const styles = [...state.modules].map((m) => componentStyles.get(m)).filter(Boolean)
+    if (styles.length)
+      html = html.includes('</head>')
+        ? html.replace('</head>', `<style data-cslug>${styles.join('\n')}</style></head>`)
+        : `<style data-cslug>${styles.join('\n')}</style>${html}`
+  }
+  return { html: /^\s*<html[\s>]/i.test(html) ? `<!doctype html>${html}` : html, state }
+}
+
+/** `return view(ShowCircuit, { circuit, days })` from a controller. */
+export class ViewResponse implements Responsable {
+  constructor(
+    readonly page: Component,
+    readonly props: Record<string, unknown>,
+    readonly init: { status?: number; headers?: Record<string, string> } = {},
+  ) {}
+
+  async toResponse(ctx: HttpContext): Promise<Response> {
+    const { html } = await renderPage(this.page, this.props, { http: ctx })
+    const headers = new Headers(this.init.headers)
+    if (!headers.has('content-type')) headers.set('content-type', 'text/html; charset=utf-8')
+    return new Response(html, { status: this.init.status ?? 200, headers })
+  }
+}
+
+/** Props of a page component, for `view()` type checking. */
+type PropsOf<C> = C extends new (
+  ...args: never[]
+) => { $props: infer P }
+  ? Omit<P, `on${string}` | 'key' | 'ref' | 'class' | 'style'>
+  : Record<string, unknown>
+
+export function view<C extends Component>(
+  page: C,
+  props: PropsOf<C> | Record<string, unknown> = {},
+  init?: { status?: number; headers?: Record<string, string> },
+): ViewResponse {
+  return new ViewResponse(page, props as Record<string, unknown>, init)
+}
+
+/**
+ * One self-contained HTML file (the offline trip pack): islands rendered as plain HTML, no scripts, the page's
+ * CSS inlined, and `/`-rooted images from `public/` inlined as data URIs.
+ */
+export async function renderStandalone(page: Component, props: Record<string, unknown> = {}): Promise<string> {
+  const app = currentApp()
+  const { html } = await renderPage(page, props, { static: true })
+  const publicDir = join(app.rootDir, 'public')
+  return html
+    .replace(/<meta name="csrf-token"[^>]*>/g, '')
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/<link rel="modulepreload"[^>]*>/g, '')
+    .replace(/<link rel="stylesheet" href="(\/[^"]+)">/g, (m, href: string) => {
+      const file = join(publicDir, href)
+      return existsSync(file) ? `<style>${readFileSync(file, 'utf8')}</style>` : m
+    })
+    .replace(/(<img\b[^>]*\bsrc=")(\/[^"]+)(")/g, (m, a: string, src: string, b: string) => {
+      const file = Bun.file(join(publicDir, src))
+      if (!existsSync(join(publicDir, src))) return m
+      return `${a}data:${file.type.split(';')[0]};base64,${Buffer.from(readFileSync(join(publicDir, src))).toString('base64')}${b}`
+    })
+}

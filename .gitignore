@@ -9,3 +9,6 @@ storage/*
 *.tgz
 .DS_Store
 coverage/
+
+# the vue test fixture imports @cslug/vue like an app (a committed relative symlink)
+!packages/vue/tests/fixture/node_modules/

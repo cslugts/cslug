@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import { graph, topoOrder } from './package-graph'
 
 /** Documented subpath exports; anything else under @cslug/<pkg>/… is a deep import. */
-const ALLOWED_SUBPATHS = new Set(['@cslug/http/middleware', '@cslug/vue/build'])
+const ALLOWED_SUBPATHS = new Set(['@cslug/http/middleware', '@cslug/vue/build', '@cslug/vue/register'])
 
 type PackageJson = {
   name?: string

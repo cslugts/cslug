@@ -86,6 +86,14 @@ async show({ params }: HttpContext) {
 
 `view()` options: `view(Page, props, { status: 404, headers: { … } })`.
 
+`VueProvider` teaches Bun to import `.vue` files before the routes (and so the controllers) load. A test that
+imports a view or a controller at the top of the file needs the loader earlier, from `bunfig.toml`:
+
+```toml
+[test]
+preload = ["@cslug/vue/register"]
+```
+
 ### Rules for views
 
 - Views run **only on the server**: they receive real rows (`bigint`, `Date`) and can use server-only helpers
@@ -214,8 +222,10 @@ for widgets that only make sense in a browser, such as a map.
 **What the browser receives:**
 
 ```html
-<div data-island="components/trip-request-form" data-hydrate="visible">…server-rendered HTML…</div>
-<script type="application/json" data-island-props>{"circuitId":"0193…","seasons":["apr-nov"]}</script>
+<cslug-island data-island="components/trip-request-form" data-hydrate="visible"
+              data-props="{&quot;circuitId&quot;:&quot;0193…&quot;,&quot;seasons&quot;:[&quot;apr-nov&quot;]}">
+  …server-rendered HTML…
+</cslug-island>
 ```
 
 The build creates one chunk per component used with `hydrate` anywhere. `<Assets>` preloads only the chunks
