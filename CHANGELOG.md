@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.2.0 (2026-11-27)
+
+Background work and email (milestones M6–M7): queue and scheduler, webhooks, mail; the starter kit runs end to
+end.
+
 ### @cslug/queue
 - `Job` with typed payloads, `tries`, `backoff` (`Job.exponential`), `timeout`, `failed()`, `Job.schema()`.
 - `dispatch()` with `delay`, `at`, `onQueue`, `priority` (three bands), `unique`, `tries`, `immediately`; held until
