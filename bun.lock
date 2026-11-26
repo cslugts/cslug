@@ -36,7 +36,7 @@
     },
     "packages/ai": {
       "name": "@cslug/ai",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/queue": "workspace:*",
@@ -48,7 +48,7 @@
     },
     "packages/auth": {
       "name": "@cslug/auth",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@cslug/testing": "workspace:*",
         "@cslug/validation": "workspace:*",
@@ -61,7 +61,7 @@
     },
     "packages/cli": {
       "name": "@cslug/cli",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "bin": {
         "cslug": "./src/bin.ts",
       },
@@ -76,21 +76,21 @@
     },
     "packages/core": {
       "name": "@cslug/core",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "peerDependencies": {
         "@cslug/validation": "workspace:*",
       },
     },
     "packages/database": {
       "name": "@cslug/database",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "peerDependencies": {
         "@cslug/core": "workspace:*",
       },
     },
     "packages/http": {
       "name": "@cslug/http",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/validation": "workspace:*",
@@ -98,7 +98,7 @@
     },
     "packages/mail": {
       "name": "@cslug/mail",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@cslug/http": "workspace:*",
         "@cslug/queue": "workspace:*",
@@ -119,7 +119,7 @@
     },
     "packages/notification": {
       "name": "@cslug/notification",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@cslug/database": "workspace:*",
         "@cslug/mail": "workspace:*",
@@ -141,7 +141,7 @@
     },
     "packages/queue": {
       "name": "@cslug/queue",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@cslug/database": "workspace:*",
         "@cslug/http": "workspace:*",
@@ -159,14 +159,14 @@
     },
     "packages/redis": {
       "name": "@cslug/redis",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "peerDependencies": {
         "@cslug/core": "workspace:*",
       },
     },
     "packages/storage": {
       "name": "@cslug/storage",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@cslug/http": "workspace:*",
         "@cslug/testing": "workspace:*",
@@ -181,7 +181,7 @@
     },
     "packages/testing": {
       "name": "@cslug/testing",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "peerDependencies": {
         "@cslug/ai": "workspace:*",
         "@cslug/auth": "workspace:*",
@@ -216,11 +216,11 @@
     },
     "packages/validation": {
       "name": "@cslug/validation",
-      "version": "0.2.0",
+      "version": "0.3.0",
     },
     "packages/vue": {
       "name": "@cslug/vue",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/http": "workspace:*",
@@ -238,7 +238,7 @@
     },
     "packages/webhook": {
       "name": "@cslug/webhook",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@cslug/queue": "workspace:*",
         "@cslug/redis": "workspace:*",

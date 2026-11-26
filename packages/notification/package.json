@@ -1,6 +1,6 @@
 {
   "name": "@cslug/notification",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Notifications over mail, database, WhatsApp and SMS channels.",
   "license": "MIT",
   "type": "module",

@@ -4,6 +4,10 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.3.0 (2026-11-27)
+
+The MVP's remaining packages (milestone M8): storage and notifications.
+
 ### @cslug/notification
 - `Notification` (`via(to)`, `to<Channel>(to)`) and `Notifier.send` / `sendMany`; recipients are any object
   (`recipient(row, fn)` for explicit routes); messages are built in the recipient's locale.

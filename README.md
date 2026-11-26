@@ -34,8 +34,8 @@ export class BookingController {
 
 ## Status
 
-Version **0.2.0** is on npm: HTTP, validation, database, Vue pages, auth, Redis, queue and scheduler, mail and
-webhooks. Notifications and storage come next; see the
+Version **0.3.0** is on npm: HTTP, validation, database, Vue pages, auth, Redis, queue and scheduler, mail,
+webhooks, notifications and storage. See the
 [implementation plan](./docs/implementation-plan.md) for the roadmap.
 
 ## Read
