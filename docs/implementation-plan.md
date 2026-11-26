@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-26):** approved. Phase 0, the spikes and M1 are done; next is milestone M2 (`database`).
+> **Status (2026-11-26):** approved. Phase 0, the spikes, M1 and M2 are done; next is milestone M3 (`cli`, `http`, `testing`).
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
@@ -13,7 +13,7 @@
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
 | S Spikes | ✅ (a) [Vue islands](../spikes/a-vue-islands/README.md) · (b) decorators (verified during design) · (c) [Redis Streams](../spikes/c-redis-streams/README.md) · (d) [async context](../spikes/d-async-context/README.md) |
 | M1 validation, core | ✅ `@cslug/validation` (62 tests) · `@cslug/core` (container, providers, config/env, errors, Clock, Money, events, logger, i18n, contracts; 87 tests) |
-| M2 database | ◐ M2a ✅ Database, sql, tables, transactions · M2b ✅ query builder, Repository, preload, pagination, row locks · M2c next: migrations, factories, seeders, idempotent, encrypted columns |
+| M2 database | ✅ Database, sql tag, tables, ambient transactions, query builder, Repository, preload, migrations (concurrent-safe), factories, seeders, idempotent, encrypted columns (49 tests on real PostgreSQL) |
 | M3 cli, http, testing (base) | ⬜ |
 | M4 vue | ⬜ |
 | M5 redis, auth → 0.1.0 | ⬜ |

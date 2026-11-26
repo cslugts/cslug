@@ -22,6 +22,12 @@ export function whereSql<T extends Table>(table: T, where: Where<T>): SqlFragmen
     if (value === undefined) continue
     const column = (table.c as Record<string, unknown>)[key]
     if (!column) throw new CslugError('db.unknown_column', `${table.name} has no column "${key}"`)
+    if (table.columns[key]?.def.encrypted) {
+      throw new CslugError(
+        'db.encrypted_where',
+        `${table.name}.${key} is encrypted and cannot be used in a where condition`,
+      )
+    }
     if (value === null) parts.push(sql`${column} is null`)
     else if (value instanceof Op) parts.push(value.render(column))
     else parts.push(sql`${column} = ${value}`)
