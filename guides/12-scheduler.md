@@ -40,7 +40,12 @@ export default defineSchedule((s) => {
 | **Where it runs** | `s.job()` dispatches to the queue; the scheduler stays light | `s.call()` runs inline |
 | **Time zone** | UTC | `.timezone('Indian/Antananarivo')` per entry, or `schedule.timezone` in config |
 
-Every run is recorded (`name`, `scheduled_for`, `started_at`, `finished_at`, `status`, `error`):
+Entry names come from the job class (`DispatchDailyCheckinsJob` → `dispatch-daily-checkins`) or the first argument
+of `s.call` / `s.cron`; rename with `.as('name')`. A job entry is skipped while its previous job is still waiting
+or running (it is dispatched as a unique job). The lock and the history live in Redis.
+
+Every run is recorded, the last 100 per entry (`name`, `scheduledFor`, `startedAt`, `finishedAt`, `status`:
+`dispatched`, `ok`, `failed` or `skipped`, `error`):
 
 ```bash
 cslug schedule:list

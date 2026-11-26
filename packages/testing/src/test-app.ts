@@ -67,6 +67,10 @@ export type TestApp = {
     count(table: string, where?: Record<string, unknown>): Promise<number>
     find(table: string, id: unknown): Promise<Record<string, unknown> | null>
   }
+  /** The scheduler (needs @cslug/queue's ScheduleProvider): `runDue()` runs what is due at the fake clock's time. */
+  readonly schedule: {
+    runDue(): Promise<import('@cslug/queue').ScheduleRun[]>
+  }
   assertDatabaseHas(table: string, where: Record<string, unknown>): Promise<void>
   assertDatabaseMissing(table: string, where: Record<string, unknown>): Promise<void>
 } & Partial<TestFakes>
@@ -202,6 +206,15 @@ export function testApp(options: TestAppOptions = {}): TestApp {
     },
     beforeRequest: (hook: (r: PendingRequest) => void | Promise<void>) => {
       hooks.push(hook)
+    },
+    schedule: {
+      async runDue() {
+        const a = need()
+        const { Scheduler } = await import('@cslug/queue')
+        if (!a.has(Scheduler)) throw new Error('testApp(): t.schedule needs ScheduleProvider (@cslug/queue)')
+        // no once-per-tick lock: tests replay the same tick
+        return a.resolve(Scheduler).runDue(clock.now(), { exclusive: false })
+      },
     },
     db: {
       async count(table: string, where: Record<string, unknown> = {}) {

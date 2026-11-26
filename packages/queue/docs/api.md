@@ -18,3 +18,10 @@
 | `JobNotFoundError`, `JobTimeoutError` | Typed errors (`queue.job_not_found`, `queue.job_timeout`) |
 | `QueueProvider` | Config `queue.{connection, queues.<name>.concurrency, failed.keep, shutdownTimeout, lease, block}` |
 | Commands | `QueueWorkCommand`, `QueueFailedCommand`, `QueueRetryCommand`, `QueueForgetCommand`, `QueueClearCommand`, `QueueStatsCommand` |
+| `defineSchedule(fn)`, `ScheduleBuilder` | `s.job(Job, payload?)`, `s.call(name, ({ app, resolve }) => …)`, `s.cron(expr, name, Job, payload?)` |
+| `ScheduleEntry` | Frequencies: `cron`, `everyMinute`, `everyFiveMinutes`, `everyTenMinutes`, `everyFifteenMinutes`, `everyThirtyMinutes`, `hourly`, `hourlyAt(m)`, `daily`, `dailyAt('HH:MM')`, `twiceDaily(a, b)`, `weekly`, `weeklyOn(day, time)`, `monthly`, `monthlyOn(day, time)`. Modifiers: `weekdays`, `between(from, to)`, `when(fn)`, `environments(list)`, `timezone(tz)`, `allowOverlap`, `catchUp('once')`, `as(name)` |
+| `Scheduler` | `entries`, `runDue(now?, { exclusive })`, `run(entry, tick, exclusive)`, `catchUp(now?)`, `next(entry, after?)`, `history(name, last)`, `heartbeat()`, `start()`, `stop()`, `find(name)`, `tzOf(entry)` |
+| `ScheduleRun` | `{ name, scheduledFor, startedAt, finishedAt?, status: 'dispatched' \| 'ok' \| 'failed' \| 'skipped', error? }` |
+| `Cron`, `localTime(date, tz)` | `new Cron(expr).matches(local)`, `.next(after, tz)` |
+| `ScheduleProvider` | Loads `routes/schedule.ts`; config `schedule.timezone` |
+| Schedule commands | `ScheduleWorkCommand`, `ScheduleRunCommand`, `ScheduleListCommand`, `ScheduleHistoryCommand`, `ScheduleTestCommand` |

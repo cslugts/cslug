@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+// packageMigrations: [] everywhere: other test files in this process may have called addMigrations() (AuthProvider)
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
@@ -73,8 +74,8 @@ drop table todos;`,
 
   test('acceptance: two concurrent migrate runs execute each migration once', async () => {
     const [a, b] = await Promise.all([
-      new Migrator(t.db, { paths: [dir] }).migrate(),
-      new Migrator(t.db, { paths: [dir] }).migrate(),
+      new Migrator(t.db, { paths: [dir], packageMigrations: [] }).migrate(),
+      new Migrator(t.db, { paths: [dir], packageMigrations: [] }).migrate(),
     ])
     const all = [...a, ...b].sort()
     expect(all).toEqual([
@@ -87,7 +88,7 @@ drop table todos;`,
   })
 
   test('status, and a second run with nothing pending', async () => {
-    const m = new Migrator(t.db, { paths: [dir] })
+    const m = new Migrator(t.db, { paths: [dir], packageMigrations: [] })
     expect(await m.migrate()).toEqual([])
     const status = await m.status()
     expect(status.map((s) => [s.name, s.ran, s.batch])).toEqual([
@@ -102,7 +103,7 @@ drop table todos;`,
       '20261127_090000_index_todos',
       '-- cslug:no-transaction\n-- up\ncreate index concurrently todos_title_idx on todos (title);\n-- down\ndrop index concurrently todos_title_idx;',
     )
-    const m = new Migrator(t.db, { paths: [dir] })
+    const m = new Migrator(t.db, { paths: [dir], packageMigrations: [] })
     expect(await m.migrate()).toEqual(['20261127_090000_index_todos'])
     expect((await m.status()).at(-1)).toMatchObject({ ran: true, batch: 2 })
     expect(await m.rollback()).toEqual(['20261127_090000_index_todos'])
@@ -120,7 +121,7 @@ drop table todos;`,
       '20261128_000000_broken',
       '-- up\ncreate table half (id int);\ncreate table half (id int);\n-- down\ndrop table half;',
     )
-    const m = new Migrator(t.db, { paths: [dir] })
+    const m = new Migrator(t.db, { paths: [dir], packageMigrations: [] })
     const error = (await m.migrate().then(
       () => undefined,
       (e: unknown) => e,
@@ -133,9 +134,9 @@ drop table todos;`,
   })
 
   test('fresh is refused in production; works elsewhere', async () => {
-    await expect(new Migrator(t.db, { paths: [dir], env: 'production' }).fresh()).rejects.toThrow(
-      /refused when APP_ENV=production/,
-    )
-    expect(await new Migrator(t.db, { paths: [dir], env: 'test' }).fresh()).toHaveLength(4)
+    await expect(
+      new Migrator(t.db, { paths: [dir], packageMigrations: [], env: 'production' }).fresh(),
+    ).rejects.toThrow(/refused when APP_ENV=production/)
+    expect(await new Migrator(t.db, { paths: [dir], packageMigrations: [], env: 'test' }).fresh()).toHaveLength(4)
   })
 })
