@@ -1,4 +1,4 @@
-import { defineCslugConfig } from '@cslug/core'
+import { defineCslugConfig } from '@cslug/cli'
 
 /** Framework-level settings: paths, assets, processes. App settings live in config/. */
 export default defineCslugConfig({

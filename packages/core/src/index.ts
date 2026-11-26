@@ -8,6 +8,20 @@ export { ValidationError, v } from '@cslug/validation'
 export { Application, type ApplicationOptions, sortProviders } from './application'
 export { Clock, FakeClock } from './clock'
 export {
+  ArgSpec,
+  type ArgsSpec,
+  arg,
+  COMMANDS,
+  Command,
+  type CommandClass,
+  ConsoleIO,
+  flag,
+  kebab,
+  names,
+  parseArgs,
+  UsageError,
+} from './command'
+export {
   type Config,
   type ConfigPath,
   type ConfigValue,

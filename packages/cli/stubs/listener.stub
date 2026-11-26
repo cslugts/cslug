@@ -1,0 +1,7 @@
+import { inject, listener } from '@cslug/core'
+
+@inject()
+export class {{ class }} {
+  // @listener(SomethingHappened)
+  async handle(payload: unknown) {}
+}

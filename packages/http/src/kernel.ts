@@ -235,12 +235,13 @@ export class HttpKernel {
   }
 
   /** Serve over HTTP. */
-  listen(options: { port?: number; hostname?: string } = {}) {
+  listen(options: { port?: number; hostname?: string; reusePort?: boolean } = {}) {
     this.compile()
     const port = options.port ?? this.app.config<number | undefined>('http.port') ?? 3000
     this.server = Bun.serve({
       port,
       hostname: options.hostname ?? this.app.config<string | undefined>('http.host'),
+      reusePort: options.reusePort,
       maxRequestBodySize: this.app.config<number | undefined>('http.maxBodyBytes') ?? 10 * 1024 * 1024,
       fetch: (req, server) => this.handle(req, { ip: server.requestIP(req)?.address }),
     })

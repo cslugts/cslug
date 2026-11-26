@@ -1,0 +1,6 @@
+import { factory } from '@cslug/database'
+import { {{ tableVar }} } from '#app/tables/{{ tableFile }}'
+
+export const {{ class }} = factory({{ tableVar }}, ({ seq, fake }) => ({
+  // name: `{{ base }} ${seq}`,
+}))

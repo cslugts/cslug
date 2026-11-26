@@ -5,6 +5,7 @@
 throttling and locale detection. Middleware: `@cslug/http/middleware`.
  */
 export { coerceForm, nestKeys } from './body'
+export { httpCommands, MakeControllerCommand, RoutesCommand, ServeCommand } from './commands'
 export { type HttpContext, HttpRequest, ResponseBuilder, type Validated } from './context'
 export { type ErrorRenderer, type ErrorReporter, ExceptionHandler } from './errors'
 export { HttpKernel, toResponse } from './kernel'

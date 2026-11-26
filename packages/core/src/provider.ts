@@ -1,4 +1,5 @@
 import type { Application } from './application'
+import { COMMANDS, type CommandClass } from './command'
 
 /**
  * The one place a subsystem is wired. `register()` binds, `boot()` connects and listens, `shutdown()` closes.
@@ -15,6 +16,11 @@ import type { Application } from './application'
  */
 export abstract class ServiceProvider {
   constructor(protected readonly app: Application) {}
+
+  /** Contribute `cslug` commands (call in `register()`). */
+  protected commands(commands: readonly CommandClass[]): void {
+    this.app.tag([...commands] as never[], COMMANDS)
+  }
 }
 
 /** The optional lifecycle hooks of a provider. */

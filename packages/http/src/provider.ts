@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { Logger, ServiceProvider } from '@cslug/core'
+import { httpCommands } from './commands'
 import { ExceptionHandler } from './errors'
 import { HttpKernel } from './kernel'
 import { bodyLimit, cors, csrf, securityHeaders, session } from './middleware'
@@ -30,6 +31,7 @@ export type HttpConfig = {
  */
 export class HttpProvider extends ServiceProvider {
   register() {
+    this.commands(httpCommands)
     this.app.singleton(Router, () => new Router())
     this.app.singleton(ExceptionHandler, (c) => new ExceptionHandler(this.app, c.resolve(Logger)))
     this.app.singleton(

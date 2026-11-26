@@ -91,6 +91,13 @@ export class Container {
     return this
   }
 
+  /** The tokens under a tag, without resolving them (command classes, for example). */
+  taggedTokens(name: string): Token[] {
+    const tokens: Token[] = []
+    for (let c: Container | undefined = this; c; c = c.parent) tokens.unshift(...(c.tags.get(name) ?? []))
+    return tokens
+  }
+
   tagged<T>(name: string): T[] {
     const tokens: Token[] = []
     for (let c: Container | undefined = this; c; c = c.parent) tokens.unshift(...(c.tags.get(name) ?? []))

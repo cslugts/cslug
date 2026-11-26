@@ -26,6 +26,7 @@ export {
   uuid,
   varchar,
 } from './columns'
+export { DbSeedCommand, databaseCommands, MigrateCommand } from './commands'
 export { Database, type DatabaseConfig, type Json, Queryable, Transaction, type TransactionOptions } from './database'
 export { decrypt, encrypt, setEncryptionKey } from './encryption'
 export { isRetryable, QueryError, RowCountError, SerializationError, UniqueViolationError } from './errors'

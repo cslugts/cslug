@@ -1,0 +1,37 @@
+import { inject, NotFoundError } from '@cslug/core'
+import { type HttpContext, redirect } from '@cslug/http'
+
+@inject()
+export class {{ class }} {
+  /** GET /{{ plural }} */
+  async index({ request }: HttpContext) {
+    return []
+  }
+
+  /** GET /{{ plural }}/create */
+  async create(ctx: HttpContext) {}
+
+  /** POST /{{ plural }} */
+  async store({ request }: HttpContext) {
+    // const data = await request.validate(Store{{ base }}Validator)
+    return redirect().to('/{{ plural }}')
+  }
+
+  /** GET /{{ plural }}/:id */
+  async show({ params }: HttpContext) {
+    throw new NotFoundError(`{{ base }} ${params.id} not found`)
+  }
+
+  /** GET /{{ plural }}/:id/edit */
+  async edit({ params }: HttpContext) {}
+
+  /** PUT /{{ plural }}/:id */
+  async update({ params, request }: HttpContext) {
+    return redirect().back()
+  }
+
+  /** DELETE /{{ plural }}/:id */
+  async destroy({ params }: HttpContext) {
+    return redirect().to('/{{ plural }}')
+  }
+}

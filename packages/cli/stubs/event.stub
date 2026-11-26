@@ -1,0 +1,5 @@
+import { Event } from '@cslug/core'
+
+export class {{ class }} extends Event<{
+  // payload fields
+}>('{{ snake }}') {}
