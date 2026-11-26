@@ -211,6 +211,9 @@
         "vue": "^3.5.46",
       },
     },
+    "spikes/c-redis-streams": {
+      "name": "spike-c-redis-streams",
+    },
   },
   "packages": {
     "@babel/helper-string-parser": ["@babel/helper-string-parser@7.29.15", "", {}, "sha512-C2FuapQ2Kh1OnVHAoLi5rD3GBJ8COb9Q609T6HEpLqaBAo560PDP5OxBE5dCI/h951MBO/+bCUYU5SZ+8ZlV+w=="],
@@ -416,6 +419,8 @@
     "source-map-js": ["source-map-js@1.2.4", "", {}, "sha512-J7ZjMvHd9O1fcT/5V09QWaaSl2BbWx3F6O08spde82Namf9UB0GxRVIPiNbVsdKkoizHiSpTodo3vp2bAy91MA=="],
 
     "spike-a-vue-islands": ["spike-a-vue-islands@workspace:spikes/a-vue-islands"],
+
+    "spike-c-redis-streams": ["spike-c-redis-streams@workspace:spikes/c-redis-streams"],
 
     "starter-kit": ["starter-kit@workspace:apps/starter-kit"],
 

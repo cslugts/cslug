@@ -11,7 +11,7 @@
 | 0.2 `cslug` repository + skeleton + CI + release | ✅ [cslugts/cslug](https://github.com/cslugts/cslug): 15 package skeletons, CI green, graph check, release script, `main` protected |
 | 0.3 `albastr` repository | ✅ `liviathan/albastr-app` (private): product documents; the app is created from the starter kit at 0.1.0 |
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
-| S Spikes | ◐ (a) Vue islands ✅ ([report](../spikes/a-vue-islands/README.md)); (b) decorators ✅ (verified earlier); (c), (d) pending |
+| S Spikes | ◐ (a) Vue islands ✅ ([report](../spikes/a-vue-islands/README.md)); (b) decorators ✅ (verified earlier); (c) Redis Streams ✅ ([report](../spikes/c-redis-streams/README.md)); (d) pending |
 | M1 validation, core | ⬜ |
 | M2 database | ⬜ |
 | M3 cli, http, testing (base) | ⬜ |

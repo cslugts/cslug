@@ -1,0 +1,6 @@
+{
+  "name": "spike-c-redis-streams",
+  "private": true,
+  "type": "module",
+  "scripts": { "spike": "bun run.ts" }
+}
