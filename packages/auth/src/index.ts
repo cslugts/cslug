@@ -1,6 +1,14 @@
 /**
- * @cslug/auth: Session and token guards, password hashing, magic links, policies and gates.
- *
- * Not implemented yet. See docs/packages.md and docs/implementation-plan.md.
+ * @cslug/auth: session and token guards (`ctx.auth`), password hashing, magic links, API tokens, policies and
+ * gates, and the `auth()`, `guest()`, `ability()`, `can()` middleware.
  */
-export {}
+import './types'
+
+export { Auth, SESSION_KEY } from './auth'
+export type { AuthConfig, UserSource } from './config'
+export { Hash } from './hash'
+export { isLocalPath, MagicLinkError, MagicLinks } from './magic-links'
+export { ability, auth, authenticate, can, guest } from './middleware'
+export { type Abilities, type AbilityArgs, Gate, Policy } from './policy'
+export { AuthProvider } from './provider'
+export { type AccessToken, Tokens, tokenCan } from './tokens'

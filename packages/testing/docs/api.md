@@ -11,13 +11,14 @@
 | `migrate` | `true` | Runs `database/migrations` once |
 | `host` | host of `app.url` | |
 
-Returns: `app`, `clock`, `resolve`, `swap`, `get/post/put/patch/delete(path)`, `beforeRequest(hook)`,
+Returns: `app`, `clock`, `resolve`, `swap`, `actingAs(user)` (for every request of the test), `get/post/put/patch/delete(path)`, `beforeRequest(hook)`,
 `db.count(table, where?)`, `db.find(table, id)`, `assertDatabaseHas/Missing(table, where)` (camelCase keys), and
 each installed fake as `t.<name>`.
 
 ## Requests (`PendingRequest`, awaited to run)
 
-Building: `header`, `headers({…})`, `withToken`, `json(data)`, `form(data)` (nested keys, CSRF, Referer).
+Building: `header`, `headers({…})`, `withToken`, `actingAs(user)` (signed in through the session, with
+@cslug/auth), `json(data)`, `form(data)` (nested keys, CSRF, Referer).
 
 Assertions (queued, run in order): `assertStatus`, `assertOk`, `assertCreated`, `assertNoContent`,
 `assertNotFound`, `assertForbidden`, `assertUnauthorized`, `assertRedirect(to?)`, `assertJson(subset)`,

@@ -121,7 +121,8 @@ export class HttpKernel {
     const req = new HttpRequest(request, scope, ip)
     const response = new ResponseBuilder()
     const defaultLocale = this.app.config<string | undefined>('i18n.default') ?? 'en'
-    const ctx: HttpContext = {
+    // packages add fields to HttpContext (`auth`, `user` from @cslug/auth) and set them in their middleware
+    const ctx = {
       request: req,
       params: {},
       response,
@@ -133,7 +134,8 @@ export class HttpKernel {
       locale: defaultLocale,
       session: new MissingSession(),
       resolve: <K extends Token>(token: K) => scope.resolve(token) as never,
-    }
+    } satisfies Partial<HttpContext> as unknown as HttpContext
+
     let status = 500
     let routeName: string | undefined
     try {

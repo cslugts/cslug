@@ -7,6 +7,12 @@ import { sql } from './sql'
 /** The framework's own migrations (idempotency table, …), always run before the app's. */
 export const FRAMEWORK_MIGRATIONS = join(import.meta.dir, '../migrations')
 
+const packageMigrations: string[] = []
+/** A package's own migrations (`@cslug/auth`'s tokens table), run with the framework's, before the app's. */
+export function addMigrations(dir: string): void {
+  if (!packageMigrations.includes(dir)) packageMigrations.push(dir)
+}
+
 type MigrationFile = { name: string; path: string; up: string; down: string | undefined; transaction: boolean }
 export type MigrationStatus = { name: string; ran: boolean; batch?: number; ranAt?: Date }
 
@@ -43,7 +49,7 @@ export class Migrator {
     private readonly db: Database,
     options: { paths?: string[]; env?: string; log?: Logger } = {},
   ) {
-    this.paths = [FRAMEWORK_MIGRATIONS, ...(options.paths ?? [])]
+    this.paths = [FRAMEWORK_MIGRATIONS, ...packageMigrations, ...(options.paths ?? [])]
     this.env = options.env ?? 'development'
     this.log = options.log ?? Logger.null()
   }

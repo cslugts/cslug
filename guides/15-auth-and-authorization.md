@@ -23,14 +23,18 @@ export const users = table('users', {
 // config/auth.ts
 export default defineConfig({
   users: () => import('#app/repositories/user-repository').then((m) => m.UserRepository),
-  guards: {
-    web:   { driver: 'session', lifetime: '14d' },       // Redis sessions, HttpOnly + Secure + SameSite=Lax, CSRF
-    token: { driver: 'token', abilities: true },         // opaque, SHA-256 hashed, expiring, scoped
-  },
   passwords: { algorithm: 'argon2id', rehashOnLogin: true },
   magicLinks: { lifetime: '30m', singleUse: true },
+  throttle: '5/min',                                     // auth.attempt(), per email + IP
+  loginRoute: 'login',                                   // where auth() sends guests (HTML requests)
+  home: '/',                                             // where guest() sends signed-in users
 })
 ```
+
+Two guards: **`web`** (the session: HttpOnly, SameSite=Lax, CSRF; stored in Redis with `@cslug/redis`) and
+**`token`** (API tokens: opaque, SHA-256 hashed, expiring, scoped by abilities). `authenticate()`, which
+`AuthProvider` adds to the web and api route groups, loads the user from a `Bearer` token or the session
+before the handler runs. `ctx.auth.guard` says which one was used.
 
 ## Logging in
 
@@ -44,7 +48,10 @@ export class MagicLinkController {
   async send({ request }: HttpContext) {
     const { email } = await request.validate(v.object({ email: v.email() }))
     const user = await this.users.findBy({ email })
-    if (user) await this.mailer.to(user).send(new MagicLinkMail(await this.links.create(user, { redirect: '/bookings' })))
+    if (user) {
+      const { token } = this.links.create(user, { redirect: '/bookings' })     // signed, expiring, single use
+      await this.mailer.to(user).send(new MagicLinkMail(route('login.magic', { token }, { absolute: true })))
+    }
     return redirect().back().with('success', t('auth.link_sent'))      // same answer either way
   }
 
@@ -56,7 +63,7 @@ export class MagicLinkController {
 }
 ```
 
-**Staff and operators: password** (+ optional TOTP for staff).
+**Staff and operators: password.** (TOTP for staff is planned, not in 0.1.)
 
 ```ts
 const user = await auth.attempt(email, password)    // throttled, constant-time, logs failures without the password
@@ -70,7 +77,15 @@ const { plainText } = await tokens.create(user, { name: 'quote-bot', abilities: 
 // requests: Authorization: Bearer <plainText>   routes: .middleware(auth('token'), ability('quotes:write'))
 ```
 
-In handlers: `auth.user()` (throws `UnauthorizedError` if not logged in), `auth.check()`, `auth.logout()`.
+In handlers: `auth.user()` (throws `UnauthorizedError` if not logged in), `auth.userOrNull()`, `auth.check()`,
+`auth.login(user)` (new session id and CSRF token), `auth.logout()`. `ctx.user` is the user or null, and views
+get it from `useRequest().user`.
+
+Route middleware: `auth()` (guests: 401 for JSON, else a redirect to the login route that remembers the URL for
+`redirect().intended()`), `auth('token')` (API tokens only), `guest()`, `ability('quotes:write')` (token
+abilities; session users pass), `can('admin.access')` (a gate). Magic links are signed with `APP_KEY`.
+"Single use" is an atomic lock on the link's nonce, so they need no table. API tokens live in
+`cslug_access_tokens`, a migration that `@cslug/auth` adds to `cslug migrate`.
 
 **Typing `auth.user()`.** The framework learns the app's user type through module augmentation, once, next to
 the configs:

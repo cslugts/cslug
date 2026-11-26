@@ -5,6 +5,28 @@ import { SessionStore } from '@cslug/core'
 type Assertion = (res: TestResponse) => void | Promise<void>
 export type Handler = (request: Request) => Promise<Response>
 
+/** The session of the test's cookie jar (created if needed), to read and write as a request would. */
+export async function testSession(app: Application, jar: CookieJar) {
+  const name = app.config<string | undefined>('session.cookie') ?? 'cslug_session'
+  const store = app.resolve(SessionStore)
+  let id = jar.cookies.get(name)
+  let data = id ? await store.read(id) : undefined
+  if (!id || !data) {
+    id = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url')
+    data = {}
+    jar.cookies.set(name, id)
+  }
+  const sessionId = id
+  const current = data
+  return {
+    data: current,
+    async write(values: Record<string, unknown>) {
+      Object.assign(current, values)
+      await store.write(sessionId, current, '1h')
+    },
+  }
+}
+
 /** Cookies kept between the requests of one test (like a browser). */
 export class CookieJar {
   readonly cookies = new Map<string, string>()
@@ -100,6 +122,12 @@ export class PendingRequest implements PromiseLike<TestResponse> {
   /** Several headers: `.headers(signWebhook('payments', payload))`. */
   headers(headers: Record<string, string>): this {
     for (const [k, v] of Object.entries(headers)) this.hdrs.set(k, v)
+    return this
+  }
+  private signIn?: { id: unknown }
+  /** Send this request as `user`, signed in through the session (needs @cslug/auth). */
+  actingAs(user: { id: unknown }): this {
+    this.signIn = user
     return this
   }
   /** `Authorization: Bearer <token>`. */
@@ -251,6 +279,7 @@ export class PendingRequest implements PromiseLike<TestResponse> {
   // ── running ────────────────────────────────────────────────────────────────────────────────────────
   private async run(): Promise<TestResponse> {
     for (const hook of this.ctx.before) await hook(this)
+    if (this.signIn) await (await testSession(this.ctx.app, this.ctx.jar)).write({ 'auth.id': String(this.signIn.id) })
     const path = typeof this.path === 'function' ? await this.path() : this.path
     const url = new URL(path, `http://${this.ctx.host}`)
     const cookie = this.ctx.jar.header()
@@ -273,20 +302,12 @@ export class PendingRequest implements PromiseLike<TestResponse> {
     if (!this.hdrs.has('referer')) this.hdrs.set('referer', url.toString())
     const params = this.body as URLSearchParams
     if (params.has('_token')) return
-    const name = this.ctx.app.config<string | undefined>('session.cookie') ?? 'cslug_session'
-    const store = this.ctx.app.resolve(SessionStore)
-    let id = this.ctx.jar.cookies.get(name)
-    let data = id ? await store.read(id) : undefined
-    if (!id || !data) {
-      id = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url')
-      data = {}
-      this.ctx.jar.cookies.set(name, id)
-      this.hdrs.set('cookie', this.ctx.jar.header() ?? '')
-    }
-    let token = data._token as string | undefined
+    const session = await testSession(this.ctx.app, this.ctx.jar)
+    this.hdrs.set('cookie', this.ctx.jar.header() ?? '')
+    let token = session.data._token as string | undefined
     if (!token) {
       token = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url')
-      await store.write(id, { ...data, _token: token }, '1h')
+      await session.write({ _token: token })
     }
     params.set('_token', token)
   }

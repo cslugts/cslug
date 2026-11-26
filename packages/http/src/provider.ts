@@ -27,6 +27,10 @@ export type HttpConfig = {
   health?: boolean
 }
 
+/** Tags for middleware that packages add to the `web` / `api` groups (`this.app.tag([token], WEB_MIDDLEWARE)`). */
+export const WEB_MIDDLEWARE = 'http.middleware.web'
+export const API_MIDDLEWARE = 'http.middleware.api'
+
 /**
  * Binds Router, ExceptionHandler and HttpKernel; at boot loads `routes/web.ts` (web group) and `routes/api.ts`
  * (api group) when they exist; on shutdown stops the server gracefully. `cslug serve` calls `kernel.listen()`.
@@ -57,10 +61,28 @@ export class HttpProvider extends ServiceProvider {
       })
     }
     const groups: [file: string, group: GroupOptions][] = [
-      ['routes/web.ts', { middleware: [session(), csrf(), ...(config.groups?.web ?? [])], group: 'web' }],
+      [
+        'routes/web.ts',
+        {
+          middleware: [
+            session(),
+            csrf(),
+            ...this.app.tagged<Middleware>(WEB_MIDDLEWARE),
+            ...(config.groups?.web ?? []),
+          ],
+          group: 'web',
+        },
+      ],
       [
         'routes/api.ts',
-        { middleware: [...(config.cors ? [cors(config.cors)] : []), ...(config.groups?.api ?? [])], group: 'api' },
+        {
+          middleware: [
+            ...(config.cors ? [cors(config.cors)] : []),
+            ...this.app.tagged<Middleware>(API_MIDDLEWARE),
+            ...(config.groups?.api ?? []),
+          ],
+          group: 'api',
+        },
       ],
     ]
     for (const [file, group] of groups) {
