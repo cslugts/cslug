@@ -1,6 +1,7 @@
 # Cache, locks & rate limits
 
-Backed by Redis through `Bun.redis`. In tests an in-memory store is used automatically.
+Backed by Redis through `Bun.redis` when `RedisProvider` is listed (`cache.default: 'memory'` keeps the
+in-memory store). Without it, core's in-memory drivers are used: fine for one process and for tests.
 
 ## Cache
 
@@ -28,7 +29,6 @@ export class ExchangeRates {
 | `flexible(key, [fresh, stale], fn)` | Serve stale while refreshing in the background |
 | `increment(key, by?)` / `decrement` | Atomic counters |
 | `tags(['operators']).remember(...)` / `tags(['operators']).flush()` | Group invalidation |
-| `store('memory')` | A specific store from `config/cache.ts` |
 
 TTLs accept `'30s' | '10m' | '1h' | '1d'` or seconds.
 
