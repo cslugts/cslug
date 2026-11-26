@@ -3,7 +3,7 @@
   "auth": {
     "login": "Se connecter", "logout": "Se déconnecter", "register": "Créer un compte",
     "name": "Nom", "email": "E-mail", "password": "Mot de passe", "password_confirmation": "Confirmer le mot de passe",
-    "remember": "Se souvenir de moi", "no_account": "Pas encore de compte ?",
+    "no_account": "Pas encore de compte ?",
     "failed": "Ces identifiants ne correspondent à aucun compte.",
     "password_mismatch": "Les mots de passe ne correspondent pas.",
     "welcome": "Bienvenue, {name} !"

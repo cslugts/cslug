@@ -26,6 +26,14 @@ describe('HTML: CSS inlining and the text part', () => {
     expect(html).toContain('<style>@media (max-width:600px){p{font-size:12px}}\na:hover{color:pink}</style></head>')
   })
 
+  test('text: hidden preheader dropped; a block after a link starts a new line', () => {
+    expect(
+      htmlToText(
+        '<span style="display: none">Preview</span><div><h1>Hi</h1><a href="https://x.test">Open</a><p>Footer</p></div>',
+      ),
+    ).toBe('Hi\n\nOpen (https://x.test)\n\nFooter')
+  })
+
   test('text: blocks on lines, links with their URL, entities decoded', () => {
     expect(
       htmlToText('<h1>Hi &amp; bye</h1><p>Go <a href="https://x.test">there</a></p><ul><li>a</li><li>b</li></ul>'),

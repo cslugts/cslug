@@ -28,7 +28,7 @@ export class LogTransport implements Transport {
   constructor(private readonly log: Logger) {}
   async send(message: Message) {
     const id = messageId(message.from.address)
-    this.log.info('mail.sent', { id, to: recipients(message), subject: message.subject, text: message.text })
+    this.log.info('mail.logged', { id, to: recipients(message), subject: message.subject, text: message.text })
     return { id }
   }
 }

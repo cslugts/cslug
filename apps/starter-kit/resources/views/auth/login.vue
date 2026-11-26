@@ -19,8 +19,6 @@ const { csrfToken, errors, old } = useRequest()
       <label for="password">{{ t('auth.password') }}</label>
       <input id="password" name="password" type="password" required />
 
-      <label class="inline"><input type="checkbox" name="remember" value="1" /> {{ t('auth.remember') }}</label>
-
       <button>{{ t('auth.login') }}</button>
     </form>
     <p>{{ t('auth.no_account') }} <a :href="route('register')">{{ t('auth.register') }}</a></p>

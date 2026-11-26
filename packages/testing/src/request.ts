@@ -6,6 +6,12 @@ type Assertion = (res: TestResponse) => void | Promise<void>
 export type Handler = (request: Request) => Promise<Response>
 
 /** The session of the test's cookie jar (created if needed), to read and write as a request would. */
+/** The session data of the jar's session cookie, or undefined (never creates a session). */
+export async function readSession(app: Application, jar: CookieJar): Promise<Record<string, unknown> | undefined> {
+  const id = jar.cookies.get(app.config<string | undefined>('session.cookie') ?? 'cslug_session')
+  return id ? ((await app.resolve(SessionStore).read(id)) ?? undefined) : undefined
+}
+
 export async function testSession(app: Application, jar: CookieJar) {
   const name = app.config<string | undefined>('session.cookie') ?? 'cslug_session'
   const store = app.resolve(SessionStore)
@@ -58,7 +64,21 @@ export class TestResponse {
     readonly response: Response,
     readonly request: Request,
     private readonly ctx: { app: Application; jar: CookieJar },
+    /** Pages rendered by `view()` for this request (needs @cslug/vue). */
+    readonly views: { page: unknown; props: Record<string, unknown> }[] = [],
   ) {}
+
+  /** The islands in the HTML: `{ id: 'components/todo-item', props }` (`data-island`, `data-props`). */
+  async islands(): Promise<{ id: string; props: Record<string, unknown> }[]> {
+    const html = await this.body()
+    return [...html.matchAll(/<cslug-island\b([^>]*)>/g)].map(([, attrs]) => {
+      const attr = (name: string) => new RegExp(`${name}="([^"]*)"`).exec(attrs ?? '')?.[1] ?? ''
+      const decoded = attr('data-props').replace(/&(quot|amp|lt|gt|#39);/g, (_m, e: string) =>
+        e === 'quot' ? '"' : e === 'amp' ? '&' : e === 'lt' ? '<' : e === 'gt' ? '>' : "'",
+      )
+      return { id: attr('data-island'), props: decoded ? (JSON.parse(decoded) as Record<string, unknown>) : {} }
+    })
+  }
 
   get status(): number {
     return this.response.status
@@ -111,6 +131,8 @@ export class PendingRequest implements PromiseLike<TestResponse> {
       handle: Handler
       host: string
       before: ((r: PendingRequest) => void | Promise<void>)[]
+      /** After each request (the test kit refreshes `t.auth` here). */
+      after?: (() => Promise<void>)[]
     },
   ) {}
 
@@ -136,6 +158,7 @@ export class PendingRequest implements PromiseLike<TestResponse> {
   }
   /** A JSON body (also sets Accept: application/json). */
   json(data: unknown): this {
+    this.jsonCsrf = true
     this.hdrs.set('content-type', 'application/json')
     if (!this.hdrs.has('accept')) this.hdrs.set('accept', 'application/json')
     this.body = JSON.stringify(data, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))
@@ -161,6 +184,8 @@ export class PendingRequest implements PromiseLike<TestResponse> {
     return this
   }
   private formCsrf = false
+  /** JSON writes carry the session's CSRF token in `X-CSRF-Token`, as an island's `useForm` does. */
+  private jsonCsrf = false
 
   // ── assertions (queued; run when awaited) ───────────────────────────────────────────────────────────
   private assert(fn: Assertion): this {
@@ -241,6 +266,34 @@ export class PendingRequest implements PromiseLike<TestResponse> {
   assertSessionMissing(key: string) {
     return this.assert(async (r) => expect(await r.session()).not.toHaveProperty([key]))
   }
+  /** The page was rendered with `view(View, props)`; `fn` gets the props (use `expect` in it). */
+  assertView(view: unknown, fn?: (props: Record<string, unknown>) => unknown) {
+    return this.assert(async (r) => {
+      const found = r.views.find((v) => v.page === view)
+      const name = (v: unknown) =>
+        (v as { __name?: string; name?: string })?.__name ?? (v as { name?: string })?.name ?? 'a view'
+      expect(
+        found,
+        `expected ${name(view)} to be rendered; rendered: ${r.views.map((v) => name(v.page)).join(', ') || 'no view'}`,
+      ).toBeDefined()
+      await fn?.((found as { props: Record<string, unknown> }).props)
+    })
+  }
+  /** An island `name` (`'todo-item'` or `'components/todo-item'`) is in the page, with at least these props (deep). */
+  assertIsland(name: string, props?: Record<string, unknown>) {
+    return this.assert(async (r) => {
+      const islands = (await r.islands()).filter((i) => i.id === name || i.id.endsWith(`/${name}`))
+      expect(
+        islands.length,
+        `no island ${name}; islands: ${(await r.islands()).map((i) => i.id).join(', ') || 'none'}`,
+      ).toBeGreaterThan(0)
+      if (props)
+        expect(
+          islands.some((i) => matches(i.props, props)),
+          `no ${name} island with props ${JSON.stringify(props)}`,
+        ).toBe(true)
+    })
+  }
   assertSee(text: string) {
     return this.assert(async (r) => expect(await r.body()).toContain(text))
   }
@@ -285,14 +338,28 @@ export class PendingRequest implements PromiseLike<TestResponse> {
     const cookie = this.ctx.jar.header()
     if (cookie && !this.hdrs.has('cookie')) this.hdrs.set('cookie', cookie)
     if (this.formCsrf) await this.addCsrf(url)
+    if (this.jsonCsrf && !['GET', 'HEAD'].includes(this.method) && !this.hdrs.has('x-csrf-token'))
+      this.hdrs.set('x-csrf-token', await this.csrfToken())
+    const marker = Bun.randomUUIDv7()
+    this.hdrs.set(TEST_REQUEST_HEADER, marker)
     const request = new Request(url, {
       method: this.method,
       headers: this.hdrs,
       body: this.method === 'GET' || this.method === 'HEAD' ? undefined : this.body,
     })
-    const response = await this.ctx.handle(request)
+    const views: TestResponse['views'] = []
+    const stop = (await vueHooks())?.onView((page, props, ctx) => {
+      if (ctx.request.header(TEST_REQUEST_HEADER) === marker) views.push({ page, props })
+    })
+    let response: Response
+    try {
+      response = await this.ctx.handle(request)
+    } finally {
+      stop?.()
+    }
     this.ctx.jar.store(response)
-    const res = new TestResponse(response, request, this.ctx)
+    for (const hook of this.ctx.after ?? []) await hook()
+    const res = new TestResponse(response, request, this.ctx, views)
     for (const a of this.assertions) await a(res)
     return res
   }
@@ -302,6 +369,11 @@ export class PendingRequest implements PromiseLike<TestResponse> {
     if (!this.hdrs.has('referer')) this.hdrs.set('referer', url.toString())
     const params = this.body as URLSearchParams
     if (params.has('_token')) return
+    params.set('_token', await this.csrfToken())
+  }
+
+  /** The session's CSRF token (the session and the token are created if needed). */
+  private async csrfToken(): Promise<string> {
     const session = await testSession(this.ctx.app, this.ctx.jar)
     this.hdrs.set('cookie', this.ctx.jar.header() ?? '')
     let token = session.data._token as string | undefined
@@ -309,7 +381,7 @@ export class PendingRequest implements PromiseLike<TestResponse> {
       token = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url')
       await session.write({ _token: token })
     }
-    params.set('_token', token)
+    return token
   }
 
   // biome-ignore lint/suspicious/noThenProperty: a PendingRequest is awaited to run it
@@ -320,4 +392,30 @@ export class PendingRequest implements PromiseLike<TestResponse> {
     this.result ??= this.run()
     return this.result.then(onFulfilled, onRejected)
   }
+}
+
+/** Marks test requests so `assertView` sees only its own request's views. */
+const TEST_REQUEST_HEADER = 'x-cslug-test-request'
+
+type VueHooks = {
+  onView(
+    fn: (
+      page: unknown,
+      props: Record<string, unknown>,
+      ctx: { request: { header(n: string): string | undefined } },
+    ) => void,
+  ): () => void
+}
+let vue: Promise<VueHooks | undefined> | undefined
+/** @cslug/vue's view hook, if installed. */
+const vueHooks = () => {
+  vue ??= import('@cslug/vue').then((m) => m as unknown as VueHooks).catch(() => undefined)
+  return vue
+}
+
+/** Deep subset match (arrays: every expected item matches some actual item at the same index). */
+function matches(actual: unknown, expected: unknown): boolean {
+  if (expected === null || typeof expected !== 'object') return Object.is(actual, expected)
+  if (actual === null || typeof actual !== 'object') return false
+  return Object.entries(expected).every(([k, v]) => matches((actual as Record<string, unknown>)[k], v))
 }

@@ -127,8 +127,10 @@ export class Supervisor {
   private async pipe(stream: ReadableStream<Uint8Array>, name: string, out: NodeJS.WriteStream): Promise<void> {
     const decoder = new TextDecoder()
     let buffer = ''
-    for await (const chunk of stream) {
-      buffer += decoder.decode(chunk, { stream: true })
+    // a reader, not `for await`: the app's tsconfig may use the DOM lib, whose ReadableStream is not async-iterable
+    const reader = stream.getReader()
+    for (let r = await reader.read(); !r.done; r = await reader.read()) {
+      buffer += decoder.decode(r.value, { stream: true })
       const lines = buffer.split('\n')
       buffer = lines.pop() ?? ''
       for (const line of lines) out.write(`[${name}] ${line}\n`)

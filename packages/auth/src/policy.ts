@@ -1,4 +1,4 @@
-import type { AuthUser, Class } from '@cslug/core'
+import { type AuthUser, type Class, resolve } from '@cslug/core'
 
 /**
  * Base of policies: one `@inject()` class per resource whose methods `(user, resource, …) => boolean`. An
@@ -34,6 +34,19 @@ export class Gate {
     if (!check) throw new Error(`No gate named "${name}" (define it with gate.define in a provider's boot())`)
     return (await (check as (u: AuthUser, ...a: unknown[]) => boolean | Promise<boolean>)(user, ...args)) === true
   }
+}
+
+/**
+ * The current app's `Gate` (a static shortcut, D9): `gate.define('admin.access', (user) => user.role === 'admin')` in
+ * a provider's `boot()`. Same as `resolve(Gate).define(…)`.
+ */
+export const gate = {
+  define(name: string, check: (user: AuthUser, ...args: never[]) => boolean | Promise<boolean>): Gate {
+    return resolve(Gate).define(name, check)
+  },
+  has: (name: string): boolean => resolve(Gate).has(name),
+  allows: (user: AuthUser, name: string, ...args: unknown[]): Promise<boolean> =>
+    resolve(Gate).allows(user, name, args),
 }
 
 /** Run a policy ability for a user: `before`, then the method. Only `true` allows. */

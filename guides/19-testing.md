@@ -57,7 +57,6 @@ const app = testApp({
 await app.get('/bookings').actingAs(traveller).assertOk()
   .assertView(BookingIndex, (props) => expect(props.bookings.data).toHaveLength(2))   // the view and its props
   .assertSee('ALB-7K2Q9F')                                                            // text in the HTML
-  .assertSelector('[data-status="deposit_paid"]', 2)                                  // CSS selector count
   .assertIsland('milestone-timeline', { bookingId: id })
 
 await app.post('/api/v1/quotes').withToken(token).json(body).assertCreated().assertJson({ status: 'sent' })
@@ -66,7 +65,7 @@ await app.delete(`/bookings/${id}`).assertProblem(409, 'booking.invalid_transiti
 ```
 
 Assertions: `assertOk`, `assertStatus`, `assertCreated`, `assertNoContent`, `assertRedirect(to?)`, `assertForbidden`,
-`assertNotFound`, `assertInvalid(errors)`, `assertProblem(status, code)`, `assertJson(subset)`, `assertView(View, fn?)`, `assertSee(text)`, `assertSelector(css, count?)`, `assertIsland(name, props?)`,
+`assertNotFound`, `assertInvalid(errors)`, `assertProblem(status, code)`, `assertJson(subset)`, `assertView(View, fn?)`, `assertSee(text)`, `assertIsland(name, props?)`,
 `assertHeader`, `assertCookie`, `assertSessionHas`, `assertOldInput(fields)`, `assertDontSee(text)`.
 
 Other helpers: `app.auth.check()` / `app.auth.user()` (state after the last request), `app.tokens.create(user,

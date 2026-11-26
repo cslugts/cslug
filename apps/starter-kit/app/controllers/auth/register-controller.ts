@@ -5,6 +5,7 @@ import { Hash } from '@cslug/auth'
 import Register from '#views/auth/register.vue'
 import { RegisterValidator } from '#app/validators/register-validator'
 import { UserRepository } from '#app/repositories/user-repository'
+import type { User } from '#app/tables/user-table'
 
 @inject(UserRepository, Hash)
 export class RegisterController {
@@ -16,7 +17,8 @@ export class RegisterController {
 
   async store({ request, auth, locale }: HttpContext) {
     const { name, email, password } = await request.validate(RegisterValidator)
-    const user = await this.users.create({ name, email, locale, passwordHash: await this.hash.make(password) })
+    // ctx.locale is one of config i18n.locales, which the users.locale column mirrors
+    const user = await this.users.create({ name, email, locale: locale as User['locale'], passwordHash: await this.hash.make(password) })
     await auth.login(user)
     return redirect().to(route('todos.index')).with('success', t('auth.welcome', { name }))
   }

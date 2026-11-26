@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect } from 'bun:test'
 import { join } from 'node:path'
 import {
   type Application,
+  type AuthUser,
   Cache,
   Clock,
   FakeClock,
@@ -16,7 +17,7 @@ import {
   type Token,
 } from '@cslug/core'
 import { loadFake, type TestFakes } from './fakes'
-import { CookieJar, type Handler, PendingRequest, testSession } from './request'
+import { CookieJar, type Handler, PendingRequest, readSession, testSession } from './request'
 
 type Db = {
   value(q: unknown): Promise<unknown>
@@ -33,7 +34,7 @@ export type TestAppOptions = {
   /** Config overrides, by dotted path: `{ 'payments.driver': 'fake' }`. */
   config?: Record<string, unknown>
   /** Fakes to install for every test: `'events'`, and those packages add (`'queue'`, `'mail'`, …). */
-  fakes?: (keyof TestFakes | string)[]
+  fakes?: readonly (keyof TestFakes | (string & {}))[]
   /**
    * Database isolation per test. `'transaction'` (default): every test runs in a transaction that is rolled
    * back. `'truncate'`: real commits, tables truncated after each test (for concurrency, locks, after-commit
@@ -62,6 +63,15 @@ export type TestApp = {
   beforeRequest(hook: (r: PendingRequest) => void | Promise<void>): void
   /** Requests of this test run as `user` (signed in through the session, like `auth.login`). Needs @cslug/auth. */
   actingAs(user: { id: unknown }): void
+  /** Who is signed in after the last request (through the session). Needs @cslug/auth. */
+  readonly auth: { check(): boolean; user(): AuthUser | null }
+  /** API tokens (@cslug/auth): `const { plainText } = await t.tokens.create(user, { abilities: ['todos:read'] })`. */
+  readonly tokens: {
+    create(
+      user: { id: unknown },
+      options?: { abilities?: string[]; name?: string; expiresIn?: string | number },
+    ): Promise<{ plainText: string }>
+  }
   readonly db: {
     /** `count('ledger_entries', { bookingId })`: camelCase keys, snake_case columns. */
     count(table: string, where?: Record<string, unknown>): Promise<number>
@@ -84,7 +94,9 @@ export type TestApp = {
  * test('…', async () => { await t.get('/todos').assertOk() })
  * ```
  */
-export function testApp(options: TestAppOptions = {}): TestApp {
+export function testApp<const F extends readonly string[] = []>(
+  options: TestAppOptions & { fakes?: F } = {},
+): TestApp & Pick<TestFakes, Extract<F[number], keyof TestFakes>> {
   let app: Application | undefined
   let db: Db | undefined
   let dbModule: DatabaseModule | undefined
@@ -92,6 +104,20 @@ export function testApp(options: TestAppOptions = {}): TestApp {
   let clock = new FakeClock()
   const jar = new CookieJar()
   const hooks: ((r: PendingRequest) => void | Promise<void>)[] = []
+  let signedIn: AuthUser | null = null
+  /** After each request: who the session says is signed in. */
+  const after = [
+    async () => {
+      const a = need()
+      const id = (await readSession(a, jar))?.['auth.id']
+      if (id === undefined || id === null) {
+        signedIn = null
+        return
+      }
+      const { userSource } = await authModule()
+      signedIn = ((await (await userSource(a)).find(id)) as AuthUser | null) ?? null
+    },
+  ]
   const fakes: Record<string, unknown> = {}
   let handle: Handler | undefined
 
@@ -132,6 +158,7 @@ export function testApp(options: TestAppOptions = {}): TestApp {
     const a = need()
     jar.clear()
     hooks.length = 0
+    signedIn = null
     clock = new FakeClock(a.config<string | undefined>('app.timezone') ?? 'UTC')
     a.swap(Clock, clock)
     // in-memory stores start empty in every test (rate limits, locks, cache, sessions); Redis ones are left alone
@@ -166,13 +193,16 @@ export function testApp(options: TestAppOptions = {}): TestApp {
     const a = need()
     if (!handle) throw new Error('testApp(): HTTP requests need @cslug/http and HttpProvider')
     const host = options.host ?? hostOf(a.config<string | undefined>('app.url'))
-    return new PendingRequest(method, path, { app: a, jar, handle, host, before: hooks })
+    return new PendingRequest(method, path, { app: a, jar, handle, host, before: hooks, after })
   }
 
   const whereSql = (sqlTag: DatabaseModule['sql'], where: Record<string, unknown>) => {
     const parts = Object.entries(where).map(([k, v]) => {
       const column = sqlTag.ident(k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`))
-      return v === null ? sqlTag`${column} is null` : sqlTag`${column} = ${v}`
+      if (v === null) return sqlTag`${column} is null`
+      // operators from @cslug/database: { remindedAt: notNull() }, { dueOn: lte('2027-03-01') }
+      if (dbModule && v instanceof dbModule.Op) return v.render(column)
+      return sqlTag`${column} = ${v}`
     })
     return parts.length ? sqlTag` where ${sqlTag.join(parts, sqlTag` and `)}` : sqlTag``
   }
@@ -206,6 +236,26 @@ export function testApp(options: TestAppOptions = {}): TestApp {
     },
     beforeRequest: (hook: (r: PendingRequest) => void | Promise<void>) => {
       hooks.push(hook)
+    },
+    auth: {
+      check: () => signedIn !== null,
+      user: () => signedIn,
+    },
+    tokens: {
+      async create(
+        user: { id: unknown },
+        options: { abilities?: string[]; name?: string; expiresIn?: string | number } = {},
+      ) {
+        const { Tokens } = await authModule()
+        const { plainText } = await need()
+          .resolve(Tokens)
+          .create(user, {
+            name: options.name ?? 'test',
+            abilities: options.abilities,
+            expiresIn: options.expiresIn,
+          })
+        return { plainText }
+      },
     },
     schedule: {
       async runDue() {
@@ -241,7 +291,7 @@ export function testApp(options: TestAppOptions = {}): TestApp {
       if (typeof key === 'string' && key in fakes) return fakes[key]
       return Reflect.get(target, key, receiver)
     },
-  }) as unknown as TestApp
+  }) as unknown as TestApp & Pick<TestFakes, Extract<F[number], keyof TestFakes>>
 }
 
 const MEMORY_DRIVERS = [
@@ -266,4 +316,26 @@ async function defaultApp(): Promise<Application> {
   if (typeof mod.createApp !== 'function')
     throw new Error(`testApp(): ${path} must export createApp(), or pass testApp({ create })`)
   return mod.createApp()
+}
+
+/**
+ * @cslug/auth, loaded at runtime with a local type: importing its types here would load a second copy of its
+ * `HttpContext` augmentation when the workspace is reachable through two paths.
+ */
+type AuthModule = {
+  userSource(app: Application): Promise<{ find(id: unknown): Promise<object | null> }>
+  Tokens: Token<{
+    create(
+      user: unknown,
+      options: { name: string; abilities?: string[]; expiresIn?: string | number },
+    ): Promise<{ plainText: string }>
+  }>
+}
+const AUTH_PACKAGE: string = '@cslug/auth'
+const authModule = async (): Promise<AuthModule> => {
+  try {
+    return (await import(AUTH_PACKAGE)) as AuthModule
+  } catch {
+    throw new Error('testApp(): t.auth and t.tokens need @cslug/auth')
+  }
 }

@@ -27,9 +27,23 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
   (after COMMIT); without the queue it is sent after COMMIT in-process.
 - Transports: own SMTP client (STARTTLS, implicit TLS, AUTH PLAIN/LOGIN), Resend, Postmark, Brevo, log, array.
 - `cslug mail:preview` (mailables with `static preview()`); `MailFake` for `fakes: ['mail']`.
+- The text part drops hidden preheader text and breaks lines at block openings too.
 
 ### @cslug/vue
 - The `.vue` loader accepts several app roots in one process (test suites); each file compiles against its own.
+- `onView()` hook; `useRequest().user` typed as `AuthUser | null`; asset build errors say which file made the import.
+
+### Starter kit
+- Runs: typechecks with `vue-tsc`, 14 feature tests, and an end-to-end test in real processes (migrate, build,
+  `cslug start`, register, add a todo, run the reminder, the email arrives in Mailpit). `bun run check:starter`.
+
+### @cslug/testing
+- `t.auth.check()` / `t.auth.user()`, `t.tokens.create()`, `assertView(View, fn)`, `assertIsland(name, props)`.
+- Fakes listed in `testApp({ fakes })` are typed as present; `.json()` writes carry the CSRF token like an
+  island; `t.db.count/assertDatabaseHas` accept `@cslug/database` operators.
+
+### @cslug/auth
+- `gate` shortcut (`gate.define(…)`, as in guide 15) and `userSource(app)`.
 
 ### @cslug/webhook
 - `verifySignature(name | fn)`: HMAC (sha1/256/512) over the raw body, constant-time comparison, `{timestamp}`

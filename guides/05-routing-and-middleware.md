@@ -12,7 +12,8 @@ More files (for example `routes/admin.ts`) are imported from one of these: `r.gr
 ```ts
 // routes/web.ts
 import { defineRoutes } from '@cslug/http'
-import { auth, can, guest, locale, throttle } from '@cslug/http/middleware'
+import { locale, throttle } from '@cslug/http/middleware'
+import { auth, can, guest } from '@cslug/auth'
 import { HomeController } from '#app/controllers/home-controller'
 import { CircuitController } from '#app/controllers/circuit-controller'
 import { TripRequestController } from '#app/controllers/trip-request-controller'
@@ -70,7 +71,8 @@ A group with `domain` only matches requests whose `Host` is that domain:
 ```ts
 // routes/api.ts
 import { defineRoutes } from '@cslug/http'
-import { auth, throttle } from '@cslug/http/middleware'
+import { throttle } from '@cslug/http/middleware'
+import { auth } from '@cslug/auth'
 
 export default defineRoutes((r) => {
   // https://api.albastr.com/v1/quotes
@@ -237,9 +239,9 @@ export const noIndex = (): Middleware => async (_ctx, next) => {
 | `bodyLimit('1mb')` | global | Per route: `.middleware(bodyLimit('20mb'))` for uploads |
 | `session()`, `csrf()` | `web` group | Session in the `SessionStore` (Redis with `@cslug/redis`); 419 without the CSRF token (`_token` field or `X-CSRF-Token`). A failed form post redirects back with errors and old input automatically |
 | `cors(...)` | `api` group | From `config/http.ts` |
-| `auth(guard?)`, `guest()` | — | `auth('token')` for API tokens |
-| `can(ability)` | — | Gate check (see [guide 15](./15-auth-and-authorization.md)) |
-| `ability('todos:write')` | — | The API token must carry this ability (with `auth('token')`) |
+| `auth(guard?)`, `guest()` | — | From `@cslug/auth`. `auth('token')` for API tokens |
+| `can(ability)` | — | From `@cslug/auth`. Gate check (see [guide 15](./15-auth-and-authorization.md)) |
+| `ability('todos:write')` | — | From `@cslug/auth`. The API token must carry this ability (with `auth('token')`) |
 | `throttle('5/min', key?)` | — | Redis sliding window; key defaults to user or IP |
 | `locale()` | — | From `:locale` param → user setting → `Accept-Language` |
 | `verifySignature(name)` | — | Webhooks (see [guide 17](./17-storage-and-webhooks.md)) |

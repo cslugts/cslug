@@ -1,8 +1,9 @@
 import { table, id, uuid, text, date, timestamp, timestamps, type Row } from '@cslug/database'
 import { users } from './user-table'
 
-export const TodoPriority = ['low', 'normal', 'high'] as const
-export type TodoPriority = (typeof TodoPriority)[number]
+import { TodoPriority } from './todo-priority'
+
+export { TodoPriority }
 
 export const todos = table('todos', {
   id: id(),
