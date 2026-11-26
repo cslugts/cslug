@@ -216,6 +216,12 @@
     "packages/webhook": {
       "name": "@cslug/webhook",
       "version": "0.1.0",
+      "devDependencies": {
+        "@cslug/queue": "workspace:*",
+        "@cslug/redis": "workspace:*",
+        "@cslug/testing": "workspace:*",
+        "@cslug/validation": "workspace:*",
+      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/database": "workspace:*",

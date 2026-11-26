@@ -20,6 +20,12 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
   workers. `Queue.chain()`, `Queue.batch().then().allowFailures()`, `Job.with()`. Per-queue `rateLimit`.
   `queue:health`.
 
+### @cslug/webhook
+- `verifySignature(name | fn)`: HMAC (sha1/256/512) over the raw body, constant-time comparison, `{timestamp}`
+  formats with a tolerance; `signWebhook()` for tests.
+- `WebhookInbox`: exactly-once receipt (`cslug_webhook_inbox`, insert on conflict do nothing in a transaction),
+  `process()`, `payload()` with validation, `replay()` (`cslug webhooks:replay`), `prune()`.
+
 ### @cslug/http
 - `cslug serve --with-worker --with-scheduler`: the queue worker and the scheduler in the web process.
 
