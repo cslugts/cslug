@@ -12,7 +12,7 @@
 | 0.3 `albastr` repository | ✅ `liviathan/albastr-app` (private): product documents; the app is created from the starter kit at 0.1.0 |
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
 | S Spikes | ✅ (a) [Vue islands](../spikes/a-vue-islands/README.md) · (b) decorators (verified during design) · (c) [Redis Streams](../spikes/c-redis-streams/README.md) · (d) [async context](../spikes/d-async-context/README.md) |
-| M1 validation, core | ◐ `@cslug/validation` ✅ · `@cslug/core`: container + providers ✅, config + env + errors + Clock + Money ✅; events, logger, i18n, contracts next |
+| M1 validation, core | ◐ `@cslug/validation` ✅ · `@cslug/core`: container + providers ✅, config + env + errors + Clock + Money ✅, events + logger ✅; i18n and cache/lock/rate-limit contracts next |
 | M2 database | ⬜ |
 | M3 cli, http, testing (base) | ⬜ |
 | M4 vue | ⬜ |

@@ -140,3 +140,28 @@ Immutable; integer minor units (`bigint`) + ISO 4217 currency; no floating point
 | `format(locale, options?)` | `2 200,00 €` (fr), `€2,200.00` (en); exact for any size |
 | `toJSON()` | `{ amount: '220000', currency: 'EUR' }` |
 | `minorDigits(currency)` | |
+
+## Events
+
+| | |
+|---|---|
+| `class X extends Event<Payload>('dot.case_name') {}` | Define an event. `X['payload']` is the payload type |
+| `X.emit(payload)` | On the current app's `EventBus`. Closures, then class listeners, in order. A synchronous listener's error rejects `emit` (so the emitter's transaction can roll back) |
+| `X.on(fn)` | Function listener; returns an unsubscribe function |
+| `@listener(X \| [X, Y], { queued?, queue?, tries?, backoff? })` | Class listener with `handle(payload, event)`, built by the container (scoped). Combine with `@inject(...)` in any order |
+| queued listeners | Run **after the transaction commits** (`afterCommit`), never on rollback. Without `@cslug/queue`: in-process in a fresh scope, errors logged. With it: `EventBus.dispatchQueued` sends them as jobs |
+| `afterCommit(fn)` | Run once the current transaction commits; outside a transaction, soon after the current task. `@cslug/database` provides the hook (`TransactionHooks`) |
+| `registeredListeners()` | For `cslug events` |
+
+## Logger
+
+Bound as a singleton from `config('log')` (`{ level?, format?, redact? }`); inject `Logger`.
+
+| | |
+|---|---|
+| `debug/info/warn/error(message, fields?)` | One JSON line (`time`, `level`, `msg`, fields); `format: 'pretty'` for terminals |
+| `child(fields)` | Adds fields to every entry |
+| context fields | `requestId`, `jobId`, `userId` from the ambient context, automatically |
+| redaction | Keys containing `password`, `secret`, `token`, `authorization`, `cookie`, `apikey`, `api_key`, `cardnumber`, `cvv` (case-insensitive, any depth), plus `redact` (e.g. `secretKeys(envShape)`) |
+| safe serialisation | bigint → string, Date → ISO, `toJSON()` (Money), errors with `code`/`status`/`cause`/`stack`, cycles cut |
+| `Logger.null()` | Writes nothing |

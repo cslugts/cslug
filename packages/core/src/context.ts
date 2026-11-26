@@ -18,6 +18,11 @@ export interface Context {
 const storage = new AsyncLocalStorage<Context>()
 let defaultApp: Application | undefined
 
+/** The transaction hook `@cslug/database` puts in the context while a transaction is open. */
+export interface TransactionHooks {
+  afterCommit(fn: () => unknown): void
+}
+
 /** Run `fn` inside a context (kernels do this per unit of work; tests per test). */
 export function runInContext<T>(context: Context, fn: () => T): T {
   return storage.run(context, fn)
@@ -57,4 +62,15 @@ export function currentApp(): Application {
 export function resolve<T>(token: Token<T>): T {
   const container = constructing.at(-1) ?? storage.getStore()?.scope ?? currentApp()
   return container.resolve(token)
+}
+
+/**
+ * Run `fn` once the current database transaction commits (and never if it rolls back). Outside a transaction it
+ * runs soon after the current task, never synchronously, so callers see the same ordering either way.
+ * Queued listeners, job dispatch and queued mail use this.
+ */
+export function afterCommit(fn: () => unknown): void {
+  const tx = storage.getStore()?.tx as TransactionHooks | undefined
+  if (tx && typeof tx.afterCommit === 'function') tx.afterCommit(fn)
+  else setTimeout(() => void fn(), 0)
 }
