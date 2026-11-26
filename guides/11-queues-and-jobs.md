@@ -93,8 +93,10 @@ money, add `.durable()`:
 await ReleaseStageJob.dispatch({ bookingId, stage: 1 }).durable()
 ```
 
-The job is written to a `queue_outbox` table **in the same transaction**; the worker relays outbox rows to Redis
-and marks them sent. The job is guaranteed to exist if and only if the transaction committed.
+The job is written to the `cslug_queue_outbox` table **in the same transaction** (created by `cslug migrate` when
+`@cslug/database` is installed). Right after COMMIT the row is pushed to Redis and deleted; rows a crashed
+process left behind are relayed by the workers every second. The job is guaranteed to exist if and only if the
+transaction committed (relaying is at least once, like delivery). Outside a transaction, `.durable()` just sends.
 
 ## Idempotent handlers
 
@@ -122,6 +124,10 @@ await Queue.batch(travellers.map((t) => CrisisBroadcastJob.with({ travellerId: t
   .dispatch()                                                   // MVP #15: crisis broadcast
 ```
 
+A chain dispatches the next job when the previous one succeeds, and stops at a job that fails for good. A batch
+runs its jobs in parallel and dispatches `then()` once all have finished; a job that failed for good cancels
+`then()` unless `allowFailures()`. `Queue.batch(…).dispatch()` resolves to the batch id.
+
 ## Running workers
 
 ```bash
@@ -131,6 +137,7 @@ cslug queue:failed                                    # list failed jobs with er
 cslug queue:retry <id|all>
 cslug queue:forget <id>
 cslug queue:stats                                     # waiting / active / delayed / failed per queue, oldest age
+cslug queue:health --stale=2m --max-wait=10m          # exit 1 if no worker ticked lately or a job waits too long
 ```
 
 Workers stop gracefully on `SIGTERM`: running jobs finish (up to `queue.shutdownTimeout`), the rest stay queued.

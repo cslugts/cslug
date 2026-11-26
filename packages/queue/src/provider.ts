@@ -1,7 +1,8 @@
-import { Clock, type Duration, EventBus, Logger, parseDuration, ServiceProvider } from '@cslug/core'
+import { Clock, type Duration, EventBus, Logger, parseDuration, type RateLimit, ServiceProvider } from '@cslug/core'
 import { RedisConnections, RedisProvider } from '@cslug/redis'
 import { queueCommands } from './commands'
 import { QueuedListenerJob } from './listener-job'
+import { Outbox } from './outbox'
 import { Queue } from './queue'
 import { RedisQueue } from './redis-queue'
 import { Worker, type WorkerOptions } from './worker'
@@ -10,8 +11,8 @@ import { Worker, type WorkerOptions } from './worker'
 export type QueueConfig = {
   /** Redis connection name (config/redis.ts). Default `'default'`. */
   connection?: string
-  /** Queues a plain `cslug queue:work` runs, with their concurrency (default 1). */
-  queues?: Record<string, { concurrency?: number }>
+  /** Queues a plain `cslug queue:work` runs: concurrency (default 1) and an optional rate (`'30/s'`, all workers). */
+  queues?: Record<string, { concurrency?: number; rateLimit?: RateLimit }>
   failed?: { keep?: Duration }
   /** How long `SIGTERM` waits for running jobs. Default `'30s'`. */
   shutdownTimeout?: Duration
@@ -21,24 +22,31 @@ export type QueueConfig = {
   block?: Duration
 }
 
-/** The workers running in this process, stopped (gracefully) when the app shuts down. */
+/** The workers running in this process (and the outbox relay), stopped gracefully when the app shuts down. */
 export class Workers {
   private readonly all = new Set<Worker>()
+  private relay?: Timer
 
   constructor(
     private readonly create: (options: Omit<WorkerOptions, 'leaseMs' | 'blockMs'>) => Worker,
     private readonly shutdownMs: number,
+    private readonly outbox: () => Outbox | undefined = () => undefined,
   ) {}
 
-  /** Start a worker for these queues (each `{ name, concurrency }`). */
+  /** Start a worker for these queues (each `{ name, concurrency, rateLimit? }`). */
   async start(queues: WorkerOptions['queues']): Promise<Worker> {
     const worker = this.create({ queues })
     this.all.add(worker)
     await worker.start()
+    const outbox = this.outbox()
+    // rows a crashed process left in the outbox (the fast path relays at COMMIT)
+    this.relay ??= outbox ? setInterval(() => void outbox.relay().catch(() => {}), 1000) : undefined
     return worker
   }
 
   async stopAll(timeoutMs = this.shutdownMs): Promise<void> {
+    clearInterval(this.relay)
+    this.relay = undefined
     await Promise.all([...this.all].map((w) => w.stop(timeoutMs)))
     this.all.clear()
   }
@@ -87,11 +95,17 @@ export class QueueProvider extends ServiceProvider {
               c.resolve(Logger),
             ),
           parseDuration(config.shutdownTimeout ?? '30s'),
+          () => (this.app.has(Outbox) ? this.app.resolve(Outbox) : undefined),
         ),
     )
   }
 
-  boot() {
+  async boot() {
+    const outbox = await Outbox.detect(this.app, this.app.resolve(Logger))
+    if (outbox) {
+      outbox.registerMigrations()
+      this.app.instance(Outbox, outbox)
+    }
     // queued listeners become jobs (core runs them in-process when no queue is installed)
     this.app.resolve(EventBus).dispatchQueued = async ({ listener, event, payload, options }) => {
       const dispatch = this.app

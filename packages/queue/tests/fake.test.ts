@@ -110,3 +110,27 @@ describe('XREADGROUP replies (spike c, finding 1)', () => {
     expect(parseRead(null)).toEqual([])
   })
 })
+
+describe('chains and batches (guide 11) with the fake', () => {
+  test('Queue.chain: one after the other', async () => {
+    await Queue.chain([RecordJob.with({ n: 1 }), RecordJob.with({ n: 2 }), NoPayloadJob.with()]).dispatch()
+    t.queue?.assertPushedCount(RecordJob, 1) // only the first is pushed until it succeeds
+    await t.queue?.drain()
+    expect(runs.map((r) => (r.job === 'record' ? (r.payload as { n: number }).n : r.job))).toEqual([1, 2, 'no-payload'])
+  })
+
+  test('Queue.batch: then() runs once, after every job', async () => {
+    await Queue.batch([RecordJob.with({ n: 1 }), RecordJob.with({ n: 2 })])
+      .then(NoPayloadJob.with())
+      .dispatch()
+    t.queue?.assertPushedCount(RecordJob, 2)
+    t.queue?.assertNotPushed(NoPayloadJob)
+    await t.queue?.drain()
+    expect(runs.map((r) => r.job)).toEqual(['record', 'record', 'no-payload'])
+  })
+
+  test('.durable() outside a transaction is sent at once', async () => {
+    await RecordJob.dispatch({ n: 1 }).durable()
+    t.queue?.assertPushed(RecordJob)
+  })
+})

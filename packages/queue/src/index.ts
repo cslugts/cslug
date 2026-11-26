@@ -6,6 +6,7 @@ export {
   QueueClearCommand,
   QueueFailedCommand,
   QueueForgetCommand,
+  QueueHealthCommand,
   QueueRetryCommand,
   QueueStatsCommand,
   QueueWorkCommand,
@@ -31,11 +32,13 @@ export {
   settingsOf,
 } from './job'
 export { QueuedListenerJob } from './listener-job'
+export { OUTBOX_MIGRATIONS, Outbox } from './outbox'
 export { type QueueConfig, QueueProvider, Workers } from './provider'
 export {
   type Envelope,
   envelopeOf,
   JobNotFoundError,
+  type JobSpec,
   JobTimeoutError,
   type PushOptions,
   Queue,

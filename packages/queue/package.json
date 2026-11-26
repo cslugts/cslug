@@ -20,6 +20,7 @@
   },
   "files": [
     "src",
+    "migrations",
     "docs",
     "stubs",
     "README.md"
@@ -40,6 +41,7 @@
   "devDependencies": {
     "@cslug/testing": "workspace:*",
     "@cslug/validation": "workspace:*",
-    "@cslug/database": "workspace:*"
+    "@cslug/database": "workspace:*",
+    "@cslug/http": "workspace:*"
   }
 }

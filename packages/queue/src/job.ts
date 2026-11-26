@@ -1,5 +1,6 @@
 import { CslugError, type Duration, parseDuration } from '@cslug/core'
 import { PendingDispatch } from './dispatch'
+import type { JobSpec } from './queue'
 
 /** How long to wait before retry `n` (1 = after the first failure): a duration, one per retry, or a function. */
 export type Backoff = Duration | readonly Duration[] | ((attempt: number) => number)
@@ -78,6 +79,14 @@ export abstract class Job<P = void> {
   static dispatch<J extends JobClass<never>>(this: J, ...[payload]: PayloadArgs<J>): PendingDispatch {
     // biome-ignore lint/complexity/noThisInStatic: `this` is the concrete job class (SendCheckinJob), not Job
     return new PendingDispatch(this as JobClass, payload)
+  }
+
+  /** This job with a payload, for `Queue.chain([…])` and `Queue.batch([…])`. */
+  static with<J extends JobClass<never>>(this: J, ...[payload]: PayloadArgs<J>): JobSpec {
+    // biome-ignore lint/complexity/noThisInStatic: `this` is the concrete job class
+    registerJob(this as JobClass)
+    // biome-ignore lint/complexity/noThisInStatic: `this` is the concrete job class
+    return { name: jobName(this as JobClass), payload }
   }
 
   /** Exponential backoff: `base`, then ×2 per retry, capped at `max`; `jitter` spreads retries out (±50%). */

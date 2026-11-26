@@ -85,6 +85,7 @@ export class QueueFake extends Queue {
       if (ran >= max) throw new Error(`drain(): more than ${max} jobs; is a job dispatching itself?`)
       const { envelope } = this.waiting.shift() as { envelope: Envelope }
       await runJob(this.app, envelope, 1)
+      await this.finished(envelope, true)
       ran++
     }
     return ran

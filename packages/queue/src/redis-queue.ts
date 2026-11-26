@@ -1,5 +1,5 @@
 import { decode, encode, type Redis } from '@cslug/redis'
-import { type Envelope, type PushOptions, Queue } from './queue'
+import { type Envelope, type JobSpec, type PushOptions, Queue } from './queue'
 
 export const GROUP = 'workers'
 /** Priority bands, read in this order. */
@@ -47,6 +47,15 @@ redis.call('ZADD', KEYS[4], ARGV[4], ARGV[2])
 local old = redis.call('ZRANGEBYSCORE', KEYS[4], '-inf', tonumber(ARGV[4]) - tonumber(ARGV[5]), 'LIMIT', 0, 100)
 for _, id in ipairs(old) do redis.call('HDEL', KEYS[3], id) redis.call('ZREM', KEYS[4], id) end
 return 1`
+
+// KEYS: batch · ARGV: ok (1/0). Returns [failed, next, allow] when the last job finished, else nil.
+const BATCH_PROGRESS = `
+if redis.call('EXISTS', KEYS[1]) == 0 then return nil end
+if ARGV[1] == '0' then redis.call('HINCRBY', KEYS[1], 'failed', 1) end
+if redis.call('HINCRBY', KEYS[1], 'pending', -1) > 0 then return nil end
+local r = redis.call('HMGET', KEYS[1], 'failed', 'next', 'allow')
+redis.call('DEL', KEYS[1])
+return r`
 
 /**
  * The queue on Redis Streams (D8): one stream per queue and priority band, read by the consumer group `workers`;
@@ -133,6 +142,34 @@ export class RedisQueue extends Queue {
       [stream, this.uniqueKey(envelope.unique), 'failed', 'failed:index'],
       [entryId, envelope.id, encode(record), this.now(), this.keepFailed],
     )
+  }
+
+  protected override async startBatch(id: string, state: { pending: number; next?: JobSpec; allowFailures: boolean }) {
+    const key = this.redis.key(`batch:${id}`)
+    const next = state.next ? encode(state.next) : ''
+    await this.redis.send('HSET', [
+      key,
+      'pending',
+      state.pending,
+      'failed',
+      0,
+      'next',
+      next,
+      'allow',
+      state.allowFailures ? 1 : 0,
+    ])
+    await this.redis.send('EXPIRE', [key, 7 * 86_400])
+  }
+
+  protected override async batchProgress(id: string, ok: boolean) {
+    const r = (await this.redis.eval(BATCH_PROGRESS, [`batch:${id}`], [ok ? 1 : 0])) as [string, string, string] | null
+    if (!r) return undefined
+    return {
+      pending: 0,
+      failed: Number(r[0]),
+      next: r[1] ? decode<JobSpec>(r[1]) : undefined,
+      allowFailures: r[2] === '1',
+    }
   }
 
   // ── failed store, stats ────────────────────────────────────────────────────────────────────────────

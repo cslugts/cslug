@@ -1,12 +1,12 @@
 import { hostname } from 'node:os'
-import type { Application, Logger } from '@cslug/core'
+import { type Application, type Logger, type RateLimit, RateLimiter } from '@cslug/core'
 import { decode, type Redis } from '@cslug/redis'
 import { backoffDelay, findJob, settingsOf } from './job'
 import { type Envelope, runFailedHook, runJob } from './queue'
 import { BANDS, GROUP, type RedisQueue } from './redis-queue'
 
 export type WorkerOptions = {
-  queues: { name: string; concurrency: number }[]
+  queues: { name: string; concurrency: number; rateLimit?: RateLimit }[]
   /** A job whose worker stopped renewing it for this long is taken over by another worker. Default 30 s. */
   leaseMs?: number
   /** How long one blocking read waits (also the delay before a due delayed job is noticed). Default 1 s. */
@@ -75,6 +75,7 @@ export class Worker {
         while (mine.size >= concurrency && this.running) await Promise.race(mine)
         if (!this.running) break
         await this.queue.promote(queue)
+        await this.queue.redis.send('SET', [this.queue.redis.key('heartbeat'), Date.now()])
         if (Date.now() - lastClaim > this.leaseMs / 2) {
           lastClaim = Date.now()
           for (const entry of await this.reclaim(streams, concurrency - mine.size)) this.track(mine, entry)
@@ -175,6 +176,18 @@ export class Worker {
     return out
   }
 
+  /** Wait for the queue's `rateLimit` (shared by all workers through core's RateLimiter); the lease keeps renewing. */
+  private async throttle(queue: string): Promise<void> {
+    const rate = this.options.queues.find((q) => q.name === queue)?.rateLimit
+    if (!rate) return
+    const limiter = this.app.resolve(RateLimiter)
+    for (;;) {
+      const r = await limiter.hit(`queue:${queue}`, rate)
+      if (r.allowed || !this.running) return
+      await Bun.sleep(Math.min(1000, Math.max(50, r.retryAfter * 1000)))
+    }
+  }
+
   private async process({ stream, id, envelope, deliveries }: Entry): Promise<void> {
     const attempt = envelope.attempt + deliveries
     const fields = { jobId: envelope.id, job: envelope.name, queue: envelope.queue, attempt }
@@ -190,8 +203,12 @@ export class Worker {
     try {
       if (attempt > envelope.tries)
         throw new Error(`gave up after ${envelope.tries} attempts (the worker running it stopped)`)
+      await this.throttle(envelope.queue)
       await runJob(this.app, envelope, attempt)
       await this.queue.complete(stream, id, envelope)
+      await this.queue
+        .finished(envelope, true)
+        .catch((e) => this.log.error('queue.chain_failed', { ...fields, error: e }))
       this.log.info('queue.job.done', { ...fields, ms: Date.now() - started })
     } catch (thrown) {
       const error = thrown instanceof Error ? thrown : new Error(String(thrown))
@@ -209,6 +226,9 @@ export class Worker {
           .fail(stream, id, envelope, error)
           .catch((e) => this.log.error('queue.fail_failed', { ...fields, error: e }))
         this.log.error('queue.job.failed', { ...fields, error })
+        await this.queue
+          .finished(envelope, false)
+          .catch((e) => this.log.error('queue.batch_failed', { ...fields, error: e }))
       }
     } finally {
       clearInterval(renew)
