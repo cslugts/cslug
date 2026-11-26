@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-26):** approved. Phase 0 is done; next are the spikes (S).
+> **Status (2026-11-26):** approved. Phase 0 and the spikes are done; next is milestone M1 (`validation`, `core`).
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
@@ -11,7 +11,7 @@
 | 0.2 `cslug` repository + skeleton + CI + release | ✅ [cslugts/cslug](https://github.com/cslugts/cslug): 15 package skeletons, CI green, graph check, release script, `main` protected |
 | 0.3 `albastr` repository | ✅ `liviathan/albastr-app` (private): product documents; the app is created from the starter kit at 0.1.0 |
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
-| S Spikes | ◐ (a) Vue islands ✅ ([report](../spikes/a-vue-islands/README.md)); (b) decorators ✅ (verified earlier); (c) Redis Streams ✅ ([report](../spikes/c-redis-streams/README.md)); (d) pending |
+| S Spikes | ✅ (a) [Vue islands](../spikes/a-vue-islands/README.md) · (b) decorators (verified during design) · (c) [Redis Streams](../spikes/c-redis-streams/README.md) · (d) [async context](../spikes/d-async-context/README.md) |
 | M1 validation, core | ⬜ |
 | M2 database | ⬜ |
 | M3 cli, http, testing (base) | ⬜ |
@@ -97,7 +97,7 @@ at the end.
 |---|---|---|---|---|
 | **S** | Spikes (first week, timeboxed) | — | (a) Vue SFC loaded on the server in Bun + `hydrate` → island transform + client mount; (b) standard `@inject(A,B)` typing (already verified on Bun 1.3.14 / TS 7.0.2); (c) Redis Streams via `Bun.redis` `send()` incl. `XAUTOCLAIM` + Lua; (d) ALS overhead per request | Each spike has a throwaway repro and a written yes/no; the riskiest is (a) |
 | **M1** | Foundations | `validation`, `core` | `v` + JSON Schema + Standard Schema; container, `@inject`, scopes, tokens, providers (topo boot/rollback/shutdown), `Application`, config + env validation, events, logger (redaction), typed errors, ALS context, `afterCommit` hook, `Clock`, `Money`, i18n (`t`, ICU plurals, `Intl`), contracts + memory drivers | Unit tests; guides 02, 03, 04 and 07 snippets compile |
-| **M2** | Data | `database` | `Bun.sql` pool, column builders, `Row`/`NewRow`, query builder, `sql` tag, `Repository`, `preload`, ambient transactions + savepoints, `lockForUpdate`, advisory locks, `idempotent`, **SQL-file migrations + runner** (advisory-locked), factories, seeders. **Deferred:** the migration differ (`--from-tables`) | Concurrency tests: two concurrent migrations run once, rollback discards after-commit callbacks |
+| **M2** | Data | `database` | **First test: the async context survives `await sql` and `sql.begin()`** (not verifiable in spike d). `Bun.sql` pool, column builders, `Row`/`NewRow`, query builder, `sql` tag, `Repository`, `preload`, ambient transactions + savepoints, `lockForUpdate`, advisory locks, `idempotent`, **SQL-file migrations + runner** (advisory-locked), factories, seeders. **Deferred:** the migration differ (`--from-tables`) | Concurrency tests: two concurrent migrations run once, rollback discards after-commit callbacks |
 | **M3** | Running apps | `cli`, `http`, `testing` (base) | CLI kernel, `Command`, packages contribute commands, `make:*` stubs, `migrate*`, `serve`, `dev`, `start` supervisor; router (groups, names, domains, resources), middleware, `HttpContext`, `request.validate`, responses, RFC 9457 + redirect-back errors, sessions (memory), CSRF, `throttle`, health endpoints, graceful shutdown; `testApp()`, HTTP assertions, DB isolation | Starter-kit JSON routes + 422 shape + SIGTERM drain tests pass |
 | **M4** | Pages | `vue` | Server loader, `view()`, layouts/slots, islands (`hydrate`, SSR by default, `serialize`), `<Assets>`, `useT/useRequest/useForm/defineStore/route`, `Bun.build` pipeline (Vue, SCSS, optional Tailwind), live reload, `cslug build`, `cslug typecheck` (vue-tsc), `renderStandalone` | Starter-kit todo page renders, islands hydrate, forms work with and without JS |
 | **M5** | Users | `redis`, `auth` | Redis connection + drivers (cache, lock, rate limiter, session store); session guard, `Hash`, `attempt`, policies, gates, `ability()`, tokens, magic links | Starter-kit auth flows + policy tests. **→ release 0.1.0**, create the `albastr` app from the starter kit |

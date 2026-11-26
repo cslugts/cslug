@@ -214,6 +214,9 @@
     "spikes/c-redis-streams": {
       "name": "spike-c-redis-streams",
     },
+    "spikes/d-async-context": {
+      "name": "spike-d-async-context",
+    },
   },
   "packages": {
     "@babel/helper-string-parser": ["@babel/helper-string-parser@7.29.15", "", {}, "sha512-C2FuapQ2Kh1OnVHAoLi5rD3GBJ8COb9Q609T6HEpLqaBAo560PDP5OxBE5dCI/h951MBO/+bCUYU5SZ+8ZlV+w=="],
@@ -421,6 +424,8 @@
     "spike-a-vue-islands": ["spike-a-vue-islands@workspace:spikes/a-vue-islands"],
 
     "spike-c-redis-streams": ["spike-c-redis-streams@workspace:spikes/c-redis-streams"],
+
+    "spike-d-async-context": ["spike-d-async-context@workspace:spikes/d-async-context"],
 
     "starter-kit": ["starter-kit@workspace:apps/starter-kit"],
 
