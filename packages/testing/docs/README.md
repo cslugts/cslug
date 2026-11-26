@@ -23,5 +23,5 @@ test('adding a todo', async () => {
 Requests go straight to the HTTP kernel (no port). `.form()` adds the CSRF token and a Referer as a browser
 would, so failed validation redirects back and `assertInvalid()` / `assertOldInput()` read the flashed errors.
 
-More assertions arrive with their packages: `actingAs` (auth), `assertQueued` (queue), `assertView` /
-`assertIsland` (vue), `assertSent` (mail). See [api.md](api.md).
+Packages plug in: `actingAs`, `t.auth`, `t.tokens` (auth), `t.queue` and `t.schedule` (queue), `assertView` /
+`assertIsland` (vue), `t.mail` (mail). See [api.md](api.md).

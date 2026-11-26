@@ -2,7 +2,7 @@
  * Composables for views and components. These are the server versions; the browser build (M4b) resolves
  * `@cslug/vue` to versions with the same names and signatures.
  */
-import { currentApp, currentLocale, formatDate, formatMoney, Translator, t, tr } from '@cslug/core'
+import { type AuthUser, currentApp, currentLocale, formatDate, formatMoney, Translator, t, tr } from '@cslug/core'
 import { route as httpRoute, Router, type UrlOptions } from '@cslug/http'
 import { renderState } from './render'
 import { formatDurationIn } from './shared/format'
@@ -10,7 +10,7 @@ import { formatDurationIn } from './shared/format'
 export type RequestInfo = {
   locale: string
   /** The signed-in user (set by @cslug/auth), or null. */
-  user: unknown
+  user: AuthUser | null
   csrfToken: string
   /** First error message per field, after a failed form post. */
   errors: Record<string, string>
@@ -45,7 +45,7 @@ export function useRequest(): RequestInfo {
   const url = new URL(ctx.request.url)
   return {
     locale: ctx.locale,
-    user: (ctx as unknown as { user?: unknown }).user ?? null,
+    user: (ctx as unknown as { user?: AuthUser | null }).user ?? null,
     csrfToken: hasSession ? ctx.session.token() : '',
     errors,
     old: hasSession ? (ctx.session.old() as Record<string, unknown>) : {},

@@ -38,7 +38,7 @@ test('an empty title is rejected (422 for the island)', async () => {
 
 test('toggling completes a todo and emits TodoCompleted', async () => {
   const todo = await TodoFactory.create()
-  const owner = await app.db.find('users', todo.userId)
+  const owner = (await app.db.find('users', todo.userId)) as { id: string }
 
   await app.post(`/todos/${todo.id}/toggle`).actingAs(owner).json({}).assertOk()
     .assertJson({ todo: { id: todo.id }, stats: { done: 1 } })

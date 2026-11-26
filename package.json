@@ -13,8 +13,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test packages scripts",
     "check:graph": "bun scripts/check-graph.ts",
-    "check": "bun run lint && bun run typecheck && bun run check:graph && bun run test",
-    "release": "bun scripts/release.ts"
+    "check": "bun run lint && bun run typecheck && bun run check:graph && bun run test && bun run check:starter",
+    "release": "bun scripts/release.ts",
+    "check:starter": "bun scripts/starter-kit.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.9",

@@ -148,9 +148,20 @@ export async function buildAssets(options: BuildOptions): Promise<BuildResult> {
       __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: dev ? 'true' : 'false',
     },
     plugins,
+    // report the errors ourselves: with `throw`, Bun only says "Bundle failed"
+    throw: false,
   })
   if (!result.success)
-    throw new AggregateError(result.logs, `Asset build failed:\n${result.logs.map((l) => String(l)).join('\n')}`)
+    throw new AggregateError(
+      result.logs,
+      `Asset build failed:\n${result.logs
+        .map((l) => {
+          // ResolveMessage.referrer: the file that made the import (a server module reaching a browser bundle)
+          const where = (l as { referrer?: string }).referrer || l.position?.file
+          return `${l.message}${where ? ` (in ${relative(root, where)}${l.position?.line ? `:${l.position.line}` : ''})` : ''}`
+        })
+        .join('\n')}`,
+    )
 
   // map outputs back to their entry: "resources/components/day-card-1a2b3c4d.js" → "resources/components/day-card"
   const stem = (file: string) =>

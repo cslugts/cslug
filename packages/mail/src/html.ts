@@ -90,24 +90,28 @@ const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"'
 
 /** A readable plain-text version of an HTML email: blocks on their own lines, links as `text (url)`. */
 export function htmlToText(html: string): string {
-  return html
-    .replace(/<(head|style|script|title)\b[\s\S]*?<\/\1>/gi, '')
-    .replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href: string, label: string) => {
-      const text = label.replace(/<[^>]+>/g, '').trim()
-      return !href || href === text || href.startsWith('#') ? text : `${text} (${href})`
-    })
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<li\b[^>]*>/gi, '\n- ')
-    .replace(/<\/(p|div|h[1-6]|tr|table|ul|ol|blockquote|section)>/gi, '\n\n')
-    .replace(/<\/(td|th)>/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&(#\d+|#x[\da-f]+|\w+);/gi, (m, e: string) =>
-      e[0] === '#'
-        ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? Number.parseInt(e.slice(2), 16) : Number(e.slice(1)))
-        : (ENTITIES[e.toLowerCase()] ?? m),
-    )
-    .replace(/[ \t]+/g, ' ')
-    .replace(/ *\n */g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+  return (
+    html
+      .replace(/<(head|style|script|title)\b[\s\S]*?<\/\1>/gi, '')
+      // hidden elements (the preheader "preview" text) are not part of the text version
+      .replace(/<(\w+)\b[^>]*style="[^"]*display:\s*none[^"]*"[^>]*>[\s\S]*?<\/\1>/gi, '')
+      .replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href: string, label: string) => {
+        const text = label.replace(/<[^>]+>/g, '').trim()
+        return !href || href === text || href.startsWith('#') ? text : `${text} (${href})`
+      })
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<li\b[^>]*>/gi, '\n- ')
+      .replace(/<\/?(p|div|h[1-6]|tr|table|ul|ol|blockquote|section)\b[^>]*>/gi, '\n\n')
+      .replace(/<\/(td|th)>/gi, ' ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&(#\d+|#x[\da-f]+|\w+);/gi, (m, e: string) =>
+        e[0] === '#'
+          ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? Number.parseInt(e.slice(2), 16) : Number(e.slice(1)))
+          : (ENTITIES[e.toLowerCase()] ?? m),
+      )
+      .replace(/[ \t]+/g, ' ')
+      .replace(/ *\n */g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  )
 }

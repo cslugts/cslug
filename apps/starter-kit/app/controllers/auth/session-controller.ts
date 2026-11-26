@@ -12,8 +12,8 @@ export class SessionController {
   }
 
   async store({ request, auth }: HttpContext) {
-    const { email, password, remember } = await request.validate(LoginValidator)
-    const user = await auth.attempt(email, password, { remember })      // throttled; failures logged without the password
+    const { email, password } = await request.validate(LoginValidator)
+    const user = await auth.attempt(email, password)      // throttled; failures logged without the password
     if (!user) throw new ValidationError({ email: ['auth.failed'] })
     return redirect().intended(route('todos.index'))
   }

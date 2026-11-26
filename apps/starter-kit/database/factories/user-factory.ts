@@ -6,5 +6,5 @@ export const UserFactory = factory(users, ({ seq, fake }) => ({
   name: fake.name(),
   email: `user${seq}@example.test`,
   passwordHash: fake.passwordHash('password-password'),
-  locale: 'en',
+  locale: 'en' as const,
 })).state('unverified', { emailVerifiedAt: null })

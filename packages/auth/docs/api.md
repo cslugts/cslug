@@ -7,6 +7,8 @@
 | `Hash` | `make`, `verify`, `needsRehash` (argon2id via `Bun.password`; bcrypt supported) |
 | `Policy` | Base class; methods `(user, ...args) => boolean`, optional `before(user)` |
 | `Gate` | `define(name, (user, ...args) => boolean)` in a provider's `boot()` |
+| `gate` | Static shortcut for the current app's `Gate`: `gate.define(…)`, `gate.has(name)`, `gate.allows(user, name, ...args)` |
+| `userSource(app)` | The users repository of `config/auth.ts` (used by the guards and by `t.auth` in tests) |
 | `Tokens` | `create(user, { name, abilities?, expiresIn? })` → `{ plainText, token }`, `verify`, `list`, `revoke`, `revokeAll` |
 | `MagicLinks` | `create(user, { redirect?, lifetime? })` → `{ token, expiresAt }`; `consume(token)` → `{ user, redirectTo }` or `MagicLinkError` (400: invalid, expired, used) |
 | Middleware | `authenticate()`, `auth(guard?)`, `guest()`, `ability(...)`, `can(gate)` |

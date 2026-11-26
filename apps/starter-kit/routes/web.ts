@@ -1,5 +1,6 @@
 import { defineRoutes } from '@cslug/http'
-import { auth, guest, throttle } from '@cslug/http/middleware'
+import { throttle } from '@cslug/http/middleware'
+import { auth, guest } from '@cslug/auth'
 import { HomeController } from '#app/controllers/home-controller'
 import { RegisterController } from '#app/controllers/auth/register-controller'
 import { SessionController } from '#app/controllers/auth/session-controller'

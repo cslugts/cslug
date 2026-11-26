@@ -16,6 +16,7 @@ export {
   type AssetManifest,
   Assets,
   CslugIsland,
+  onView,
   type RenderOptions,
   type RenderState,
   readManifest,

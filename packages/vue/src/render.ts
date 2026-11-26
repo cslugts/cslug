@@ -193,6 +193,17 @@ export async function renderPage(
   return { html: /^\s*<html[\s>]/i.test(html) ? `<!doctype html>${html}` : html, state }
 }
 
+type ViewListener = (page: Component, props: Record<string, unknown>, ctx: HttpContext) => void
+const viewListeners = new Set<ViewListener>()
+
+/** Be told of every page rendered by `view()` (the test kit's `assertView`). Returns an unsubscribe function. */
+export function onView(listener: ViewListener): () => void {
+  viewListeners.add(listener)
+  return () => {
+    viewListeners.delete(listener)
+  }
+}
+
 /** `return view(ShowCircuit, { circuit, days })` from a controller. */
 export class ViewResponse implements Responsable {
   constructor(
@@ -202,6 +213,7 @@ export class ViewResponse implements Responsable {
   ) {}
 
   async toResponse(ctx: HttpContext): Promise<Response> {
+    for (const listener of viewListeners) listener(this.page, this.props, ctx)
     const { html } = await renderPage(this.page, this.props, { http: ctx })
     const headers = new Headers(this.init.headers)
     if (!headers.has('content-type')) headers.set('content-type', 'text/html; charset=utf-8')

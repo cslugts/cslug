@@ -2,11 +2,11 @@
 
 A small todo app that exercises most of cslug. It is what `bun create cslug` should generate, plus one feature.
 
-> **Status: spec check, not runnable yet.** The `@cslug/*` packages do not exist, so `bun install` fails on the
-> `workspace:*` dependencies, and the app is not in the root workspace list. It installs 10 of the 15 packages
-> (no ai, notification, storage or webhook), which shows the granular setup. Every file is written against the
-> documented API in `docs/` and `guides/`. Writing it surfaced the gaps listed at the end, which are now resolved in
-> the docs.
+> **Status: runs.** It installs 10 of the 15 packages (no ai, notification, storage or webhook), which shows the
+> granular setup. `bun run check:starter` at the repository root typechecks it (`vue-tsc`) and runs its tests,
+> including `tests/e2e/reminder.test.ts`: migrate, build, `cslug start`, register, add a todo, run the reminder
+> entry, and the email arrives (in Mailpit when `MAILPIT_URL` is set, as in CI). Writing it before the packages
+> existed surfaced the gaps listed at the end, now resolved in the docs.
 
 ## What it covers
 
@@ -26,7 +26,7 @@ A small todo app that exercises most of cslug. It is what `bun create cslug` sho
 | Factories, seeder, feature tests | `database/`, `tests/` | testing |
 | Single-instance deploy | `railway.json`, `Dockerfile` (`cslug start`) | cli |
 
-## Run it (once cslug exists)
+## Run it
 
 ```bash
 docker compose up -d

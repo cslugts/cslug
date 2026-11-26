@@ -2,7 +2,7 @@
 import { useForm, useT, route } from '@cslug/vue'
 import type { v } from '@cslug/validation'
 import type { StoreTodoValidator } from '#app/validators/store-todo-validator'
-import { TodoPriority } from '#app/tables/todo-table'
+import { TodoPriority } from '#app/tables/todo-priority'   // not todo-table: that one imports the database
 
 defineOptions({ lang: ['todos', 'validation'] })
 const { t } = useT()

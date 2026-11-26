@@ -4,6 +4,7 @@
 |---|---|
 | `view(Page, props, { status?, headers? })` | A `Responsable`: renders the page in the request |
 | `renderPage(Page, props, { http?, static? })` | `{ html, state }` (`state.islands`, `state.modules`) |
+| `onView((page, props, ctx) => …)` | Be told of every page `view()` renders (the test kit's `assertView`); returns an unsubscribe function |
 | `renderStandalone(Page, props)` | One self-contained HTML file: no scripts, CSS and `public/` images inlined, islands as plain HTML |
 | `<Assets entry="client" />` | In the layout `<head>` |
 | `hydrate="load \| idle \| visible \| media:(…) \| none"` | On any component use; `idle` waits at most 2 s; `:ssr="false"` + `<template #fallback>` to skip server rendering |

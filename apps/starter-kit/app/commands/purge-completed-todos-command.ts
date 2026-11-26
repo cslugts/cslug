@@ -1,18 +1,18 @@
-import { inject, Clock } from '@cslug/core'
+import { inject } from '@cslug/core'
 import { Command, arg, flag } from '@cslug/cli'
 import { lte } from '@cslug/database'
 import { TodoRepository } from '#app/repositories/todo-repository'
 
-@inject(TodoRepository, Clock)
+@inject(TodoRepository)
 export class PurgeCompletedTodosCommand extends Command {
   static signature = 'todos:purge'
   static description = 'Delete todos completed more than N days ago.'
   static args = {
-    days: arg.int().default(90).describe('Age in days'),
+    days: arg.number().default(90).describe('Age in days'),
     dryRun: flag.boolean().describe('Count only'),
   }
 
-  constructor(private todos: TodoRepository, private clock: Clock) { super() }
+  constructor(private todos: TodoRepository) { super() }      // the clock: this.clock (Command's)
 
   async handle({ days, dryRun }: Command.Args<typeof PurgeCompletedTodosCommand>) {
     const cutoff = this.clock.subtract(`${days}d`)

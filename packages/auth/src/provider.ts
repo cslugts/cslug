@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { Clock, CslugError, Lock, ServiceProvider, token } from '@cslug/core'
+import { type Application, Clock, CslugError, Lock, ServiceProvider, token } from '@cslug/core'
 import { addMigrations } from '@cslug/database'
 import { API_MIDDLEWARE, type MiddlewareFn, WEB_MIDDLEWARE } from '@cslug/http'
 import type { AuthDeps } from './auth'
@@ -11,6 +11,14 @@ import { Gate } from './policy'
 import { Tokens } from './tokens'
 
 const AUTHENTICATE = token<MiddlewareFn>('auth.authenticate')
+
+/** The users repository of `config/auth.ts` (`users`: a class, or a function importing it lazily). */
+export async function userSource(app: Application): Promise<UserSource> {
+  const users = app.config<AuthConfig | undefined>('auth')?.users
+  if (!users) throw new CslugError('auth.no_users', 'config/auth.ts must set `users` (your users repository)')
+  const Repo = isClass(users) ? users : await (users as () => Promise<typeof users>)()
+  return app.resolve(Repo as never) as UserSource
+}
 
 /**
  * Binds `Hash`, `Gate`, `Tokens` and `MagicLinks`, adds `authenticate()` to the web and api groups, and the
@@ -26,10 +34,7 @@ export class AuthProvider extends ServiceProvider {
 
     let source: Promise<UserSource> | undefined
     const users = () => {
-      source ??= (async () => {
-        const Repo = isClass(config.users) ? config.users : await (config.users as () => Promise<typeof config.users>)()
-        return this.app.resolve(Repo as never) as UserSource
-      })()
+      source ??= userSource(this.app)
       return source
     }
     this.app.singleton(Hash, () => new Hash(config.passwords))
