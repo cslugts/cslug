@@ -20,6 +20,17 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
   workers. `Queue.chain()`, `Queue.batch().then().allowFailures()`, `Job.with()`. Per-queue `rateLimit`.
   `queue:health`.
 
+### @cslug/mail
+- `Mailable` (`subject`, `view`, `html`, `text`, `attach`, …), rendered in the recipient's locale: Vue views through
+  `renderStandalone`, CSS inlined (HTMLRewriter, specificity order), text part derived, MIME with attachments.
+- `Mailer.to(…).locale(…).send()` / `sendNow()`; queued mail is rendered at send time and queued as `cslug.mail`
+  (after COMMIT); without the queue it is sent after COMMIT in-process.
+- Transports: own SMTP client (STARTTLS, implicit TLS, AUTH PLAIN/LOGIN), Resend, Postmark, Brevo, log, array.
+- `cslug mail:preview` (mailables with `static preview()`); `MailFake` for `fakes: ['mail']`.
+
+### @cslug/vue
+- The `.vue` loader accepts several app roots in one process (test suites); each file compiles against its own.
+
 ### @cslug/webhook
 - `verifySignature(name | fn)`: HMAC (sha1/256/512) over the raw body, constant-time comparison, `{timestamp}`
   formats with a tolerance; `signWebhook()` for tests.

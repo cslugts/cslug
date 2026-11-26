@@ -1,0 +1,8 @@
+{
+  "mail": {
+    "due": {
+      "subject": "{count, plural, one {# tâche arrive} other {# tâches arrivent}} à échéance",
+      "hello": "Bonjour {name}"
+    }
+  }
+}

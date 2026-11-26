@@ -56,7 +56,7 @@ const { t } = useT()          // in the recipient's locale
 cslug ships no mail components. `resources/mail/layout.vue` (created by `bun create cslug`) is the app's own
 layout: a table-based shell with a `<style>` block. When sending, cslug **inlines** the `<style>` rules into
 `style` attributes and derives the **plain-text part** from the HTML.
-`cslug mail:preview` opens every mailable with factory data in the browser, in each locale.
+`cslug mail:preview` opens every mailable (with a `static preview()`) in the browser, in each locale.
 
 ### Sending
 
@@ -90,6 +90,21 @@ export default defineConfig({
   },
   queue: 'notifications',
 })
+```
+
+Transports: `smtp` (cslug's own client: STARTTLS when offered, implicit TLS with `secure: true`, AUTH PLAIN or
+LOGIN; it refuses to send in clear to anything but localhost unless `allowPlain: true`), `resend`, `postmark`,
+`brevo` (HTTP APIs through `fetch`), `log` and `array` (in memory).
+
+**Queued mail is rendered when you send it** (in the recipient's locale, with the data of that moment) and the
+rendered message is queued as the job `cslug.mail`; the worker only transports it. Nothing about the mailable
+has to be serializable. `sendNow()` skips the queue. Without `@cslug/queue`, queued mail is sent after COMMIT in
+the same process.
+
+`cslug mail:preview` lists every mailable that has a `static preview()` returning an example instance:
+
+```ts
+static preview() { return new TodoDueMail('Ada', [{ title: 'Pay the deposit', dueOn: '2027-05-14', priority: 'high' }]) }
 ```
 
 ## Notifications

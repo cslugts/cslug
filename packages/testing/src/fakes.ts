@@ -17,6 +17,7 @@ export const fakeInstaller = (name: string) => installers.get(name)
 /** Fakes of optional packages, loaded on first use (the package may not be installed). */
 const lazy: Record<string, () => Promise<FakeInstaller>> = {
   queue: async () => (await import('@cslug/queue')).installQueueFake,
+  mail: async () => (await import('@cslug/mail')).installMailFake,
 }
 
 /** The installer for `name`: registered, or loaded from its package. Undefined if neither. */
@@ -78,5 +79,6 @@ declare module './fakes' {
   interface TestFakes {
     events: EventFake
     queue: import('@cslug/queue').QueueFake
+    mail: import('@cslug/mail').MailFake
   }
 }

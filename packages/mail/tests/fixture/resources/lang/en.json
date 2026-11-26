@@ -1,0 +1,3 @@
+{
+  "mail": { "due": { "subject": "{count, plural, one {# todo is} other {# todos are}} due", "hello": "Hello {name}" } }
+}
