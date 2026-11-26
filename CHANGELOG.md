@@ -4,6 +4,17 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/storage
+- `Storage` with `local`, `s3` (`Bun.s3`, any S3-compatible service) and `memory` disks from `config/storage.ts`.
+- `putFile(dir, file)`: generated `dir/<uuidv7>.<ext>` key, extension from the sniffed bytes; keys can never leave
+  the disk.
+- `signedUrl` (with `download` file name) and `signedUploadUrl` + `verifyUpload` for direct browser uploads; on a
+  local disk the app serves them at `/_storage/:disk`.
+- `fakes: ['storage']` → `t.storage` (`assertExists`, `assertMissing`).
+
+### @cslug/core
+- Re-exports `sniffType` and `parseSize` from validation.
+
 ## 0.2.0 (2026-11-27)
 
 Background work and email (milestones M6–M7): queue and scheduler, webhooks, mail; the starter kit runs end to

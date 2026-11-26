@@ -50,13 +50,35 @@ export class OperatorDocumentController {
 
 | Method | |
 |---|---|
-| `put(key, data)` / `putFile(dir, file)` | `putFile` generates `dir/<uuidv7>.<ext>` and returns the key |
-| `get(key)` / `stream(key)` / `exists(key)` / `delete(key)` | |
-| `signedUrl(key, { expiresIn })` | Private download |
-| `signedUploadUrl(key, { expiresIn, maxSize, type })` | Direct browser → S3 upload |
+| `put(key, data)` / `putFile(dir, file)` | `putFile` generates `dir/<uuidv7>.<ext>` (extension from the sniffed bytes) and returns the key |
+| `get(key)` / `text(key)` / `stream(key)` / `stat(key)` / `exists(key)` / `delete(key)` | A missing key is `FileNotFoundError` (404) |
+| `signedUrl(key, { expiresIn, download? })` | Private download (`download`: attachment file name) |
+| `signedUploadUrl(key, { expiresIn, type, maxSize? })` | Direct browser upload: `{ url, method: 'PUT', headers }` |
+| `verifyUpload(key, { maxSize?, types? })` | After a direct upload: size and type from the bytes; a refused file is deleted (422) |
 | `disk('local')` | A specific disk |
 
-Uploaded files never live under `public/`.
+Uploaded files never live under `public/`. On S3, signed URLs are presigned by the service; on a local disk the app
+serves them itself at `/_storage/:disk` (signature and expiry checked with `APP_KEY`), so development works the same.
+
+### Direct uploads
+
+Large files go from the browser straight to the disk. A presigned S3 PUT cannot limit the size, so the server
+checks the file once the browser says it is done:
+
+```ts
+async uploadUrl({ params }: HttpContext) {
+  const key = `operators/${params.operator}/licence/${Bun.randomUUIDv7()}.pdf`
+  return { key, ...(await this.storage.signedUploadUrl(key, { expiresIn: '10m', type: 'application/pdf' })) }
+}
+// the island: await fetch(url, { method, headers, body: file }), then POST { key } to:
+async uploaded({ params, request }: HttpContext) {
+  const { key } = await request.validate(v.object({ key: v.string() }))
+  // the key comes back from the browser: accept only keys this operator was given
+  if (!key.startsWith(`operators/${params.operator}/licence/`)) throw new ForbiddenError()
+  await this.storage.verifyUpload(key, { maxSize: '10mb', types: ['application/pdf'] })   // 422 + deleted if not
+  // … record the document
+}
+```
 
 ## Webhooks
 

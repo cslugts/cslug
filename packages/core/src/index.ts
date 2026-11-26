@@ -3,8 +3,8 @@
  * typed errors, Clock, Money, events, logger, i18n, and the Cache/Lock/RateLimiter/SessionStore contracts.
  */
 
-/** Re-exported so apps can `import { v, ValidationError } from '@cslug/core'` in config/env.ts. */
-export { ValidationError, v } from '@cslug/validation'
+/** Re-exported: `v` and `ValidationError` for config/env.ts; `sniffType` and `parseSize` for @cslug/storage. */
+export { parseSize, sniffType, ValidationError, v } from '@cslug/validation'
 export { Application, type ApplicationOptions, sortProviders } from './application'
 export { Clock, FakeClock } from './clock'
 export {

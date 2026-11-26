@@ -10,3 +10,8 @@ services:
   mailpit:
     image: axllent/mailpit
     ports: ["1025:1025", "8025:8025"]
+  s3: # RustFS for the storage tests: S3_ENDPOINT=http://localhost:9000, then create the bucket "cslug"
+    image: rustfs/rustfs:1.0.5
+    command: /data
+    environment: { RUSTFS_ACCESS_KEY: cslug, RUSTFS_SECRET_KEY: cslug-secret }
+    ports: ["9000:9000"]

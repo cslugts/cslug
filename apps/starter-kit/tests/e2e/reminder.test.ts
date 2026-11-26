@@ -13,7 +13,13 @@ const MAILPIT_URL = process.env.MAILPIT_URL
 const base = process.env.DATABASE_URL as string
 const name = `starter_kit_e2e_${process.pid}`
 const dbUrl = Object.assign(new URL(base), { pathname: `/${name}` }).toString()
-const port = 20_000 + Math.floor(Math.random() * 20_000)
+/** A port the OS just handed out (a random pick can collide with outgoing connections' ephemeral ports). */
+const port = (() => {
+  const probe = Bun.serve({ port: 0, fetch: () => new Response() })
+  const free = probe.port as number
+  probe.stop(true)
+  return free
+})()
 const url = `http://127.0.0.1:${port}`
 const env = {
   ...process.env,

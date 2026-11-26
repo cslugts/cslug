@@ -92,7 +92,7 @@ All extend `CslugError` (`code`, `message`): `BindingNotFoundError` (`container.
 | `app.setConfig(path, value)` | Override before `start()` (the test kit); config is deep-frozen at start |
 | `Config`, `Typed<T>`, `ConfigPath<T>`, `ConfigValue<T, P>` | `declare module '@cslug/core' { interface Config extends Typed<typeof configs> {} }` |
 
-`v` and `ValidationError` are re-exported from `@cslug/validation`.
+`v`, `ValidationError`, `sniffType` and `parseSize` are re-exported from `@cslug/validation`.
 
 ## Errors
 
