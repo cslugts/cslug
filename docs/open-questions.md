@@ -26,3 +26,11 @@
 | Q10 | CLI binary name | `cslug` | docs |
 | Q11 | Escrow payment partner (guides use "Mangopay" as a placeholder) | Confirm with the legal/escrow work | `app/payments` |
 | Q12 | WhatsApp: Meta Cloud API directly or a provider? | Start manual (per MVP); keep the `whatsapp` channel | `@cslug/notification` |
+
+## Intermittent hang: 200 concurrent transactions in CI (seen 2026-11-26)
+
+`packages/database/tests/database.test.ts` › "the context survives queries and transactions" timed out once (5 s) in
+CI on PR #16, and its `afterAll` (drop database) hung too. It passed on re-run. Locally it never failed in 37
+runs, including 25 pinned to one CPU. Suspect: `Bun.sql` pool (max 8) under 200 concurrent `begin` + savepoints
+on a slow runner. **To do:** if it recurs, capture `pg_stat_activity` on timeout and try to reproduce with a
+standalone `Bun.sql` script; report upstream if confirmed.

@@ -1,0 +1,9 @@
+import { ServiceProvider } from '@cslug/core'
+
+export class {{ class }} extends ServiceProvider {
+  register() {
+    // this.app.singleton(Contract, Implementation)
+  }
+
+  async boot() {}
+}

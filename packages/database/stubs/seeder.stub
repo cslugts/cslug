@@ -1,0 +1,5 @@
+import { seeder } from '@cslug/database'
+
+export default seeder(async () => {
+  // await SomethingFactory.createMany(10)
+})

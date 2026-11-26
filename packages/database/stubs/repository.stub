@@ -1,0 +1,6 @@
+import { inject } from '@cslug/core'
+import { Repository } from '@cslug/database'
+import { {{ tableVar }} } from '#app/tables/{{ tableFile }}'
+
+@inject()
+export class {{ class }} extends Repository({{ tableVar }}) {}

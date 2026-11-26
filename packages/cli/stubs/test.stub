@@ -1,0 +1,10 @@
+import { describe, test } from 'bun:test'
+import { testApp } from '@cslug/testing'
+
+const t = testApp()
+
+describe('{{ base }}', () => {
+  test('works', async () => {
+    await t.get('/').assertOk()
+  })
+})

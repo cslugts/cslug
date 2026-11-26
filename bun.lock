@@ -61,6 +61,11 @@
       "bin": {
         "cslug": "./src/bin.ts",
       },
+      "devDependencies": {
+        "@cslug/database": "workspace:*",
+        "@cslug/http": "workspace:*",
+        "@cslug/validation": "workspace:*",
+      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
       },

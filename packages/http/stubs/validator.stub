@@ -1,0 +1,7 @@
+import { v } from '@cslug/validation'
+
+export const {{ class }} = v.object({
+  // name: v.string().trim().min(1).max(200),
+})
+
+export type {{ base }}Input = v.infer<typeof {{ class }}>

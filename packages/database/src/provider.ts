@@ -1,10 +1,12 @@
 import { HEALTH_CHECKS, healthCheck, Logger, ServiceProvider } from '@cslug/core'
+import { databaseCommands } from './commands'
 import { Database, type DatabaseConfig } from './database'
 import { setEncryptionKey } from './encryption'
 
 /** Binds `Database` from `config('database')`, checks the connection at boot, closes the pool at shutdown. */
 export class DatabaseProvider extends ServiceProvider {
   register() {
+    this.commands(databaseCommands)
     setEncryptionKey(this.app.config<string | undefined>('app.key'))
     this.app.singleton(Database, (c) => {
       const config = this.app.config<DatabaseConfig | undefined>('database')

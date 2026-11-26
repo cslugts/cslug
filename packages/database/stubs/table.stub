@@ -1,0 +1,9 @@
+import { id, type NewRow, type Row, table, timestamps } from '@cslug/database'
+
+export const {{ tableVar }} = table('{{ plural }}', {
+  id: id(),
+  ...timestamps(),
+})
+
+export type {{ base }} = Row<typeof {{ tableVar }}>
+export type New{{ base }} = NewRow<typeof {{ tableVar }}>

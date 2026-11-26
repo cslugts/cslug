@@ -63,8 +63,22 @@ export class ExpireDocumentsCommand extends Command {
 }
 ```
 
-Commands are discovered in `app/commands/`. Output helpers: `info`, `success`, `warn`, `error`, `table`, `confirm`, `ask`,
-`choose`, `progress`. `this.clock`, `this.log` are available on the base class.
+Commands are discovered in `app/commands/` (files named `*-command.ts`). Output helpers: `info`, `success`, `warn`,
+`error`, `table`, `confirm`, `ask`, `choose`, `progress`. `this.clock`, `this.log` are available on the base class.
+Return a number from `handle` to set the exit code (usage errors exit 2).
+
+Commands boot the providers (database, Redis …) before `handle`. A command that doesn't need them declares
+`static boot = false`. A command that keeps running (a server, a consumer) declares `static longRunning = true`.
+
+Packages contribute commands from their provider:
+
+```ts
+export class PaymentsProvider extends ServiceProvider {
+  register() {
+    this.commands([ReconcilePaymentsCommand])
+  }
+}
+```
 
 ## REPL
 

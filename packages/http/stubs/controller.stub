@@ -1,0 +1,9 @@
+import { inject } from '@cslug/core'
+import type { HttpContext } from '@cslug/http'
+
+@inject()
+export class {{ class }} {
+  async index({ request }: HttpContext) {
+    return []
+  }
+}

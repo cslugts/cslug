@@ -1,0 +1,14 @@
+import { Command, arg, flag } from '@cslug/cli'
+
+export class {{ class }} extends Command {
+  static signature = '{{ kebab }}'
+  static description = ''
+  static args = {
+    // name: arg.string().describe('…'),
+    dryRun: flag.boolean().describe('Show what would change'),
+  }
+
+  async handle({ dryRun }: Command.Args<typeof {{ class }}>) {
+    this.info(dryRun ? 'Dry run' : 'Running')
+  }
+}

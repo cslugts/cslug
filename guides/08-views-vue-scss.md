@@ -381,7 +381,7 @@ No Vite. `cslug dev` and `cslug build` use `Bun.build` with cslug's plugins:
 
 ```ts
 // cslug.config.ts
-import { defineCslugConfig } from '@cslug/core'
+import { defineCslugConfig } from '@cslug/cli'
 
 export default defineCslugConfig({
   assets: {

@@ -1,5 +1,6 @@
 import { configure as configureValidation } from '@cslug/validation'
 import { Clock } from './clock'
+import { ConsoleIO } from './command'
 import { deepFreeze, getPath, setPath } from './config'
 import { Container } from './container'
 import { setDefaultApp } from './context'
@@ -26,7 +27,7 @@ export type ApplicationOptions = {
   configs?: Record<string, unknown>
 }
 
-type State = 'created' | 'starting' | 'running' | 'stopping' | 'stopped'
+type State = 'created' | 'registered' | 'starting' | 'running' | 'stopping' | 'stopped'
 
 /**
  * The application: the root container plus provider orchestration. Built in `bootstrap/app.ts`, started by a
@@ -57,6 +58,7 @@ export class Application extends Container {
     this.singleton(Lock, () => new MemoryLock())
     this.singleton(RateLimiter, () => new MemoryRateLimiter())
     this.singleton(SessionStore, () => new MemorySessionStore())
+    this.singleton(ConsoleIO, () => new ConsoleIO())
   }
 
   /** All config sections. Read-only once the app has started. */
@@ -94,23 +96,33 @@ export class Application extends Container {
    * Register every provider, then boot them in dependency order. If a boot() throws, providers that already
    * booted are shut down in reverse order and the error is rethrown.
    */
-  async start(options: { signals?: boolean } = {}): Promise<this> {
-    if (this.state !== 'created') throw new ProviderError(`Cannot start an application that is ${this.state}.`)
-    this.state = 'starting'
+  /**
+   * Run every provider's `register()` without booting (no connections). The CLI does this to list commands and
+   * to run those with `static boot = false`; `start()` does it if needed.
+   */
+  registerProviders(): this {
+    if (this.state !== 'created') return this
     deepFreeze(this._configs)
     // dates validated with v.date().future() follow the app clock and time zone
     configureValidation({ today: () => this.resolve(Clock).today() })
-    const order = sortProviders(this.providerClasses)
-    const instances = order.map((P) => new P(this) as ServiceProvider & ProviderHooks)
-
+    this.instances_ = sortProviders(this.providerClasses).map((P) => new P(this) as ServiceProvider & ProviderHooks)
     this.registering = true
     try {
-      for (const p of instances) p.register?.()
+      for (const p of this.instances_) p.register?.()
     } finally {
       this.registering = false
     }
+    this.state = 'registered'
+    setDefaultApp(this)
+    return this
+  }
+  private instances_: (ServiceProvider & ProviderHooks)[] = []
 
-    for (const p of instances) {
+  async start(options: { signals?: boolean } = {}): Promise<this> {
+    this.registerProviders()
+    if (this.state !== 'registered') throw new ProviderError(`Cannot start an application that is ${this.state}.`)
+    this.state = 'starting'
+    for (const p of this.instances_) {
       try {
         await p.boot?.()
         this.booted.push(p)
@@ -134,6 +146,12 @@ export class Application extends Container {
   /** Shut providers down in reverse boot order. Safe to call twice. Errors are collected, then thrown together. */
   async shutdown(): Promise<void> {
     if (this.state === 'stopped' || this.state === 'stopping' || this.state === 'created') return
+    if (this.state === 'registered') {
+      this.state = 'stopped'
+      await this.dispose()
+      setDefaultApp(undefined)
+      return
+    }
     this.state = 'stopping'
     if (this.signalHandler) {
       process.off('SIGTERM', this.signalHandler)
