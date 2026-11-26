@@ -2,4 +2,5 @@
 
 Mailer and mailables, CSS inlining, SMTP and HTTP API transports.
 
-Written when the package is implemented: what it does, install, minimal example. The full public API goes in `api.md`.
+> **Not implemented yet.** This version is an empty placeholder kept for the lockstep release; the package is
+> planned for 0.2.0.

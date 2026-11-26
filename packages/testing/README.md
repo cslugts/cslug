@@ -1,5 +1,7 @@
 # @cslug/testing
 
-Test kit: testApp(), HTTP and HTML assertions, database isolation, fakes, time travel.
+`testApp()` starts your app once per test file and isolates every test (database rollback or truncate). Send
+requests without a port, assert on responses, and sign in with `t.actingAs`.
 
-> Not implemented yet. Part of [cslug](https://github.com/cslugts/cslug).
+Part of [cslug](https://github.com/cslugts/cslug). Docs: [docs/README.md](docs/README.md), [docs/api.md](docs/api.md),
+[guide 19](../../guides/19-testing.md).
