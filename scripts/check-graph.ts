@@ -97,8 +97,14 @@ function sourceFiles(dir: string): string[] {
   return out
 }
 
+/** Remove block and line comments (so examples in doc comments are not imports). Keeps `//` inside URLs. */
+export function stripComments(code: string): string {
+  return code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1')
+}
+
 /** Static and dynamic import/export-from specifiers. Type-only imports count too: types must follow the graph. */
-export function importSpecifiers(code: string): string[] {
+export function importSpecifiers(source: string): string[] {
+  const code = stripComments(source)
   const specs: string[] = []
   const re =
     /(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|import\s+['"]([^'"]+)['"]/g
