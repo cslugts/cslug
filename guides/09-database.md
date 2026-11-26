@@ -164,7 +164,7 @@ Keys of `where` are checked against the table's columns, and values against the 
 const rows = await this.db.many(sql<{ day: string; bookings: number; revenue: bigint }>`
   select date_trunc('day', ${bookings.c.createdAt})::date as day,
          count(*)::int as bookings,
-         sum(${bookings.c.commission}) as revenue
+         sum(${bookings.c.commission})::bigint as revenue   -- sum(bigint) is numeric in Postgres: cast it
   from ${bookings}
   where ${bookings.c.createdAt} >= ${since}
   group by 1 order by 1`)
@@ -178,6 +178,9 @@ const rows = await this.db.many(sql<{ day: string; bookings: number; revenue: bi
 | `${value}` | bound parameter `$n`, never inlined |
 | `${sql\`…\`}` | nested fragment |
 | `${sql.join(list, sql\`, \`)}` / `${sql.raw('…')}` | lists / trusted literal (lint-flagged) |
+
+Aggregates follow Postgres types: `count(*)` is `bigint` (cast with `::int` for a number) and `sum()` of a
+`bigint` column is `numeric` (a string), so cast it back with `::bigint`.
 
 Result typing: pass a table (`db.many(query, operators)`) to map and type rows as `Operator`, or annotate the
 tag (`sql<{…}>`) for ad-hoc shapes. `db.one()` (throws if not exactly one), `db.maybeOne()`, `db.many()`,
