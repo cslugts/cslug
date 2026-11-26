@@ -9,7 +9,7 @@ export { httpCommands, MakeControllerCommand, RoutesCommand, ServeCommand } from
 export { type HttpContext, HttpRequest, ResponseBuilder, type Validated } from './context'
 export { type ErrorRenderer, type ErrorReporter, ExceptionHandler } from './errors'
 export { HttpKernel, toResponse } from './kernel'
-export { type HttpConfig, HttpProvider } from './provider'
+export { API_MIDDLEWARE, type HttpConfig, HttpProvider, WEB_MIDDLEWARE } from './provider'
 export {
   accepted,
   created,

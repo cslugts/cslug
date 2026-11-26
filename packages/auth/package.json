@@ -22,7 +22,8 @@
     "src",
     "docs",
     "stubs",
-    "README.md"
+    "README.md",
+    "migrations"
   ],
   "engines": {
     "bun": ">=1.3.14"
@@ -31,5 +32,9 @@
     "@cslug/core": "workspace:*",
     "@cslug/http": "workspace:*",
     "@cslug/database": "workspace:*"
+  },
+  "devDependencies": {
+    "@cslug/testing": "workspace:*",
+    "@cslug/validation": "workspace:*"
   }
 }

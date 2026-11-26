@@ -286,3 +286,11 @@ export class MemorySessionStore extends SessionStore {
     return this.cache.forget(`session:${id}`)
   }
 }
+
+// ── AuthUser ─────────────────────────────────────────────────────────────────────────────────────────
+/**
+ * The signed-in user's type, which apps declare once (`config/index.ts`):
+ * `declare module '@cslug/core' { interface AuthUser extends User {} }`. `@cslug/auth` returns it.
+ */
+// biome-ignore lint/suspicious/noEmptyInterface: augmented by apps
+export interface AuthUser {}

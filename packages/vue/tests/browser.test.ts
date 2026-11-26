@@ -10,8 +10,17 @@ import { build, FIXTURE, load, vueApp } from './support'
 
 const chrome = Bun.which('google-chrome') ?? Bun.which('chromium')
 
-/** Load a page in headless Chrome; the DOM after JS ran, and the console. */
+/** Load a page in headless Chrome (retried once if Chrome returns no document); the DOM and the console. */
 async function inChrome(url: string) {
+  const first = await chromeOnce(url)
+  if (first.dom.includes('</html>')) return first
+  const second = await chromeOnce(url)
+  if (!second.dom.includes('</html>'))
+    throw new Error(`Chrome returned no document twice:\n${second.stderr.slice(-2000)}`)
+  return second
+}
+
+async function chromeOnce(url: string) {
   const profile = mkdtempSync(join(tmpdir(), 'cslug-chrome-'))
   const proc = Bun.spawn(
     [
@@ -32,7 +41,7 @@ async function inChrome(url: string) {
   const [dom, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()])
   await proc.exited
   rmSync(profile, { recursive: true, force: true })
-  return { dom, console: err.split('\n').filter((l) => l.includes('CONSOLE')) }
+  return { dom, stderr: err, console: err.split('\n').filter((l) => l.includes('CONSOLE')) }
 }
 
 describe.skipIf(!chrome)('islands in a real browser (Chrome headless)', () => {

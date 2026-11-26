@@ -6,6 +6,7 @@
 - **cookies**: a fresh browser-like cookie jar per test
 - **clock**: a new `FakeClock` per test (`t.clock.travelTo()`, `advance()`)
 - **swaps and fakes**: reset after each test
+- **in-memory stores** (cache, locks, rate limits, sessions): fresh in each test
 
 ```ts
 import { testApp } from '@cslug/testing'

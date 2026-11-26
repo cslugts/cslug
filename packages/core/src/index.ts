@@ -43,6 +43,7 @@ export {
   type TransactionHooks,
 } from './context'
 export {
+  type AuthUser,
   Cache,
   Lock,
   type LockHandle,

@@ -1,8 +1,22 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect } from 'bun:test'
 import { join } from 'node:path'
-import { type Application, Clock, FakeClock, type Resolved, type Token } from '@cslug/core'
+import {
+  type Application,
+  Cache,
+  Clock,
+  FakeClock,
+  Lock,
+  MemoryCache,
+  MemoryLock,
+  MemoryRateLimiter,
+  MemorySessionStore,
+  RateLimiter,
+  type Resolved,
+  SessionStore,
+  type Token,
+} from '@cslug/core'
 import { fakeInstaller, type TestFakes } from './fakes'
-import { CookieJar, type Handler, PendingRequest } from './request'
+import { CookieJar, type Handler, PendingRequest, testSession } from './request'
 
 type Db = {
   value(q: unknown): Promise<unknown>
@@ -46,6 +60,8 @@ export type TestApp = {
   delete(path: string): PendingRequest
   /** Run something before each request of this test (the auth package uses it for `actingAs`). */
   beforeRequest(hook: (r: PendingRequest) => void | Promise<void>): void
+  /** Requests of this test run as `user` (signed in through the session, like `auth.login`). Needs @cslug/auth. */
+  actingAs(user: { id: unknown }): void
   readonly db: {
     /** `count('ledger_entries', { bookingId })`: camelCase keys, snake_case columns. */
     count(table: string, where?: Record<string, unknown>): Promise<number>
@@ -114,6 +130,9 @@ export function testApp(options: TestAppOptions = {}): TestApp {
     hooks.length = 0
     clock = new FakeClock(a.config<string | undefined>('app.timezone') ?? 'UTC')
     a.swap(Clock, clock)
+    // in-memory stores start empty in every test (rate limits, locks, cache, sessions); Redis ones are left alone
+    for (const [contract, Memory] of MEMORY_DRIVERS)
+      if (a.resolve(contract as Token<unknown>) instanceof Memory) a.swap(contract as Token<unknown>, new Memory())
     for (const name of options.fakes ?? []) {
       const install = fakeInstaller(String(name))
       if (!install) throw new Error(`testApp(): no fake named "${String(name)}" (is its package installed?)`)
@@ -175,6 +194,12 @@ export function testApp(options: TestAppOptions = {}): TestApp {
     put: request('PUT'),
     patch: request('PATCH'),
     delete: request('DELETE'),
+    actingAs: (user: { id: unknown }) => {
+      hooks.push(async () => {
+        const session = await testSession(need(), jar)
+        await session.write({ 'auth.id': String(user.id) }) // @cslug/auth's SESSION_KEY
+      })
+    },
     beforeRequest: (hook: (r: PendingRequest) => void | Promise<void>) => {
       hooks.push(hook)
     },
@@ -205,6 +230,13 @@ export function testApp(options: TestAppOptions = {}): TestApp {
     },
   }) as unknown as TestApp
 }
+
+const MEMORY_DRIVERS = [
+  [Cache, MemoryCache],
+  [Lock, MemoryLock],
+  [RateLimiter, MemoryRateLimiter],
+  [SessionStore, MemorySessionStore],
+] as const
 
 const bigintSafe = (_k: string, v: unknown) => (typeof v === 'bigint' ? `${v}n` : v)
 const hostOf = (url: string | undefined) => {

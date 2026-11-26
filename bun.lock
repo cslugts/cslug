@@ -49,6 +49,10 @@
     "packages/auth": {
       "name": "@cslug/auth",
       "version": "0.0.0",
+      "devDependencies": {
+        "@cslug/testing": "workspace:*",
+        "@cslug/validation": "workspace:*",
+      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/database": "workspace:*",
