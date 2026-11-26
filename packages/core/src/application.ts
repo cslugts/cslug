@@ -4,6 +4,8 @@ import { deepFreeze, getPath, setPath } from './config'
 import { Container } from './container'
 import { setDefaultApp } from './context'
 import { ProviderError } from './errors'
+import { EventBus } from './events'
+import { Logger, type LoggerOptions } from './logger'
 import { dependenciesOf, type ProviderClass, type ProviderHooks, type ServiceProvider } from './provider'
 
 export type ApplicationOptions = {
@@ -34,6 +36,8 @@ export class Application extends Container {
     this._configs = options.configs ?? {}
     this.instance(Application, this)
     this.singleton(Clock, () => new Clock((this.config('app.timezone') as string | undefined) ?? 'UTC'))
+    this.singleton(Logger, () => new Logger((this.config('log') as LoggerOptions | undefined) ?? {}))
+    this.singleton(EventBus, (c) => new EventBus(this, c.resolve(Logger)))
   }
 
   /** All config sections. Read-only once the app has started. */
