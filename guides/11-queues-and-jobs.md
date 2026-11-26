@@ -54,7 +54,13 @@ await SendCheckinJob.dispatch(payload).unique(`checkin:${bookingId}:pickup`)    
 ```
 
 `dispatch()` is typed from `Job<Payload>`. It is sugar for `resolve(Queue).dispatch(SendCheckinJob, payload)`;
-inject `Queue` if you prefer.
+inject `Queue` if you prefer. `await` gives the job id, or `null` when a `unique()` key is already held.
+Priorities run from 1 (first) to 10 (last), default 5, and are taken in three bands: 1–3, 4–7, 8–10.
+
+Defaults when a job declares nothing: queue `default`, 3 tries, exponential backoff from 5 s (capped at 10 min,
+with jitter), timeout 60 s. These statics and `failed()` are not declared on `Job`, so no `override` is needed. A
+job whose constructor takes nothing needs no `@inject`. A run past its `timeout` fails and is retried, but the
+handler cannot be stopped: it finishes in the background, one more reason for idempotent side effects.
 
 Payloads are JSON (bigint and Date are supported). Pass **IDs, not rows**: the row may change before the job runs.
 
@@ -128,8 +134,12 @@ cslug queue:stats                                     # waiting / active / delay
 ```
 
 Workers stop gracefully on `SIGTERM`: running jobs finish (up to `queue.shutdownTimeout`), the rest stay queued.
-A crashed worker's jobs are reclaimed by another worker once their lease (`timeout` + grace) expires
-(`XAUTOCLAIM`); long jobs extend their lease automatically while running.
+A crashed worker's jobs are reclaimed by another worker once their lease (`queue.lease`, default 30 s) expires
+(`XAUTOCLAIM`); a running job renews its lease automatically, so long jobs are never taken over. A takeover
+counts as an attempt.
+
+Workers load every module in `app/jobs/` and `app/listeners/` (subfolders included) so they can run any job.
+A renamed job class can keep its stored name with `static jobName = 'OldName'`.
 
 ## Configuration
 
@@ -144,6 +154,8 @@ export default defineConfig({
   },
   failed: { keep: '30d' },
   shutdownTimeout: '30s',
+  lease: '30s',                      // a dead worker's job is taken over after this
+  block: '1s',                       // one blocking read; also how soon a due delayed job is noticed
 })
 ```
 

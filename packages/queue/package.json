@@ -36,5 +36,10 @@
     "@cslug/database": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@cslug/testing": "workspace:*",
+    "@cslug/validation": "workspace:*",
+    "@cslug/database": "workspace:*"
   }
 }

@@ -14,6 +14,24 @@ export function registerFake(name: string, install: FakeInstaller): void {
 }
 export const fakeInstaller = (name: string) => installers.get(name)
 
+/** Fakes of optional packages, loaded on first use (the package may not be installed). */
+const lazy: Record<string, () => Promise<FakeInstaller>> = {
+  queue: async () => (await import('@cslug/queue')).installQueueFake,
+}
+
+/** The installer for `name`: registered, or loaded from its package. Undefined if neither. */
+export async function loadFake(name: string): Promise<FakeInstaller | undefined> {
+  const known = installers.get(name)
+  if (known || !lazy[name]) return known
+  try {
+    const install = await (lazy[name] as () => Promise<FakeInstaller>)()
+    installers.set(name, install)
+    return install
+  } catch {
+    return undefined
+  }
+}
+
 type Recorded = { event: AnyEventClass; payload: unknown }
 
 /** Records emitted events instead of running listeners. */
@@ -59,5 +77,6 @@ registerFake('events', (app) => {
 declare module './fakes' {
   interface TestFakes {
     events: EventFake
+    queue: import('@cslug/queue').QueueFake
   }
 }

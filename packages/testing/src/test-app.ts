@@ -15,7 +15,7 @@ import {
   SessionStore,
   type Token,
 } from '@cslug/core'
-import { fakeInstaller, type TestFakes } from './fakes'
+import { loadFake, type TestFakes } from './fakes'
 import { CookieJar, type Handler, PendingRequest, testSession } from './request'
 
 type Db = {
@@ -134,7 +134,7 @@ export function testApp(options: TestAppOptions = {}): TestApp {
     for (const [contract, Memory] of MEMORY_DRIVERS)
       if (a.resolve(contract as Token<unknown>) instanceof Memory) a.swap(contract as Token<unknown>, new Memory())
     for (const name of options.fakes ?? []) {
-      const install = fakeInstaller(String(name))
+      const install = await loadFake(String(name))
       if (!install) throw new Error(`testApp(): no fake named "${String(name)}" (is its package installed?)`)
       fakes[String(name)] = install(a)
     }

@@ -4,6 +4,20 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/queue
+- `Job` with typed payloads, `tries`, `backoff` (`Job.exponential`), `timeout`, `failed()`, `Job.schema()`.
+- `dispatch()` with `delay`, `at`, `onQueue`, `priority` (three bands), `unique`, `tries`, `immediately`; held until
+  COMMIT inside a transaction and dropped on rollback.
+- Redis Streams engine: consumer groups, delayed set promoted in Lua, atomic ack/retry/fail, lease renewal while a
+  job runs, takeover of a dead worker's jobs (`XAUTOCLAIM`), graceful stop on SIGTERM.
+- Failed store with retention; `queue:work`, `queue:failed`, `queue:retry`, `queue:forget`, `queue:clear`,
+  `queue:stats`; workers discover `app/jobs/` and `app/listeners/`.
+- Queued `@listener`s run as jobs.
+
+### @cslug/testing
+- `fakes: ['queue']`: `QueueFake` with `assertPushed`, `assertNotPushed`, `assertPushedCount`, `assertNothingPushed`
+  and `drain()`.
+
 ## 0.1.0 (2026-11-26)
 
 First release: web apps with pages, auth and PostgreSQL (milestones M1–M5). Packages are published as
