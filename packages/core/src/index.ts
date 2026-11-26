@@ -1,6 +1,6 @@
 /**
  * @cslug/core: application, container and `@inject`, service providers, ambient context, config and env,
- * typed errors, Clock, Money, events, logger. (i18n and the cache/lock/rate-limit contracts come next.)
+ * typed errors, Clock, Money, events, logger, i18n, and the Cache/Lock/RateLimiter/SessionStore contracts.
  */
 
 /** Re-exported so apps can `import { v, ValidationError } from '@cslug/core'` in config/env.ts. */
@@ -28,6 +28,22 @@ export {
   runInContext,
   type TransactionHooks,
 } from './context'
+export {
+  Cache,
+  Lock,
+  type LockHandle,
+  LockTimeoutError,
+  MemoryCache,
+  MemoryLock,
+  MemoryRateLimiter,
+  MemorySessionStore,
+  parseRate,
+  type RateLimit,
+  RateLimiter,
+  type RateLimitResult,
+  type SessionData,
+  SessionStore,
+} from './contracts'
 export { type Duration, parseDuration } from './duration'
 export {
   AppError,
@@ -56,6 +72,17 @@ export {
   type QueuedListenerDispatcher,
   registeredListeners,
 } from './events'
+export {
+  currentLocale,
+  formatDate,
+  formatMoney,
+  type I18nConfig,
+  Translator,
+  t,
+  tr,
+  validationTranslator,
+  withLocale,
+} from './i18n'
 export { inject, type Lifetime } from './inject'
 export { DEFAULT_REDACT, type LogFields, Logger, type LoggerOptions, type LogLevel } from './logger'
 export { Money, minorDigits } from './money'

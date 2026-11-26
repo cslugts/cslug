@@ -3,8 +3,19 @@ import { Clock } from './clock'
 import { deepFreeze, getPath, setPath } from './config'
 import { Container } from './container'
 import { setDefaultApp } from './context'
+import {
+  Cache,
+  Lock,
+  MemoryCache,
+  MemoryLock,
+  MemoryRateLimiter,
+  MemorySessionStore,
+  RateLimiter,
+  SessionStore,
+} from './contracts'
 import { ProviderError } from './errors'
 import { EventBus } from './events'
+import { type I18nConfig, Translator } from './i18n'
 import { Logger, type LoggerOptions } from './logger'
 import { dependenciesOf, type ProviderClass, type ProviderHooks, type ServiceProvider } from './provider'
 
@@ -38,6 +49,14 @@ export class Application extends Container {
     this.singleton(Clock, () => new Clock((this.config('app.timezone') as string | undefined) ?? 'UTC'))
     this.singleton(Logger, () => new Logger((this.config('log') as LoggerOptions | undefined) ?? {}))
     this.singleton(EventBus, (c) => new EventBus(this, c.resolve(Logger)))
+    this.singleton(Translator, () =>
+      Translator.fromDirectory(`${this.rootDir}/resources/lang`, (this.config('i18n') as I18nConfig | undefined) ?? {}),
+    )
+    // in-memory drivers; @cslug/redis replaces them
+    this.singleton(Cache, () => new MemoryCache())
+    this.singleton(Lock, () => new MemoryLock())
+    this.singleton(RateLimiter, () => new MemoryRateLimiter())
+    this.singleton(SessionStore, () => new MemorySessionStore())
   }
 
   /** All config sections. Read-only once the app has started. */
