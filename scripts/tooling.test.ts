@@ -30,6 +30,16 @@ describe('package graph', () => {
     `
     expect(importSpecifiers(code)).toEqual(['@cslug/core', '@cslug/http', './c', '@cslug/queue', 'vue/server-renderer'])
   })
+
+  test('imports shown in comments are ignored; URLs in strings are kept intact', () => {
+    const code = `
+      /** Usage: \`import { v } from '@cslug/validation'\` */
+      // import { x } from '@cslug/http'
+      import { a } from '@cslug/core' // trailing comment
+      const docs = 'https://cslug.dev/x' // import { y } from '@cslug/ai'
+    `
+    expect(importSpecifiers(code)).toEqual(['@cslug/core'])
+  })
 })
 
 describe('release', () => {

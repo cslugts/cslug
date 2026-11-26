@@ -29,6 +29,16 @@ export type StoreTripRequest = v.infer<typeof StoreTripRequestValidator>
 Also useful: `v.coerce.int()`, `v.coerce.boolean()` (`'1'`, `'on'`, `'true'` → `true`; for checkboxes),
 `v.coerce.date()`, and `v.secret()` (a string that is redacted in logs, error messages and `cslug config:show`).
 
+A few rules worth knowing:
+
+- **Dates:** `v.date()` is a calendar date, as a `'YYYY-MM-DD'` string (impossible dates like Feb 30 are
+  rejected). `v.datetime()` is an instant, as a `Date`.
+- **URLs:** `v.url()` accepts any absolute URL, so `DATABASE_URL` and `REDIS_URL` work, except dangerous schemes
+  (`javascript:`, `data:`, `file:` …). For links shown to users, narrow it: `v.url().protocols('https:')`.
+- **Unknown keys** are dropped; `.strict()` rejects them instead.
+
+The complete list is in [`packages/validation/docs/api.md`](../packages/validation/docs/api.md).
+
 ```ts
 const data = await request.validate(StoreTripRequestValidator)
 //    ^? { circuitId: string; startDate: string; nights: number; budget: Money; … }
@@ -70,7 +80,7 @@ export class RegisterOperatorValidator extends Validator {
     }),
   })
 
-  /** Runs after the schema passes. Add errors with `fail`. */
+  /** Runs after the schema passes. Add errors with `fail`. (No `override` needed.) */
   async after(data: v.infer<this['schema']>, fail: Fail) {
     if (await this.operators.existsBy({ email: data.email })) fail('email', 'validation.unique')
     if (await this.operators.existsBy({ licenceNumber: data.licenceNumber })) fail('licenceNumber', 'operators.licence_taken')
