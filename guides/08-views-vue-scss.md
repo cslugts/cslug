@@ -174,8 +174,10 @@ Used statically, the button does nothing and `v-show` keeps the details hidden, 
 show what matters by default. Used with `hydrate`, it is interactive.
 
 **Types for components that can be islands.** Props cross the network as JSON, so type them with
-`Serialized<T>` (`bigint` → `string`, `Date` → ISO `string`). A component used only statically may take real
-rows.
+`Serialized<T>` (`bigint` → `string`, `Date` → ISO `string`). Use it **per prop**:
+`defineProps<{ day: Serialized<CircuitDay> }>()`. Vue's compile-time props resolver cannot handle a whole props
+type written as a mapped type (`defineProps<Serialized<{ … }>>()` fails to compile). A component used only
+statically may take real rows.
 
 ### `hydrate` options
 
@@ -203,6 +205,9 @@ for widgets that only make sense in a browser, such as a map.
 - **Island translations** are declared with `defineOptions({ lang: ['todos', 'common'] })`. `@cslug/vue`
   augments Vue's `ComponentCustomOptions`, so `vue-tsc` accepts the option.
 - **Each island is its own Vue app.** Share state through a store (below), not provide/inject.
+- **Islands render inside `<cslug-island>`** (`display: contents`, so it does not affect layout). Don't put an
+  island directly inside `<table>`, `<tbody>` or `<tr>`: the HTML parser moves unknown elements out of tables.
+  Make the whole table the island instead.
 - **Browser-side helpers come from `@cslug/vue`**: `useT`, `route`, `formatMoney`, `formatDate`, `useForm`,
   `defineStore`. They work on the server too, so the same component renders in both places.
 

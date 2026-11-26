@@ -1,0 +1,7 @@
+{
+  "name": "spike-a-vue-islands",
+  "private": true,
+  "type": "module",
+  "scripts": { "spike": "bun run.ts" },
+  "dependencies": { "vue": "^3.5.46" }
+}

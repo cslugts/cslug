@@ -247,10 +247,10 @@ const { csrfToken, errors } = useRequest()
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useT, formatMoney, type Serialized } from '@cslug/vue'
-import type { Booking } from '#app/tables/booking-table'
 
-// Serialized<>: bigints arrive as strings, because island props cross the network as JSON
-const props = defineProps<Serialized<Pick<Booking, 'total' | 'deposit' | 'currency'>>>()
+// Island props cross the network as JSON, so bigints arrive as strings. Use Serialized<> per prop:
+// Vue's compiler cannot resolve a whole props type written as a mapped type (defineProps<Serialized<{…}>>()).
+const props = defineProps<{ total: Serialized<bigint>; deposit: Serialized<bigint>; currency: string }>()
 const { t } = useT()
 const showStages = ref(false)
 const stages = computed(() => [30, 40, 30].map((pct) => (BigInt(props.total) * BigInt(pct)) / 100n))
