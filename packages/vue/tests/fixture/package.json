@@ -1,0 +1,9 @@
+{
+  "name": "vue-fixture",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#views/*": "./resources/views/*",
+    "#components/*": "./resources/components/*"
+  }
+}

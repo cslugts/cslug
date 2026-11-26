@@ -11,7 +11,7 @@ installs `@cslug/ai`.
 | `@cslug/validation` | `v` (schemas, coercion, refinements, JSON Schema export, Standard Schema), `Validator`, `ValidationError` | — | — |
 | `@cslug/core` | `Application`, container, `@inject`, `token`, `ServiceProvider`, config + env, events, logger, typed errors, ambient context, `Clock`, `Money`, **i18n** (`t()`, formatting), **contracts** (`Cache`, `Lock`, `RateLimiter`, `SessionStore`) with in-memory drivers | validation | `AsyncLocalStorage`, `Intl` |
 | `@cslug/http` | Router (incl. domain routing), middleware, `HttpContext`, request/response, cookies, sessions (via `SessionStore`), CSRF, CORS, `throttle()` (via `RateLimiter`), error rendering, static files, `/health/*` | core, validation | `Bun.serve` |
-| `@cslug/vue` | `view()`, `renderStandalone()`, server `.vue` loader, `hydrate` → island transform, composables (`useT`, `useRequest`, `useForm`, `defineStore`), `route()`, formatters, `<Assets>`, `serialize()`, `Serialized<T>`, `mountIslands()`; build plugins at `@cslug/vue/build` | http · **peer: `vue`** · optional peers: `sass`, `tailwindcss`, `bun-plugin-tailwind` | `vue/server-renderer`, `vue/compiler-sfc`, `Bun.build` |
+| `@cslug/vue` | `view()`, `renderStandalone()`, server `.vue` loader, `hydrate` → island transform, composables (`useT`, `useRequest`, `useForm`, `defineStore`), `route()`, formatters, `<Assets>`, `serialize()`, `Serialized<T>`, `mountIslands()`; build plugins at `@cslug/vue/build`; test preload `@cslug/vue/register` | http · **peer: `vue`** · optional peers: `sass`, `tailwindcss`, `bun-plugin-tailwind` | `vue/server-renderer`, `vue/compiler-sfc`, `Bun.build` |
 | `@cslug/database` | `Database`, column builders, `Row`/`NewRow`, query builder, `sql` tag, `Repository`, `preload`, transactions (+ `afterCommit` hooks in core context), locks, idempotency, migrations + differ, factories, seeders | core | `Bun.sql` |
 | `@cslug/redis` | `Redis` connections, Lua helper; Redis drivers for core's `Cache`, `Lock`, `RateLimiter`, `SessionStore` | core | `Bun.redis` |
 | `@cslug/queue` | `Job`, workers on Redis Streams, retries, delays, unique jobs, chains, batches, after-commit dispatch; **scheduler** (`defineSchedule`, cron, once-per-tick locks); durable outbox when `@cslug/database` is present | core, redis · optional: database | Redis Streams |
@@ -63,7 +63,7 @@ No package has a runtime dependency outside `@cslug/*`. The only third-party pac
    `@cslug/cli` knows nothing about databases or queues. `cslug migrate` exists only if `@cslug/database` is
    installed.
 6. **Public API = the package's `src/index.ts`.** No deep imports between packages (`@cslug/http/src/...` is a
-   lint error). Subpath exports only where documented (`@cslug/http/middleware`, `@cslug/vue/build`).
+   lint error). Subpath exports only where documented (`@cslug/http/middleware`, `@cslug/vue/build`, `@cslug/vue/register`).
 7. **No cycles.** CI checks the graph above against the `package.json` files.
 
 ## Versioning and releases

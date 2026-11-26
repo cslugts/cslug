@@ -188,6 +188,9 @@
     "packages/vue": {
       "name": "@cslug/vue",
       "version": "0.0.0",
+      "devDependencies": {
+        "@cslug/validation": "workspace:*",
+      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/http": "workspace:*",
