@@ -1,86 +1,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Translate } from '@cslug/validation'
+import { formatIcu, type Translate } from '@cslug/validation'
 import { currentApp, currentContext, runInContext } from './context'
 import { CslugError } from './errors'
 import { Money } from './money'
-
-// ── ICU message format (the subset apps use: arguments, plural with =N and #, select) ───────────────────
-type Part = string | { arg: string } | { arg: string; kind: 'plural' | 'select'; options: Record<string, Part[]> }
-
-function parse(message: string): Part[] {
-  let i = 0
-  const parseParts = (inPlural: boolean, untilBrace: boolean): Part[] => {
-    const parts: Part[] = []
-    let text = ''
-    const flush = () => {
-      if (text) parts.push(text)
-      text = ''
-    }
-    while (i < message.length) {
-      const ch = message[i] as string
-      if (ch === '}' && untilBrace) break
-      if (ch === '#' && inPlural) {
-        flush()
-        parts.push({ arg: '#' })
-        i++
-      } else if (ch === '{') {
-        flush()
-        i++
-        parts.push(parseArgument())
-      } else {
-        text += ch
-        i++
-      }
-    }
-    flush()
-    return parts
-  }
-  const parseArgument = (): Part => {
-    const close = message.indexOf('}', i)
-    const header = message.slice(i, close === -1 ? undefined : close)
-    const [name, kind] = header.split(',').map((s) => s.trim())
-    if (kind !== 'plural' && kind !== 'select') {
-      i = close + 1
-      return { arg: name as string }
-    }
-    i = message.indexOf(',', message.indexOf(',', i) + 1) + 1 // after "name, kind,"
-    const options: Record<string, Part[]> = {}
-    while (i < message.length && message[i] !== '}') {
-      const open = message.indexOf('{', i)
-      const key = message.slice(i, open).trim()
-      i = open + 1
-      options[key] = parseParts(kind === 'plural', true)
-      i++ // past the option's closing brace
-      while (message[i] === ' ' || message[i] === '\n') i++
-    }
-    i++ // past the argument's closing brace
-    return { arg: name as string, kind, options }
-  }
-  return parseParts(false, false)
-}
-
-function render(parts: Part[], params: Record<string, unknown>, locale: string, hash?: number): string {
-  let out = ''
-  for (const p of parts) {
-    if (typeof p === 'string') out += p
-    else if (!('kind' in p)) {
-      if (p.arg === '#') out += new Intl.NumberFormat(locale).format(hash ?? 0)
-      else {
-        const v = params[p.arg]
-        out += v === undefined ? `{${p.arg}}` : Array.isArray(v) ? v.join(', ') : String(v)
-      }
-    } else if (p.kind === 'plural') {
-      const n = Number(params[p.arg] ?? 0)
-      const branch = p.options[`=${n}`] ?? p.options[new Intl.PluralRules(locale).select(n)] ?? p.options.other ?? []
-      out += render(branch, params, locale, n)
-    } else {
-      const branch = p.options[String(params[p.arg])] ?? p.options.other ?? []
-      out += render(branch, params, locale, hash)
-    }
-  }
-  return out
-}
 
 // ── translator ───────────────────────────────────────────────────────────────────────────────────────
 export type I18nConfig = {
@@ -107,7 +30,6 @@ export class Translator {
   readonly defaultLocale: string
   private readonly fallback: Record<string, string>
   private readonly messages = new Map<string, Map<string, string>>()
-  private readonly compiled = new Map<string, Part[]>()
 
   constructor(config: I18nConfig = {}, messages: Record<string, Messages> = {}) {
     this.defaultLocale = config.default ?? 'en'
@@ -155,20 +77,21 @@ export class Translator {
   ): string | undefined {
     for (const l of this.chain(locale)) {
       const message = this.messages.get(l)?.get(key)
-      if (message === undefined) continue
-      const cacheKey = `${l}\u0000${key}`
-      let parts = this.compiled.get(cacheKey)
-      if (!parts) {
-        parts = parse(message)
-        this.compiled.set(cacheKey, parts)
-      }
-      return render(parts, params, l)
+      if (message !== undefined) return formatIcu(message, params, l)
     }
     return undefined
   }
 
   has(key: string, locale: string = this.defaultLocale): boolean {
     return this.chain(locale).some((l) => this.messages.get(l)?.has(key))
+  }
+
+  /** Raw messages under `prefix` (`'todos'`), resolved through the locale chain: what islands receive. */
+  messagesFor(prefix: string, locale: string): Record<string, string> {
+    const out: Record<string, string> = {}
+    for (const l of this.chain(locale).reverse())
+      for (const [k, v] of this.messages.get(l) ?? []) if (k === prefix || k.startsWith(`${prefix}.`)) out[k] = v
+    return out
   }
 
   /** Keys of one locale (for `cslug i18n:check`). */

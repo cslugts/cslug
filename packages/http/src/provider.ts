@@ -13,6 +13,8 @@ export type HttpConfig = {
   /** Time to let in-flight requests finish on shutdown. */
   shutdownTimeout?: string | number
   bodyLimit?: string | number
+  /** Folder served for GET/HEAD requests no route matches (default `public`); false turns it off. */
+  public?: boolean | string
   trustedProxies?: string[]
   cors?: { origins: string[]; credentials?: boolean }
   /** Extra middleware for the `web` (routes/web.ts) and `api` (routes/api.ts) groups. */
@@ -44,6 +46,8 @@ export class HttpProvider extends ServiceProvider {
     const config = this.app.config<HttpConfig | undefined>('http') ?? {}
     const kernel = this.app.resolve(HttpKernel)
     const router = this.app.resolve(Router)
+    if (config.public !== false)
+      kernel.publicDir = join(this.app.rootDir, typeof config.public === 'string' ? config.public : 'public')
     kernel.global.push(securityHeaders(), bodyLimit(config.bodyLimit ?? '1mb'), ...(config.middleware ?? []))
 
     if (config.health !== false) {

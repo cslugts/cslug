@@ -228,8 +228,12 @@ for widgets that only make sense in a browser, such as a map.
 </cslug-island>
 ```
 
-The build creates one chunk per component used with `hydrate` anywhere. `<Assets>` preloads only the chunks
-on the current page.
+The build creates one chunk per component used with `hydrate` anywhere (Vue itself is one shared chunk).
+`<Assets>` preloads only the chunks on the current page, and adds `<script type="application/json"
+id="cslug-data">` with what the islands need: the locale, the translation namespaces they declared, the
+named routes (all of them, or those listed in `config('vue.routes')`, by name prefix) and the chunk URLs.
+`@cslug/vue` resolves to a browser build in islands (the `browser` export condition): the same names
+(`useT`, `route`, `useForm`, …), without the server.
 
 ```ts
 // resources/client.ts
@@ -319,6 +323,7 @@ const form = useForm<Fields>(initial)        // initial may be {} for button-onl
 form.data                                    // reactive fields
 form.errors                                  // { field: message } from a 422 response, cleared on next submit
 form.processing                              // true while a request is in flight
+form.error                                   // a message for failures that are not field errors (419, 403, 500, network)
 form.response                                // parsed JSON of the last successful response (typed with useForm<Fields, Response>)
 await form.post(url) / form.put(url) / form.patch(url) / form.delete(url)   // → Promise<boolean> (true on 2xx)
 form.reset(), form.clearErrors()
@@ -382,10 +387,12 @@ No Vite. `cslug dev` and `cslug build` use `Bun.build` with cslug's plugins:
 | `.css` + Tailwind | Bun CSS bundler + `bun-plugin-tailwind` (optional) |
 | images, fonts | Bun, hashed |
 
-- **`cslug dev`**: watches, recompiles changed SFCs on the server, rebuilds island chunks, and **live-reloads**
-  the page over SSE. CSS changes apply without a reload. (Vue state-preserving HMR is not in v1.)
-- **`cslug build`**: minified, hashed output in `public/build/` plus `manifest.json`, and precompiled server
-  render functions, so production does not compile templates at start-up.
+- **`cslug dev`**: builds the assets at start, rebuilds them when `resources/` changes, and **live-reloads**
+  the page over SSE; CSS changes swap the stylesheet without a reload. A server-side change restarts the
+  process (`bun --watch`) and open pages reload when it is back. (Vue state-preserving HMR is not in v1.)
+- **`cslug build`**: minified, hashed output in `public/build/` plus `manifest.json`. Run it before deploying
+  (the Dockerfile does). Files in `public/` are served for GET requests no route matches; hashed build files
+  are cached for a year. Server templates are compiled on first use (a few ms each) and cached.
 - **`cslug typecheck`**: runs `vue-tsc --noEmit`. It checks `.ts` files, every `.vue` template and every
   `view(Page, props)` call. This replaces `tsc` in CI.
 

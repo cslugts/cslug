@@ -188,12 +188,10 @@
     "packages/vue": {
       "name": "@cslug/vue",
       "version": "0.0.0",
-      "devDependencies": {
-        "@cslug/validation": "workspace:*",
-      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/http": "workspace:*",
+        "@cslug/validation": "workspace:*",
         "bun-plugin-tailwind": ">=0.1.0",
         "sass": "^1.80.0",
         "tailwindcss": "^4.0.0",

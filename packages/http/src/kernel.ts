@@ -13,6 +13,7 @@ import type { ExceptionHandler } from './errors'
 import { isResponsable, json } from './responses'
 import type { Middleware, MiddlewareFn, Next, RouteDef, Router } from './router'
 import { MissingSession } from './session'
+import { serveStatic } from './static'
 
 type Compiled = { route: RouteDef; path: RegExp; domain?: RegExp; score: number[] }
 
@@ -71,6 +72,9 @@ export class HttpKernel {
     private readonly errors: ExceptionHandler,
     private readonly log: Logger = Logger.null(),
   ) {}
+
+  /** Serve files from this folder for GET/HEAD requests that match no route (`public/`; `http.public: false` turns it off). */
+  publicDir?: string
 
   /** Compile the router's routes (called at boot; call again after adding routes). */
   compile(): this {
@@ -146,6 +150,10 @@ export class HttpKernel {
             }
             const { route, params, allowed } = this.match(method, host, url.pathname)
             if (!route) {
+              if (this.publicDir && (request.method === 'GET' || request.method === 'HEAD')) {
+                const file = serveStatic(this.publicDir, url.pathname, request)
+                if (file) return file
+              }
               if (allowed.size) {
                 const allow = [...allowed, ...(allowed.has('GET') ? ['HEAD'] : [])].join(', ')
                 return json(

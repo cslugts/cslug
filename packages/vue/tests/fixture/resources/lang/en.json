@@ -1,1 +1,5 @@
-{ "days": { "title": "Itinerary", "count": "{count, plural, one {# day} other {# days}}" } }
+{
+  "days": { "title": "Itinerary", "count": "{count, plural, one {# day} other {# days}}" },
+  "counter": { "label": "{count, plural, one {# click} other {# clicks}}" },
+  "other": { "secret": "not sent" }
+}
