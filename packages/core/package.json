@@ -1,0 +1,33 @@
+{
+  "name": "@cslug/core",
+  "version": "0.0.0",
+  "description": "Application, container and @inject, providers, config, events, logger, errors, context, Clock, Money, i18n, contracts.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cslugts/cslug.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/cslugts/cslug/tree/main/packages/core",
+  "keywords": [
+    "cslug",
+    "bun",
+    "framework"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "docs",
+    "stubs",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.3.14"
+  },
+  "peerDependencies": {
+    "@cslug/validation": "workspace:*"
+  }
+}

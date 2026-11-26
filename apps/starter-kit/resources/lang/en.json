@@ -1,0 +1,40 @@
+{
+  "app": { "name": "Starter Kit" },
+  "auth": {
+    "login": "Log in", "logout": "Log out", "register": "Create an account",
+    "name": "Name", "email": "Email", "password": "Password", "password_confirmation": "Confirm password",
+    "remember": "Remember me", "no_account": "No account yet?",
+    "failed": "These credentials do not match our records.",
+    "password_mismatch": "The passwords do not match.",
+    "welcome": "Welcome, {name}!"
+  },
+  "todos": {
+    "title": "My todos",
+    "stats": "{open} open · {done} done",
+    "overdue": "{count, plural, one {# overdue} other {# overdue}}",
+    "new_placeholder": "What needs doing?",
+    "add": "Add",
+    "delete": "Delete",
+    "confirm_delete": "Delete this todo?",
+    "empty": "Nothing here. Enjoy the day.",
+    "created": "Todo added.", "updated": "Todo updated.", "deleted": "Todo deleted.",
+    "filter": { "all": "All", "open": "Open", "done": "Done" },
+    "priority": { "low": "Low", "normal": "Normal", "high": "High" }
+  },
+  "mail": {
+    "todo_due": {
+      "subject": "{count, plural, one {A todo is due} other {# todos are due}}",
+      "preview": "{count, plural, one {One todo needs your attention} other {# todos need your attention}}",
+      "greeting": "Hi {name},",
+      "intro": "{count, plural, one {This todo is due:} other {These todos are due:}}",
+      "cta": "Open my todos"
+    }
+  },
+  "errors": { "not_found": "Page not found", "back_home": "Back to the home page" },
+  "validation": {
+    "required": "This field is required.",
+    "unique": "This value is already taken.",
+    "string.min": "Must be at least {min} characters.",
+    "string.max": "Must be at most {max} characters."
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "@cslug/vue",
+  "version": "0.0.0",
+  "description": "Vue views rendered on the server, components hydrated as islands, composables and asset build.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cslugts/cslug.git",
+    "directory": "packages/vue"
+  },
+  "homepage": "https://github.com/cslugts/cslug/tree/main/packages/vue",
+  "keywords": [
+    "cslug",
+    "bun",
+    "framework"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "docs",
+    "stubs",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.3.14"
+  },
+  "peerDependencies": {
+    "@cslug/core": "workspace:*",
+    "@cslug/http": "workspace:*",
+    "vue": "^3.5.0",
+    "sass": "^1.80.0",
+    "tailwindcss": "^4.0.0",
+    "bun-plugin-tailwind": ">=0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "sass": {
+      "optional": true
+    },
+    "tailwindcss": {
+      "optional": true
+    },
+    "bun-plugin-tailwind": {
+      "optional": true
+    }
+  }
+}

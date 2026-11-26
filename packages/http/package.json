@@ -1,0 +1,33 @@
+{
+  "name": "@cslug/http",
+  "version": "0.0.0",
+  "description": "Router, middleware, HttpContext, sessions, CSRF, error rendering on Bun.serve.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cslugts/cslug.git",
+    "directory": "packages/http"
+  },
+  "homepage": "https://github.com/cslugts/cslug/tree/main/packages/http",
+  "keywords": [
+    "cslug",
+    "bun",
+    "framework"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "docs",
+    "stubs",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.3.14"
+  },
+  "peerDependencies": {
+    "@cslug/core": "workspace:*"
+  }
+}

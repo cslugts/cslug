@@ -1,0 +1,40 @@
+{
+  "app": { "name": "Starter Kit" },
+  "auth": {
+    "login": "Se connecter", "logout": "Se déconnecter", "register": "Créer un compte",
+    "name": "Nom", "email": "E-mail", "password": "Mot de passe", "password_confirmation": "Confirmer le mot de passe",
+    "remember": "Se souvenir de moi", "no_account": "Pas encore de compte ?",
+    "failed": "Ces identifiants ne correspondent à aucun compte.",
+    "password_mismatch": "Les mots de passe ne correspondent pas.",
+    "welcome": "Bienvenue, {name} !"
+  },
+  "todos": {
+    "title": "Mes tâches",
+    "stats": "{open} à faire · {done} terminées",
+    "overdue": "{count, plural, one {# en retard} other {# en retard}}",
+    "new_placeholder": "Que faut-il faire ?",
+    "add": "Ajouter",
+    "delete": "Supprimer",
+    "confirm_delete": "Supprimer cette tâche ?",
+    "empty": "Rien à faire. Profitez de la journée.",
+    "created": "Tâche ajoutée.", "updated": "Tâche modifiée.", "deleted": "Tâche supprimée.",
+    "filter": { "all": "Toutes", "open": "À faire", "done": "Terminées" },
+    "priority": { "low": "Basse", "normal": "Normale", "high": "Haute" }
+  },
+  "mail": {
+    "todo_due": {
+      "subject": "{count, plural, one {Une tâche arrive à échéance} other {# tâches arrivent à échéance}}",
+      "preview": "{count, plural, one {Une tâche demande votre attention} other {# tâches demandent votre attention}}",
+      "greeting": "Bonjour {name},",
+      "intro": "{count, plural, one {Cette tâche arrive à échéance :} other {Ces tâches arrivent à échéance :}}",
+      "cta": "Voir mes tâches"
+    }
+  },
+  "errors": { "not_found": "Page introuvable", "back_home": "Retour à l'accueil" },
+  "validation": {
+    "required": "Ce champ est obligatoire.",
+    "unique": "Cette valeur est déjà utilisée.",
+    "string.min": "Doit contenir au moins {min} caractères.",
+    "string.max": "Doit contenir au plus {max} caractères."
+  }
+}

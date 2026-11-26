@@ -1,0 +1,35 @@
+name: Release
+
+# Publishes every @cslug/* package at the tagged version, in dependency order.
+# Uses npm trusted publishing (OIDC) with provenance: no npm token is stored in the repository.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - name: Tag matches package versions
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          for f in packages/*/package.json; do
+            grep -q "\"version\": \"$v\"" "$f" || { echo "$f is not at $v"; exit 1; }
+          done
+      - run: bun scripts/release.ts publish

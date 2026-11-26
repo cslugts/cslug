@@ -1,0 +1,87 @@
+{
+  "name": "@cslug/testing",
+  "version": "0.0.0",
+  "description": "Test kit: testApp(), HTTP and HTML assertions, database isolation, fakes, time travel.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cslugts/cslug.git",
+    "directory": "packages/testing"
+  },
+  "homepage": "https://github.com/cslugts/cslug/tree/main/packages/testing",
+  "keywords": [
+    "cslug",
+    "bun",
+    "framework"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "docs",
+    "stubs",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.3.14"
+  },
+  "peerDependencies": {
+    "@cslug/core": "workspace:*",
+    "@cslug/validation": "workspace:*",
+    "@cslug/http": "workspace:*",
+    "@cslug/vue": "workspace:*",
+    "@cslug/database": "workspace:*",
+    "@cslug/redis": "workspace:*",
+    "@cslug/queue": "workspace:*",
+    "@cslug/auth": "workspace:*",
+    "@cslug/mail": "workspace:*",
+    "@cslug/notification": "workspace:*",
+    "@cslug/storage": "workspace:*",
+    "@cslug/webhook": "workspace:*",
+    "@cslug/ai": "workspace:*",
+    "@cslug/cli": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@cslug/validation": {
+      "optional": true
+    },
+    "@cslug/http": {
+      "optional": true
+    },
+    "@cslug/vue": {
+      "optional": true
+    },
+    "@cslug/database": {
+      "optional": true
+    },
+    "@cslug/redis": {
+      "optional": true
+    },
+    "@cslug/queue": {
+      "optional": true
+    },
+    "@cslug/auth": {
+      "optional": true
+    },
+    "@cslug/mail": {
+      "optional": true
+    },
+    "@cslug/notification": {
+      "optional": true
+    },
+    "@cslug/storage": {
+      "optional": true
+    },
+    "@cslug/webhook": {
+      "optional": true
+    },
+    "@cslug/ai": {
+      "optional": true
+    },
+    "@cslug/cli": {
+      "optional": true
+    }
+  }
+}

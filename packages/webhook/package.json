@@ -1,0 +1,35 @@
+{
+  "name": "@cslug/webhook",
+  "version": "0.0.0",
+  "description": "Webhook signature verification and an exactly-once inbox.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cslugts/cslug.git",
+    "directory": "packages/webhook"
+  },
+  "homepage": "https://github.com/cslugts/cslug/tree/main/packages/webhook",
+  "keywords": [
+    "cslug",
+    "bun",
+    "framework"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "docs",
+    "stubs",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.3.14"
+  },
+  "peerDependencies": {
+    "@cslug/core": "workspace:*",
+    "@cslug/http": "workspace:*",
+    "@cslug/database": "workspace:*"
+  }
+}

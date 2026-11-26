@@ -1,0 +1,9 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": { "builder": "DOCKERFILE" },
+  "deploy": {
+    "startCommand": "bun cslug migrate --force && bun cslug start",
+    "healthcheckPath": "/health/ready",
+    "restartPolicyType": "ON_FAILURE"
+  }
+}

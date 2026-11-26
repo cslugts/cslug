@@ -1,0 +1,43 @@
+{
+  "name": "starter-kit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cslug dev",
+    "start": "cslug start",
+    "build": "cslug build",
+    "typecheck": "cslug typecheck",
+    "test": "bun test",
+    "lint": "biome check ."
+  },
+  "imports": {
+    "#app/*": "./app/*.ts",
+    "#config/*": "./config/*.ts",
+    "#routes/*": "./routes/*.ts",
+    "#database/*": "./database/*.ts",
+    "#views/*": "./resources/views/*",
+    "#components/*": "./resources/components/*",
+    "#resources/*": "./resources/*"
+  },
+  "dependencies": {
+    "@cslug/core": "workspace:*",
+    "@cslug/validation": "workspace:*",
+    "@cslug/http": "workspace:*",
+    "@cslug/vue": "workspace:*",
+    "@cslug/database": "workspace:*",
+    "@cslug/redis": "workspace:*",
+    "@cslug/queue": "workspace:*",
+    "@cslug/mail": "workspace:*",
+    "@cslug/auth": "workspace:*",
+    "@cslug/cli": "workspace:*",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@cslug/testing": "workspace:*",
+    "@types/bun": "^1.3.14",
+    "sass": "^1.80.0",
+    "typescript": "^5.9.0",
+    "vue-tsc": "^3.0.0"
+  }
+}
