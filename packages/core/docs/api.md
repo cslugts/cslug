@@ -1,4 +1,4 @@
-# @cslug/core: API (container and providers)
+# @cslug/core: API
 
 ## `@inject`
 
@@ -79,3 +79,64 @@ The hooks and `dependsOn` are not declared on the base class, so apps using `noI
 
 All extend `CslugError` (`code`, `message`): `BindingNotFoundError` (`container.binding_not_found`),
 `CircularDependencyError`, `ScopeViolationError`, `ProviderError` (`app.provider`).
+
+## Config and env
+
+| | |
+|---|---|
+| `defineEnv(shape, source = process.env)` | Validates immediately with `v` schemas; typed, frozen result. Empty values count as missing. Throws `EnvError` listing **every** problem (`name  message`), with hints (`APP_KEY` → `cslug key:generate`). Secret values are never printed |
+| `secretKeys(shape)` | Names of `v.secret()` variables, for redaction |
+| `defineConfig(object)` | A config file's default export; returns the object, typed |
+| `config(path)` | Typed read from the current app: `config('payments.commissionPercent')`. Paths and value types come from the app's `Config` (see below). Arrays are leaves |
+| `app.config(path)` | Untyped read (`unknown` by default), used by packages |
+| `app.setConfig(path, value)` | Override before `start()` (the test kit); config is deep-frozen at start |
+| `Config`, `Typed<T>`, `ConfigPath<T>`, `ConfigValue<T, P>` | `declare module '@cslug/core' { interface Config extends Typed<typeof configs> {} }` |
+
+`v` and `ValidationError` are re-exported from `@cslug/validation`.
+
+## Errors
+
+| Class | Status | Code |
+|---|---|---|
+| `CslugError(code, message)` | — | base of everything cslug throws |
+| `AppError(code, message?, { status?, params?, cause? })` | 500 by default | base for errors shown to users; `code` is the translation key |
+| `HttpError` | — | base for the classes below |
+| `NotFoundError(resource?, id?)` | 404 | `<resource>.not_found` |
+| `ForbiddenError(code?, message?)` | 403 | `auth.forbidden` |
+| `UnauthorizedError(code?, message?)` | 401 | `auth.unauthenticated` |
+| `ConflictError(code, params?, message?)` | 409 | yours, e.g. `booking.invalid_transition` |
+| `BadRequestError(code?, message?)` | 400 | `http.bad_request` |
+| `TooManyRequestsError(retryAfter?)` | 429 | `http.too_many_requests` |
+| `ValidationError` | 422 | `validation.failed` (from `@cslug/validation`) |
+
+## Clock
+
+Bound as a singleton; its time zone is `config('app.timezone')` (default UTC). At `start()` the app points
+`v.date().future()/past()` at it.
+
+| | |
+|---|---|
+| `now()` | `Date` |
+| `today(offsetDays = 0, tz?)` | `'YYYY-MM-DD'` in the time zone |
+| `add(duration)` / `subtract(duration)` | `Date` relative to now |
+| `atLocal(date, 'HH:mm', tz?)` | The instant of a local wall-clock time; DST-safe |
+| `FakeClock(tz?, start?)` | For tests: frozen time; `travelTo(instant)`, `advance(duration)`, `freeze()` |
+
+`parseDuration('1h30m')` → ms. Units: `ms s m h d w`. Invalid input throws (never a silent 0).
+
+## Money
+
+Immutable; integer minor units (`bigint`) + ISO 4217 currency; no floating point anywhere.
+
+| | |
+|---|---|
+| `Money.of(amount, currency)` | Amount: bigint, safe integer, or digit string. Currency checked against Intl's list |
+| `Money.from({ amount, currency })` / `Money.zero(c)` / `Money.sum(list, c?)` | |
+| `add`, `subtract` | Same currency only (`money.currency_mismatch`) |
+| `multiply(factor)` / `percent(p)` | Decimal factors (`'1.005'`, `2.5`); rounded **half away from zero** to the minor unit |
+| `allocate([30, 40, 30])` | Splits without losing a cent; the remainder goes to the first shares |
+| `negate`, `isZero`, `isPositive`, `isNegative`, `equals`, `compare` | |
+| `toDecimal()` | `'2200.00'` (digits from Intl: EUR 2, JPY 0, KWD 3) |
+| `format(locale, options?)` | `2 200,00 €` (fr), `€2,200.00` (en); exact for any size |
+| `toJSON()` | `{ amount: '220000', currency: 'EUR' }` |
+| `minorDigits(currency)` | |

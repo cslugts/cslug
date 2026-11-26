@@ -1,3 +1,6 @@
+import { configure as configureValidation } from '@cslug/validation'
+import { Clock } from './clock'
+import { deepFreeze, getPath, setPath } from './config'
 import { Container } from './container'
 import { setDefaultApp } from './context'
 import { ProviderError } from './errors'
@@ -19,7 +22,7 @@ type State = 'created' | 'starting' | 'running' | 'stopping' | 'stopped'
 export class Application extends Container {
   /** The app's root directory. */
   readonly rootDir: string
-  readonly configs: Record<string, unknown>
+  protected _configs: Record<string, unknown>
   protected providerClasses: ProviderClass[] = []
   protected booted: (ServiceProvider & ProviderHooks)[] = []
   protected state: State = 'created'
@@ -28,8 +31,29 @@ export class Application extends Container {
   constructor(options: ApplicationOptions = {}) {
     super()
     this.rootDir = options.root ?? process.cwd()
-    this.configs = options.configs ?? {}
+    this._configs = options.configs ?? {}
     this.instance(Application, this)
+    this.singleton(Clock, () => new Clock((this.config('app.timezone') as string | undefined) ?? 'UTC'))
+  }
+
+  /** All config sections. Read-only once the app has started. */
+  get configs(): Readonly<Record<string, unknown>> {
+    return this._configs
+  }
+
+  /** Config at a dotted path (`'payments.stages'`), or undefined. App code uses the typed `config()` helper. */
+  config<T = unknown>(path: string): T {
+    return getPath(this._configs, path) as T
+  }
+
+  /**
+   * Override a config value before start (the test kit does this: `testApp({ config: { 'payments.driver': 'fake' } })`).
+   * After start, config is frozen.
+   */
+  setConfig(path: string, value: unknown): this {
+    if (this.state !== 'created') throw new ProviderError(`Config is read-only after start (tried to set "${path}").`)
+    this._configs = setPath(this._configs, path, value)
+    return this
   }
 
   get isRunning(): boolean {
@@ -50,6 +74,9 @@ export class Application extends Container {
   async start(options: { signals?: boolean } = {}): Promise<this> {
     if (this.state !== 'created') throw new ProviderError(`Cannot start an application that is ${this.state}.`)
     this.state = 'starting'
+    deepFreeze(this._configs)
+    // dates validated with v.date().future() follow the app clock and time zone
+    configureValidation({ today: () => this.resolve(Clock).today() })
     const order = sortProviders(this.providerClasses)
     const instances = order.map((P) => new P(this) as ServiceProvider & ProviderHooks)
 

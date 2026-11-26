@@ -1,7 +1,7 @@
 # @cslug/core
 
-The application, the container with `@inject`, service providers, and the ambient context. Config, env, events,
-the logger, typed errors, `Clock`, `Money` and i18n are added in the next M1 steps.
+The application, the container with `@inject`, service providers, the ambient context, config and env, typed
+errors, `Clock` and `Money`. Events, the logger, i18n and the cache/lock/rate-limit contracts are added next.
 
 ```ts
 import { Application, inject, ServiceProvider } from '@cslug/core'
