@@ -105,3 +105,49 @@ timestamps, defaults; `RETURNING *`), `update(id, values)`, `upsert(values, { co
 
 `preload(rows, { operator: belongsTo(operators, 'operatorId'), todos: hasMany(todos, 'operatorId', { orderBy }) })`:
 one query per relation, typed results (`Row | null` for belongsTo, `Row[]` for hasMany).
+
+## Migrations
+
+SQL files `database/migrations/YYYYMMDD_HHMMSS_name.sql` with `-- up` / `-- down` sections (several statements
+and `$$` bodies are fine). A first line `-- cslug:no-transaction` runs the file outside a transaction (needed for
+`create index concurrently`).
+
+| `Migrator(db, { paths?, env?, log? })` | |
+|---|---|
+| `migrate()` | Pending migrations, each in its own transaction, recorded in `cslug_migrations` with a batch number. The whole run holds an advisory lock: concurrent runs execute each migration **once** |
+| `rollback({ steps? })` | Undo the last `steps` batches (default 1), newest first; fails clearly without a `-- down` |
+| `status()` | `{ name, ran, batch?, ranAt? }[]` |
+| `fresh()` | Drop the public schema and migrate; **refused when `env` is `production`** |
+| `Migrator.create(dir, name)` | Writes an empty, timestamped file |
+| `FRAMEWORK_MIGRATIONS` | cslug's own (e.g. `cslug_idempotency`), always run first |
+
+A failing migration is rolled back entirely and the error names the file. (`cslug migrate*` commands arrive
+with `@cslug/cli` in M3. The table differ, `--from-tables`, comes later.)
+
+## Factories and seeders
+
+```ts
+export const TodoFactory = factory(todos, ({ seq, fake, clock }) => ({
+  userId: () => UserFactory.create().then((u) => u.id),   // lazy, may be async
+  title: `Todo ${seq}`,
+})).state('done', ({ clock }) => ({ completedAt: clock.now() }))
+
+await TodoFactory.for({ userId: me.id }).state('done').createMany(3)
+await TodoFactory.make()                                   // attributes only
+await TodoFactory.on(db).create()                          // a specific database
+```
+
+`fake` (`Fake`, seeded, deterministic): `name firstName lastName company email word words sentence int bool pick
+digits phone(country) date(from, to) passwordHash(plain)`. `seeder(async () => …)` marks a seeder for `cslug db:seed`.
+
+## `db.idempotent(key, fn, { scope? })`
+
+Runs `fn` once per key under an advisory lock; the result is stored as JSON and every call, the first one
+included, returns it as `Json<T>` (bigint and Date as strings). Inside a transaction the record commits or rolls
+back with your changes.
+
+## Encrypted columns
+
+`text().encrypted()`: AES-256-GCM, key derived from `APP_KEY` (set by `DatabaseProvider` from `config('app.key')`,
+or `setEncryptionKey()`), random IV per value, stored as `v1.<iv>.<tag>.<ciphertext>`. Decrypted on read; using
+the column in `where` throws (random IVs make it unsearchable). A wrong key fails loudly (`db.decrypt_failed`).

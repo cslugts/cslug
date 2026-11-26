@@ -1,4 +1,5 @@
 import type { AnyColumn, Column } from './columns'
+import { decrypt } from './encryption'
 import { IDENT, quote, type SqlIdentifier } from './sql'
 
 export type Columns = Record<string, AnyColumn>
@@ -86,7 +87,9 @@ export class Table<C extends Columns = Columns> implements SqlIdentifier {
     for (const [key, column] of Object.entries(this.columns)) {
       const name = this.sqlNames.get(key) as string
       if (!(name in raw)) continue
-      out[key] = convertFromDb(raw[name], column.def.kind)
+      const value = raw[name]
+      out[key] =
+        column.def.encrypted && typeof value === 'string' ? decrypt(value) : convertFromDb(value, column.def.kind)
     }
     return out as Row<this>
   }

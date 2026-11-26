@@ -22,6 +22,15 @@ const camelKeys = (row: Record<string, unknown>) =>
 const seconds = (v: string | number | undefined, fallback: number) =>
   v === undefined ? fallback : typeof v === 'number' ? v : Number.parseFloat(v) * (v.endsWith('ms') ? 0.001 : 1)
 
+/** A value after a JSON round trip: bigint and Date become strings. What `idempotent()` returns. */
+export type Json<T> = T extends bigint | Date
+  ? string
+  : T extends (infer U)[]
+    ? Json<U>[]
+    : T extends object
+      ? { [K in keyof T]: Json<T[K]> }
+      : T
+
 export type TransactionOptions = {
   isolation?: 'read committed' | 'repeatable read' | 'serializable'
   /** Retry the whole transaction this many times on serialization failures and deadlocks. */
@@ -223,6 +232,40 @@ export class Database extends Queryable {
     } finally {
       conn.release()
     }
+  }
+
+  /**
+   * Run `fn` once per key: the first result is stored as JSON and returned to every call with the same key,
+   * the first one included, so the shape is always the same (`Json<T>`: bigint and Date as strings).
+   * Concurrent calls wait for each other (advisory lock). Inside a transaction, the record commits or rolls back
+   * with your changes. Needs the framework migration `cslug_idempotency` (run by `cslug migrate`).
+   *
+   * ```ts
+   * const transfer = await db.idempotent(`release:${bookingId}:1`, () => gateway.release(…))
+   * ```
+   */
+  async idempotent<T>(key: string, fn: () => Promise<T> | T, options: { scope?: string } = {}): Promise<Json<T>> {
+    const scope = options.scope ?? 'default'
+    return this.advisoryLock(`idempotent:${scope}:${key}`, async () => {
+      const existing = await this.maybeOne(
+        new SqlFragment<{ result: Json<T> }>(
+          ['select result from cslug_idempotency where scope = ', ' and key = ', ''],
+          [scope, key],
+        ),
+      )
+      if (existing) return existing.result
+      const result = await fn()
+      const json = JSON.stringify(result === undefined ? null : result, (_k, v) =>
+        typeof v === 'bigint' ? v.toString() : v,
+      )
+      await this.exec(
+        new SqlFragment(
+          ['insert into cslug_idempotency (scope, key, result) values (', ', ', ', (', '::text)::jsonb)'],
+          [scope, key, json],
+        ),
+      )
+      return JSON.parse(json) as Json<T>
+    })
   }
 
   async close(): Promise<void> {

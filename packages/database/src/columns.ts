@@ -30,6 +30,8 @@ export type ColumnDef = {
   check?: SqlFragment<unknown>
   /** Set on update automatically (updatedAt). */
   touch?: boolean
+  /** Stored encrypted (AES-256-GCM with APP_KEY); decrypted on read; cannot be queried by value. */
+  encrypted?: boolean
 }
 
 /**
@@ -87,6 +89,10 @@ export class TextColumn<T extends string = string, N extends boolean = false, D 
   }
   override default(value: T): TextColumn<T, N, true> {
     return new TextColumn<T, N, true>({ ...this.def, defaultValue: value })
+  }
+  /** Store encrypted at rest (AES-256-GCM with APP_KEY). Values are decrypted on read and cannot be searched. */
+  encrypted(): TextColumn<T, N, D> {
+    return new TextColumn<T, N, D>({ ...this.def, encrypted: true })
   }
 }
 

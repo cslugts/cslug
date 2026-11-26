@@ -20,7 +20,7 @@ export const operators = table('operators', {
   phone: text(),
   verificationStatus: text().oneOf(['pending', 'in_review', 'verified', 'suspended']).default('pending'),
   payoutMethod: text().oneOf(['mvola', 'orange_money', 'airtel_money', 'bank']),
-  payoutAccount: text().encrypted(),                         // AES-GCM with APP_KEY; decrypted on read (M2c)
+  payoutAccount: text().encrypted(),                         // AES-256-GCM with APP_KEY; decrypted on read; not searchable
   maxSeats: integer().default(4),
   ratingAvg: numeric(3, 2).nullable(),                       // returned as string (exact), not float
   acceptsNightDriving: boolean().default(false),
@@ -74,7 +74,7 @@ async importFromSheet(rows: NewOperator[]) { await this.operators.createMany(row
 | `timestamps()` / `softDeletes()` | `created_at`, `updated_at` / `deleted_at` | `Date` / `Date \| null` |
 
 Modifiers: `.nullable()`, `.default(v)`, `.defaultSql(sql\`now()\`)`, `.unique()`, `.references(() => t, opts)`,
-`.oneOf([...])`, `.encrypted()` (coming in M2c), `.check(sql\`…\`)`.
+`.oneOf([...])`, `.encrypted()` (text columns; cannot appear in `where`), `.check(sql\`…\`)`.
 
 ## Repositories
 
@@ -234,7 +234,8 @@ export class ClaimService {
 await this.bookings.lockForUpdate(id)                                       // row lock
 await this.db.advisoryLock(`payout:${operatorId}`, async () => { … })        // cluster-wide mutex
 const transfer = await this.db.idempotent(`release:${bookingId}:1`, () => this.gateway.release(…))
-// the first call runs and stores the result; later calls with the same key return it
+// the first call runs and stores the result; every call with the same key gets it back as JSON
+// (Json<T>: bigint and Date become strings, the same shape on the first call and on replays)
 ```
 
 ## Migrations
