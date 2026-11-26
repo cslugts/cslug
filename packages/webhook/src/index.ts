@@ -1,6 +1,7 @@
 /**
- * @cslug/webhook: Webhook signature verification and an exactly-once inbox.
- *
- * Not implemented yet. See docs/packages.md and docs/implementation-plan.md.
+ * @cslug/webhook: signature verification (`verifySignature`) and an exactly-once inbox (`WebhookInbox`) for the
+ * webhooks your providers send.
  */
-export {}
+export { WEBHOOK_MIGRATIONS, WebhookInbox, type WebhookProcessor } from './inbox'
+export { WebhookProvider, WebhooksReplayCommand } from './provider'
+export { checkSignature, type SignatureCheck, signWebhook, verifySignature, type WebhookSource } from './signature'

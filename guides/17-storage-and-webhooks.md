@@ -84,6 +84,8 @@ r.post('/webhooks/payments', [PaymentWebhookController, 'handle']).middleware(ve
 
 The middleware reads the **raw bytes** before any parsing, compares in constant time and returns `401` on mismatch.
 Providers with their own scheme can pass a function: `verifySignature((req, raw) => mySdk.verify(raw, req.headers))`.
+Signatures are hex by default (`encoding: 'base64'` otherwise). In tests, `signWebhook('payments', rawBody)`
+returns the headers the provider would send.
 
 ### 2. The inbox (exactly-once processing)
 
@@ -91,11 +93,13 @@ Providers with their own scheme can pass a function: `verifySignature((req, raw)
 await this.inbox.receive('payments', event.id, event, () => ProcessPaymentEventJob.dispatch({ eventId: event.id }).durable())
 ```
 
-`WebhookInbox.receive(source, externalId, payload, then)`:
+`WebhookInbox.receive(source, externalId, payload, then)` (list `WebhookProvider` to get the table):
 
-1. inserts into `webhook_inbox` (unique on `source, external_id`), storing the payload;
-2. if the row already existed, returns without calling `then` — **replays are no-ops**;
-3. otherwise runs `then` in the same transaction (so the durable job and the inbox row commit together).
+1. inserts into `cslug_webhook_inbox` (unique on `source, external_id`), storing the payload;
+2. if the row already existed, returns `false` without calling `then`: **replays are no-ops**, even when the
+   same event arrives several times at once;
+3. otherwise runs `then` in the same transaction (so the durable job and the inbox row commit together) and
+   returns `true`.
 
 Respond `200` fast; do the work in the job.
 
@@ -118,4 +122,12 @@ export class ProcessPaymentEventJob extends Job.schema(v.object({ eventId: v.str
 }
 ```
 
-`cslug webhooks:replay payments <eventId>` re-runs processing for one stored event; useful after a bug fix.
+`cslug webhooks:replay payments <eventId>` re-runs processing for one stored event; useful after a bug fix. The
+replay needs to know what processing is, so register it once per source (a provider's `boot()`), and `receive`
+can then omit `then`:
+
+```ts
+inbox.process('payments', (eventId) => ProcessPaymentEventJob.dispatch({ eventId }).durable())
+```
+
+Old events can be pruned: `inbox.prune('90d')` (schedule it daily).
