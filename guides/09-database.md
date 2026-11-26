@@ -20,7 +20,7 @@ export const operators = table('operators', {
   phone: text(),
   verificationStatus: text().oneOf(['pending', 'in_review', 'verified', 'suspended']).default('pending'),
   payoutMethod: text().oneOf(['mvola', 'orange_money', 'airtel_money', 'bank']),
-  payoutAccount: text().encrypted(),                         // AES-GCM with APP_KEY; decrypted on read
+  payoutAccount: text().encrypted(),                         // AES-GCM with APP_KEY; decrypted on read (M2c)
   maxSeats: integer().default(4),
   ratingAvg: numeric(3, 2).nullable(),                       // returned as string (exact), not float
   acceptsNightDriving: boolean().default(false),
@@ -74,7 +74,7 @@ async importFromSheet(rows: NewOperator[]) { await this.operators.createMany(row
 | `timestamps()` / `softDeletes()` | `created_at`, `updated_at` / `deleted_at` | `Date` / `Date \| null` |
 
 Modifiers: `.nullable()`, `.default(v)`, `.defaultSql(sql\`now()\`)`, `.unique()`, `.references(() => t, opts)`,
-`.oneOf([...])`, `.encrypted()`, `.check(sql\`…\`)`.
+`.oneOf([...])`, `.encrypted()` (coming in M2c), `.check(sql\`…\`)`.
 
 ## Repositories
 
@@ -133,7 +133,7 @@ export class OperatorRepository extends Repository(operators) {
 ## The query builder (single table)
 
 ```ts
-import { eq, ne, gt, gte, lt, lte, inList, notIn, like, ilike, between, isNull, notNull, or, not } from '@cslug/database'
+import { eq, ne, gt, gte, lt, lte, inList, notIn, like, ilike, between, isNull, notNull, not } from '@cslug/database'
 
 await this.bookings
   .where({

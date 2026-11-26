@@ -1,7 +1,8 @@
 # @cslug/database
 
 PostgreSQL on `Bun.sql`, with no ORM and no dependency. Typed tables, the `sql` tag, ambient transactions and
-advisory locks. (Query builder, repositories, migrations and factories come in the next M2 steps.)
+advisory locks, the single-table query builder, repositories and `preload`. (Migrations, factories and
+encrypted columns come in M2c.)
 
 ```ts
 import { amount, currency, date, id, sql, table, text, timestamps, type Row } from '@cslug/database'
