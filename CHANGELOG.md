@@ -4,6 +4,17 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/notification
+- `Notification` (`via(to)`, `to<Channel>(to)`) and `Notifier.send` / `sendMany`; recipients are any object
+  (`recipient(row, fn)` for explicit routes); messages are built in the recipient's locale.
+- Channels: `mail` (through the Mailer, queued), `database` (`cslug_notifications`), `whatsapp` and `sms` with `log`
+  and `manual` drivers, custom channels with `extend()`.
+- One job per delivery (`cslug.notification`), after COMMIT; delivery records in `cslug_notification_deliveries`.
+- `fakes: ['notify']` → `t.notify` (`assertSentTo`, `assertNotSentTo`, `assertNothingSent`).
+
+### @cslug/mail
+- `mailer.to(…).queue(mailable)`: queued even if the mailable is not.
+
 ### @cslug/storage
 - `Storage` with `local`, `s3` (`Bun.s3`, any S3-compatible service) and `memory` disks from `config/storage.ts`.
 - `putFile(dir, file)`: generated `dir/<uuidv7>.<ext>` key, extension from the sniffed bytes; keys can never leave

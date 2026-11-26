@@ -80,7 +80,7 @@ export class Mailer {
   async dispatch(
     mailable: Mailable,
     to: Address[],
-    options: { cc?: Address[]; bcc?: Address[]; locale?: string; now?: boolean } = {},
+    options: { cc?: Address[]; bcc?: Address[]; locale?: string; now?: boolean; queued?: boolean } = {},
   ) {
     if (!to.length)
       throw new CslugError('mail.no_recipient', `${mailable.constructor.name}: no recipient (mailer.to(…))`)
@@ -88,7 +88,7 @@ export class Mailer {
     const from = this.config.from ? address(this.config.from) : undefined
     const message = await renderMail(mailable, { to, cc: options.cc, bcc: options.bcc }, { locale, from })
     const cls = mailable.constructor as MailableClass
-    const queued = !options.now && (cls.queued ?? this.config.queued ?? false)
+    const queued = !options.now && (options.queued ?? cls.queued ?? this.config.queued ?? false)
     await this.deliver({ mailable, message, locale, queued })
   }
 
@@ -140,6 +140,15 @@ export class PendingMail {
   /** Send (or queue, for queued mailables). */
   send(mailable: Mailable): Promise<void> {
     return this.mailer.dispatch(mailable, this.recipients, { cc: this.copies, bcc: this.blind, locale: this.lang })
+  }
+  /** Queue it, even if the mailable is not marked `queued`. */
+  queue(mailable: Mailable): Promise<void> {
+    return this.mailer.dispatch(mailable, this.recipients, {
+      cc: this.copies,
+      bcc: this.blind,
+      locale: this.lang,
+      queued: true,
+    })
   }
   /** Send now, even if the mailable is queued. */
   sendNow(mailable: Mailable): Promise<void> {

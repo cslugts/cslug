@@ -1,6 +1,17 @@
 /**
- * @cslug/notification: Notifications over mail, database, WhatsApp and SMS channels.
- *
- * Not implemented yet. See docs/packages.md and docs/implementation-plan.md.
+ * @cslug/notification: notifications over mail, database, WhatsApp, SMS and custom channels, one job per
+ * delivery, delivery records, and a fake for tests.
  */
-export {}
+export { installNotificationFake, NotificationFake, type SentNotification } from './fake'
+export { Notification, type Recipient, recipient, routeOf } from './notification'
+export {
+  type Channel,
+  type Delivery,
+  type DeliveryStatus,
+  LogChannel,
+  ManualChannel,
+  type NotificationConfig,
+  type NotificationStore,
+  Notifier,
+} from './notifier'
+export { NOTIFICATION_MIGRATIONS, NotificationProvider } from './provider'

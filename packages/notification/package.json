@@ -20,6 +20,7 @@
   },
   "files": [
     "src",
+    "migrations",
     "docs",
     "stubs",
     "README.md"
@@ -43,5 +44,12 @@
     "@cslug/database": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@cslug/testing": "workspace:*",
+    "@cslug/database": "workspace:*",
+    "@cslug/queue": "workspace:*",
+    "@cslug/redis": "workspace:*",
+    "@cslug/mail": "workspace:*"
   }
 }

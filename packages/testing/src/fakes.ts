@@ -19,6 +19,7 @@ const lazy: Record<string, () => Promise<FakeInstaller>> = {
   queue: async () => (await import('@cslug/queue')).installQueueFake,
   mail: async () => (await import('@cslug/mail')).installMailFake,
   storage: async () => (await import('@cslug/storage')).installStorageFake,
+  notify: async () => (await import('@cslug/notification')).installNotificationFake,
 }
 
 /** The installer for `name`: registered, or loaded from its package. Undefined if neither. */
@@ -82,5 +83,6 @@ declare module './fakes' {
     queue: import('@cslug/queue').QueueFake
     mail: import('@cslug/mail').MailFake
     storage: import('@cslug/storage').StorageFake
+    notify: import('@cslug/notification').NotificationFake
   }
 }
