@@ -84,6 +84,7 @@
       "version": "0.0.0",
       "peerDependencies": {
         "@cslug/core": "workspace:*",
+        "@cslug/validation": "workspace:*",
       },
     },
     "packages/mail": {

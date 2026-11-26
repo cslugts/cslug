@@ -26,7 +26,7 @@ export const graph: Record<string, PackageSpec> = {
   },
   http: {
     description: 'Router, middleware, HttpContext, sessions, CSRF, error rendering on Bun.serve.',
-    requires: ['core'],
+    requires: ['core', 'validation'],
   },
   vue: {
     description: 'Vue views rendered on the server, components hydrated as islands, composables and asset build.',

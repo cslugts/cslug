@@ -72,6 +72,7 @@ export {
   type QueuedListenerDispatcher,
   registeredListeners,
 } from './events'
+export { HEALTH_CHECKS, type HealthCheck, healthCheck } from './health'
 export {
   currentLocale,
   formatDate,
