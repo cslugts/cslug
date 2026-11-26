@@ -51,7 +51,7 @@ const routes = (r: Parameters<Parameters<typeof httpApp>[0]>[0]) => {
   r.get('/boom', () => {
     throw new Error('secret internal detail')
   })
-  r.post('/accept', () => redirect().back('/fallback').with('success', 'ok'))
+  r.post('/accept', () => redirect().back('/fallback'))
   r.get('/go', () => redirect().away('https://pay.example.test/checkout/1'))
   r.get('/file', () => download('a,b\n1,2\n', 'export.csv', 'text/csv'))
   r.get('/context', ({ requestId }) => ({ same: currentContext()?.requestId === requestId }))

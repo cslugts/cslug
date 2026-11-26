@@ -3,6 +3,8 @@ import { CslugError, ForbiddenError, parseDuration } from '@cslug/core'
 import type { MiddlewareFn } from '../router'
 import { verifySignedUrl } from '../url'
 
+export { csrf, locale, type SessionOptions, session, throttle } from './web'
+
 /** Security headers on every response (CSP is opt-in: it depends on your assets). */
 export const securityHeaders =
   (options: { hsts?: boolean; csp?: string; frameOptions?: 'DENY' | 'SAMEORIGIN' } = {}): MiddlewareFn =>
