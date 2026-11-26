@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-26):** approved. Steps 0.1, 0.2 and 0.4 are done; next are 0.3 (`albastr` repo) and the spikes.
+> **Status (2026-11-26):** approved. Phase 0 is done; next are the spikes (S).
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
@@ -9,7 +9,7 @@
 |---|---|
 | 0.1 Accounts (npm org, GitHub, `gh`) | ✅ npm org `cslug` (owner `cslugdev`), `create-cslug` claimed; GitHub org `cslugts` (`cslugdev`, `liviathan`) |
 | 0.2 `cslug` repository + skeleton + CI + release | ✅ [cslugts/cslug](https://github.com/cslugts/cslug): 15 package skeletons, CI green, graph check, release script, `main` protected |
-| 0.3 `albastr` repository | ⬜ not started |
+| 0.3 `albastr` repository | ✅ `liviathan/albastr-app` (private): product documents; the app is created from the starter kit at 0.1.0 |
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
 | S Spikes | ⬜ |
 | M1 validation, core | ⬜ |
@@ -69,8 +69,8 @@ npm is not logged in. The current `bun/` folder is not a git repo.
   **trusted publishing** from a GitHub Actions workflow (OIDC + provenance, no long-lived npm token).
   No placeholders are needed for the scoped packages: owning the `cslug` org reserves every `@cslug/*` name.
 
-### 0.3 The `albastr` repository
-- Private repo. Holds the product app (created later from the starter kit) and `docs/proposals/`.
+### 0.3 The `albastr` repository ✅
+- Private repo **`liviathan/albastr-app`** (`liviathan/albastr` was already taken by the product's business-documents project). Holds the product app (created later from the starter kit) and `docs/proposals/`.
 - During development it consumes the local framework with `bun link` (or a `file:` path). From 0.1.0 on, it
   uses the published versions, so Railway installs from npm with no tokens.
 
