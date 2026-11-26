@@ -1,0 +1,6 @@
+{
+  "name": "spike-d-async-context",
+  "private": true,
+  "type": "module",
+  "scripts": { "spike": "bun run.ts" }
+}
