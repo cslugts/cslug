@@ -28,11 +28,13 @@ Bun loads `.env` / `.env.<APP_ENV>` natively. At boot, cslug validates **all** v
 message listing every problem:
 
 ```
-✖ Invalid environment (.env)
-  APP_KEY        must be at least 32 characters (got 12)
+✖ Invalid environment
+  APP_KEY        must be at least 32 characters
   DATABASE_URL   is required
   Run `cslug key:generate` to create APP_KEY.
 ```
+
+Empty values (`FOO=`) count as missing. Values of `v.secret()` variables are never printed.
 
 ## 2. Config files
 
