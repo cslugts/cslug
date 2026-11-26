@@ -51,6 +51,7 @@ TypeScript source for Bun ≥ 1.3.14.
 - In the browser: `mountIslands`, `useForm` with CSRF, and `defineStore`.
 - `Bun.build` with one chunk per island plus a manifest, and `public/` serving.
 - `cslug build` and `cslug typecheck`, with dev rebuild and live reload.
+- `hydrate="idle"` islands hydrate when the browser is idle, or after 2 s at the latest.
 
 ### @cslug/redis
 - Connections on `Bun.redis`, a Lua script helper, and Redis drivers for `Cache`, `Lock`, `RateLimiter` and
