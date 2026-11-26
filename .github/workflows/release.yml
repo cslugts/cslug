@@ -50,14 +50,14 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
       - run: npm install -g npm@latest
-      # MinIO for the S3 disk tests (a service container cannot be given `server /data`)
-      - name: Start MinIO
+      # RustFS (S3-compatible, checks signatures) for the S3 disk tests; started here, since a service container
+      # cannot be given its arguments. The bucket is created with a SigV4-signed PUT.
+      - name: Start S3 (RustFS)
         run: |
-          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER=cslug -e MINIO_ROOT_PASSWORD=cslug-secret \
-            minio/minio server /data
-          for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/live && break; sleep 1; done
-          docker run --rm --network host --entrypoint sh minio/mc -c \
-            "mc alias set local http://localhost:9000 cslug cslug-secret && mc mb local/cslug"
+          docker run -d --name s3 -p 9000:9000 -e RUSTFS_ACCESS_KEY=cslug -e RUSTFS_SECRET_KEY=cslug-secret \
+            rustfs/rustfs:1.0.5 /data
+          for i in $(seq 1 30); do curl -s -o /dev/null http://localhost:9000 && break; sleep 1; done
+          curl -sf -X PUT --aws-sigv4 "aws:amz:us-east-1:s3" --user cslug:cslug-secret http://localhost:9000/cslug
       - run: bun install --frozen-lockfile
       - run: bun run check
       - name: Tag matches package versions
