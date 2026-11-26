@@ -1,4 +1,4 @@
-import { arg, Command, flag } from '@cslug/core'
+import { arg, Command, flag, parseDuration } from '@cslug/core'
 import { discoverJobs } from './discover'
 import type { QueueConfig } from './provider'
 import { Workers } from './provider'
@@ -29,7 +29,11 @@ export class QueueWorkCommand extends QueueCommand {
     const names = [...queues, ...queue].length ? [...new Set([...queues, ...queue])] : Object.keys(configured)
     if (!names.length) names.push('default')
     const jobs = await discoverJobs(this.app)
-    const list = names.map((name) => ({ name, concurrency: concurrency ?? configured[name]?.concurrency ?? 1 }))
+    const list = names.map((name) => ({
+      name,
+      concurrency: concurrency ?? configured[name]?.concurrency ?? 1,
+      rateLimit: configured[name]?.rateLimit,
+    }))
     await this.app.resolve(Workers).start(list)
     if (process.stdout.isTTY)
       this.info(`Working ${list.map((q) => `${q.name} (×${q.concurrency})`).join(', ')}; ${jobs} job classes`)
@@ -124,7 +128,34 @@ export class QueueStatsCommand extends QueueCommand {
   }
 }
 
+/** `cslug queue:health`: exit 1 if no worker ran its loop lately or a queue's oldest job waits too long. */
+export class QueueHealthCommand extends QueueCommand {
+  static signature = 'queue:health'
+  static description = 'Check the workers (for services without HTTP)'
+  static args = {
+    stale: flag.string().default('2m').describe('A worker heartbeat older than this is a problem'),
+    maxWait: flag.string().default('10m').describe('A job waiting longer than this is a problem'),
+  }
+
+  async handle({ stale, maxWait }: Command.Args<typeof QueueHealthCommand>) {
+    const problems: string[] = []
+    const redis = this.queue.redis
+    const beat = Number(await redis.send('GET', [redis.key('heartbeat')]))
+    if (!beat || Date.now() - beat > parseDuration(stale)) problems.push(`no worker heartbeat within ${stale}`)
+    const names = [...new Set([...Object.keys(this.config.queues ?? {}), ...(await this.queue.queues())])]
+    for (const name of names) {
+      const s = await this.queue.stats(name)
+      if (s.waiting > 0 && s.oldestAgeMs > parseDuration(maxWait))
+        problems.push(`${name}: oldest job waiting ${Math.round(s.oldestAgeMs / 1000)}s`)
+    }
+    for (const p of problems) this.error(p)
+    if (!problems.length) this.success('queue healthy')
+    return problems.length ? 1 : 0
+  }
+}
+
 export const queueCommands = [
+  QueueHealthCommand,
   QueueWorkCommand,
   QueueFailedCommand,
   QueueRetryCommand,

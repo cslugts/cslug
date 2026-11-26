@@ -128,6 +128,8 @@
       "name": "@cslug/queue",
       "version": "0.1.0",
       "devDependencies": {
+        "@cslug/database": "workspace:*",
+        "@cslug/http": "workspace:*",
         "@cslug/testing": "workspace:*",
         "@cslug/validation": "workspace:*",
       },

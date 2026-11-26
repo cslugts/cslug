@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 import { join } from 'node:path'
-import type { Application } from '@cslug/core'
-import { QueueStatsCommand, RedisQueue, Workers } from '../src'
+import { type Application, runInContext } from '@cslug/core'
+import { Queue, QueueHealthCommand, QueueStatsCommand, RedisQueue, Workers } from '../src'
 import {
   cleanRedis,
   FailingJob,
@@ -159,4 +159,102 @@ describe.skipIf(!REDIS_URL)('the queue on Redis Streams (guide 11)', () => {
     await until(() => runs.length === 1, 5000, 'the reclaimed job')
     expect(runs).toEqual([{ job: 'hang', payload: { n: 1 }, attempt: 2 }])
   }, 15_000)
+})
+
+describe.skipIf(!REDIS_URL)('chains, batches, rateLimit, health on Redis', () => {
+  const keys2 = prefix()
+  let app2: Application
+  beforeAll(async () => {
+    app2 = redisApp(keys2, { queues: { default: { concurrency: 3 }, slow: { concurrency: 5, rateLimit: '5/s' } } })
+    await app2.start()
+  })
+  afterAll(async () => {
+    await app2.shutdown()
+    await cleanRedis(keys2)
+  })
+  beforeEach(reset)
+  afterEach(async () => {
+    await app2.resolve(Workers).stopAll()
+  })
+  const start = () =>
+    runInContext({ app: app2, scope: app2.createScope() }, () =>
+      app2.resolve(Workers).start([{ name: 'default', concurrency: 3 }]),
+    )
+  const inApp = <T>(fn: () => Promise<T>) => runInContext({ app: app2, scope: app2.createScope() }, fn)
+
+  test('a chain runs in order and stops at a job that fails for good', async () => {
+    await start()
+    await inApp(() =>
+      Queue.chain([RecordJob.with({ n: 1 }), FailingJob.with({ n: 2 }), RecordJob.with({ n: 3 })]).dispatch(),
+    )
+    await until(() => failures.length === 1, 4000, 'the failing link')
+    await Bun.sleep(200)
+    expect(runs.filter((r) => r.job === 'record').map((r) => (r.payload as { n: number }).n)).toEqual([1])
+  })
+
+  test('a batch runs then() once after all; a failure cancels it unless allowFailures()', async () => {
+    await start()
+    await inApp(() =>
+      Queue.batch([RecordJob.with({ n: 1 }), RecordJob.with({ n: 2 }), RecordJob.with({ n: 3 })])
+        .then(NoPayloadJob.with())
+        .dispatch(),
+    )
+    await until(() => runs.some((r) => r.job === 'no-payload'), 4000, 'then()')
+    expect(runs.filter((r) => r.job === 'no-payload')).toHaveLength(1)
+
+    reset()
+    await inApp(() =>
+      Queue.batch([FailingJob.with({ n: 1 }), RecordJob.with({ n: 2 })])
+        .then(NoPayloadJob.with())
+        .dispatch(),
+    )
+    await until(() => failures.length === 1, 4000, 'the failure')
+    await Bun.sleep(200)
+    expect(runs.some((r) => r.job === 'no-payload')).toBe(false)
+
+    reset()
+    await inApp(() =>
+      Queue.batch([FailingJob.with({ n: 1 }), RecordJob.with({ n: 2 })])
+        .then(NoPayloadJob.with())
+        .allowFailures()
+        .dispatch(),
+    )
+    await until(() => runs.some((r) => r.job === 'no-payload'), 4000, 'then() despite the failure')
+  })
+
+  test("rateLimit: '5/s' across the queue's workers", async () => {
+    await app2.resolve(Workers).start([{ name: 'slow', concurrency: 5, rateLimit: '5/s' }])
+    const started = Date.now()
+    for (let n = 1; n <= 8; n++) await inApp(async () => RecordJob.dispatch({ n }).onQueue('slow'))
+    await until(() => runs.length === 8, 5000, 'all 8 jobs')
+    expect(Date.now() - started).toBeGreaterThanOrEqual(900) // 5 in the first second, 3 in the next
+  })
+
+  test('queue:health: a recent heartbeat and no old waiting job', async () => {
+    await start()
+    await Bun.sleep(100)
+    const io = { out: '' }
+    const run = (args: Record<string, unknown>) =>
+      inApp(async () => {
+        const cmd = new QueueHealthCommand() as unknown as {
+          handle(a: unknown): Promise<number>
+          error(t: string): void
+          success(t: string): void
+        }
+        cmd.error = (text) => {
+          io.out += text
+        }
+        cmd.success = (text) => {
+          io.out += text
+        }
+        return cmd.handle(args)
+      })
+    expect(await run({ stale: '2m', maxWait: '10m' })).toBe(0)
+    await app2.resolve(Workers).stopAll()
+    await inApp(async () => RecordJob.dispatch({ n: 1 }))
+    await Bun.sleep(50)
+    expect(await run({ stale: '2m', maxWait: '1ms' })).toBe(1)
+    expect(io.out).toContain('default: oldest job waiting')
+    await app2.resolve(RedisQueue).clear('default')
+  })
 })

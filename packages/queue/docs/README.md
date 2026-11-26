@@ -101,5 +101,20 @@ Commands: `schedule:work`, `schedule:run` (one tick, for an external cron), `sch
 In tests: `t.schedule.runDue()` runs what is due at `t.clock`'s time, without the tick lock, so a test can replay a
 tick.
 
-Not yet (M6c): `.durable()` (outbox), chains and batches, per-queue `rateLimit`, `queue:health`,
-`serve --with-worker/--with-scheduler`.
+## Durable dispatch, chains, batches, rate limits
+
+- **`.durable()`** (needs `@cslug/database`; the provider detects it, binds `Outbox` and registers the
+  `cslug_queue_outbox` migration): inside a transaction the job is inserted in that transaction and relayed right
+  after COMMIT; workers relay leftovers every second (`SELECT … FOR UPDATE SKIP LOCKED`, push, delete). Outside a
+  transaction it is sent at once.
+- **`Queue.chain([A.with(p), B.with(q)])`**: the remaining jobs travel in the envelope; the next one is dispatched
+  when the previous succeeds; a job that fails for good ends the chain.
+- **`Queue.batch([...]).then(C.with(r)).allowFailures()`**: a Redis hash counts finished jobs (an atomic Lua
+  countdown); the last one dispatches `then()` (not if a job failed, without `allowFailures()`). Batch state
+  expires after 7 days. With the fake, `drain()` runs chains and batches too.
+- **`rateLimit`** per queue (`queues.notifications.rateLimit: '30/s'`): every job takes a hit on core's
+  `RateLimiter` (Redis with `RedisProvider`, so shared by all workers) and waits for its turn.
+- **`queue:health`**: exit 1 if no worker loop wrote its heartbeat within `--stale` (default 2 m) or a queue's
+  oldest waiting job is older than `--max-wait` (default 10 m). For worker-only services.
+- **One process** (guide 21, model 1): `cslug serve --with-worker --with-scheduler` runs `queue:work` and
+  `schedule:work` in the web process; `@cslug/http` finds them by signature (it does not import the queue).

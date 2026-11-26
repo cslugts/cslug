@@ -91,3 +91,10 @@ Config `http`: `port`, `host`, `shutdownTimeout`, `bodyLimit`, `trustedProxies`,
 GET/HEAD requests that match no route are served from `public/` (`config('http.public')`: a folder name, or
 `false`). Dotfiles and paths escaping the folder are refused. Hashed build files (`name-1a2b3c4d.js`) get
 `Cache-Control: public, max-age=31536000, immutable`; others revalidate with `Last-Modified` / 304.
+
+## Commands
+
+| | |
+|---|---|
+| `cslug serve [--port] [--host] [--reuse-port] [--with-worker] [--with-scheduler]` | The HTTP server; SIGTERM drains in-flight requests. `--with-worker` / `--with-scheduler` also run `queue:work` / `schedule:work` in this process (one-process deployment, guide 21); they are found by signature, so http does not import the queue, and missing commands are an error |
+| `cslug routes [filter] [--json]` | The routes, with names and middleware |

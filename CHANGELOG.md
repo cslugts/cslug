@@ -16,6 +16,15 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Scheduler: `defineSchedule` in `routes/schedule.ts`, own cron parser with time zones, frequency helpers and
   filters, once-per-tick locks across instances, no overlap, `catchUp('once')`, run history; `schedule:work`,
   `schedule:run`, `schedule:list`, `schedule:history`, `schedule:test`.
+- `.durable()`: the outbox table `cslug_queue_outbox` (when `@cslug/database` is installed), relayed at COMMIT and by
+  workers. `Queue.chain()`, `Queue.batch().then().allowFailures()`, `Job.with()`. Per-queue `rateLimit`.
+  `queue:health`.
+
+### @cslug/http
+- `cslug serve --with-worker --with-scheduler`: the queue worker and the scheduler in the web process.
+
+### @cslug/database
+- `Migrator` option `packageMigrations` (default: the folders added with `addMigrations()`).
 
 ### @cslug/testing
 - `fakes: ['queue']`: `QueueFake` with `assertPushed`, `assertNotPushed`, `assertPushedCount`, `assertNothingPushed`

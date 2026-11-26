@@ -1,4 +1,4 @@
-import { type Application, CslugError, runInContext } from '@cslug/core'
+import { type Application, CslugError, resolve, runInContext } from '@cslug/core'
 import { PendingDispatch } from './dispatch'
 import {
   findJob,
@@ -23,7 +23,16 @@ export type Envelope = {
   priority?: number
   unique?: string
   dispatchedAt: number
+  /** Jobs to dispatch, in order, after this one succeeds (`Queue.chain`). */
+  chain?: JobSpec[]
+  /** The batch this job belongs to (`Queue.batch`). */
+  batch?: string
 }
+
+/** A job and its payload, not dispatched yet: `SendCheckinJob.with({ bookingId })`. */
+export type JobSpec = { name: string; payload: unknown }
+
+type BatchState = { pending: number; failed: number; next?: JobSpec; allowFailures: boolean }
 
 /** Where and when to push. */
 export type PushOptions = {
@@ -44,6 +53,77 @@ export abstract class Queue {
 
   /** Store the job. Resolves to its id, or null when its `unique` key is already held. */
   abstract push(envelope: Envelope, options?: PushOptions): Promise<string | null>
+
+  /** Run jobs one after the other; the chain stops at a job that fails for good. */
+  static chain(specs: readonly JobSpec[]) {
+    return {
+      dispatch: async (): Promise<string | null> => {
+        const [first, ...rest] = specs
+        return first ? resolve(Queue).pushSpec(first, { chain: rest }) : null
+      },
+    }
+  }
+
+  /** Run jobs in parallel; `then(job)` runs once all have finished (unless one failed, without `allowFailures()`). */
+  static batch(specs: readonly JobSpec[]) {
+    let next: JobSpec | undefined
+    let allowFailures = false
+    const builder = {
+      // biome-ignore lint/suspicious/noThenProperty: guide 11's API (`.then(Job.with(…))`); do not await the builder itself
+      then(spec: JobSpec) {
+        next = spec
+        return builder
+      },
+      allowFailures() {
+        allowFailures = true
+        return builder
+      },
+      /** Resolves to the batch id. */
+      async dispatch(): Promise<string> {
+        const queue = resolve(Queue)
+        const id = Bun.randomUUIDv7()
+        if (!specs.length) {
+          if (next) await queue.pushSpec(next)
+          return id
+        }
+        await queue.startBatch(id, { pending: specs.length, failed: 0, next, allowFailures })
+        for (const spec of specs) await queue.pushSpec(spec, { batch: id })
+        return id
+      },
+    }
+    return builder
+  }
+
+  /** Called when a job has finished (`ok`) or failed for good: continue its chain, count it in its batch. */
+  async finished(envelope: Envelope, ok: boolean): Promise<void> {
+    const [next, ...rest] = envelope.chain ?? []
+    if (ok && next) await this.pushSpec(next, { chain: rest })
+    if (!envelope.batch) return
+    const done = await this.batchProgress(envelope.batch, ok)
+    if (done?.next && (done.failed === 0 || done.allowFailures)) await this.pushSpec(done.next)
+  }
+
+  /** Batch bookkeeping; in memory here (the fake), in Redis for `RedisQueue`. */
+  private readonly batches = new Map<string, BatchState>()
+  protected async startBatch(id: string, state: BatchState): Promise<void> {
+    this.batches.set(id, state)
+  }
+  /** Count one finished job; returns the batch state when it was the last one. */
+  protected async batchProgress(id: string, ok: boolean): Promise<BatchState | undefined> {
+    const state = this.batches.get(id)
+    if (!state) return undefined
+    state.pending--
+    if (!ok) state.failed++
+    if (state.pending > 0) return undefined
+    this.batches.delete(id)
+    return state
+  }
+
+  protected pushSpec(spec: JobSpec, extra: Partial<Envelope> = {}): Promise<string | null> {
+    const job = findJob(spec.name)
+    if (!job) throw new JobNotFoundError(spec.name)
+    return this.push({ ...envelopeOf(job, spec.payload), ...extra })
+  }
 }
 
 /** The envelope of a new job. */

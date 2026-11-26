@@ -1,5 +1,15 @@
-import { Clock, currentContext, type Duration, parseDuration, resolve, type TransactionHooks } from '@cslug/core'
+import {
+  Clock,
+  CslugError,
+  currentApp,
+  currentContext,
+  type Duration,
+  parseDuration,
+  resolve,
+  type TransactionHooks,
+} from '@cslug/core'
 import type { JobClass } from './job'
+import { Outbox } from './outbox'
 import { type Envelope, envelopeOf, type PushOptions, Queue } from './queue'
 
 /**
@@ -19,6 +29,7 @@ export class PendingDispatch implements PromiseLike<string | null> {
   private priorityLevel?: number
   private triesOverride?: number
   private now = false
+  private isDurable = false
   private sent?: Promise<string | null>
 
   constructor(
@@ -56,6 +67,14 @@ export class PendingDispatch implements PromiseLike<string | null> {
     this.triesOverride = n
     return this
   }
+  /**
+   * Write the job to the outbox table in the current transaction: it exists if and only if the transaction
+   * commits (for jobs that move money). Needs `@cslug/database`. Outside a transaction it is sent at once.
+   */
+  durable(): this {
+    this.isDurable = true
+    return this
+  }
   /** Send now even inside a transaction (rarely right: the job may run before the data it needs is committed). */
   immediately(): this {
     this.now = true
@@ -85,6 +104,17 @@ export class PendingDispatch implements PromiseLike<string | null> {
       options.uniqueFor = this.uniqueFor + Math.max(0, options.runAt - resolve(Clock).now().getTime())
 
     const tx = currentContext()?.tx as TransactionHooks | undefined
+    if (this.isDurable && tx && typeof tx.afterCommit === 'function') {
+      if (!currentApp().has(Outbox))
+        throw new CslugError(
+          'queue.no_outbox',
+          '.durable() needs @cslug/database (DatabaseProvider before QueueProvider)',
+        )
+      const outbox = resolve(Outbox)
+      await outbox.write(envelope, options)
+      tx.afterCommit(() => outbox.relay(envelope.id))
+      return envelope.id
+    }
     if (!this.now && tx && typeof tx.afterCommit === 'function') {
       tx.afterCommit(() => queue.push(envelope, options))
       return envelope.id

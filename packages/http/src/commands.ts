@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { arg, Command, flag, names } from '@cslug/core'
+import { arg, COMMANDS, Command, type CommandClass, flag, names, parseArgs } from '@cslug/core'
 import { HttpKernel } from './kernel'
 import { Router } from './router'
 
@@ -14,13 +14,32 @@ export class ServeCommand extends Command {
     port: flag.number().optional().describe('Port (default: config http.port, PORT, or 3000)'),
     host: flag.string().optional().describe('Interface to bind (default: all)'),
     reusePort: flag.boolean().describe('Share the port between several processes (cslug start with web instances > 1)'),
+    withWorker: flag.boolean().describe('Also run queue:work in this process (needs @cslug/queue)'),
+    withScheduler: flag.boolean().describe('Also run schedule:work in this process (needs ScheduleProvider)'),
   }
 
-  handle({ port, host, reusePort }: Command.Args<typeof ServeCommand>) {
+  async handle({ port, host, reusePort, withWorker, withScheduler }: Command.Args<typeof ServeCommand>) {
+    // http does not import the queue: the other roles run through their own commands, found by signature
+    const roles = [withWorker && 'queue:work', withScheduler && 'schedule:work'].filter((r): r is string => !!r)
+    const found = this.app.taggedTokens(COMMANDS) as CommandClass[]
+    for (const signature of roles) {
+      if (!found.some((c) => c.signature === signature)) {
+        this.error(
+          `--with-${signature === 'queue:work' ? 'worker' : 'scheduler'}: no ${signature} command (is its provider listed?)`,
+        )
+        return 1
+      }
+    }
     const envPort = process.env.PORT ? Number(process.env.PORT) : undefined
     const server = this.app.resolve(HttpKernel).listen({ port: port ?? envPort, hostname: host, reusePort })
     this.log.info('http.listening', { url: server.url.toString() })
     if (process.stdout.isTTY) this.info(`Listening on ${server.url}`)
+    for (const signature of roles) {
+      const cmd = found.find((c) => c.signature === signature) as CommandClass
+      const instance = this.app.createScope().build(cmd as never) as { handle(args: unknown): unknown }
+      await instance.handle(parseArgs(cmd.args ?? {}, []))
+    }
+    return 0
   }
 }
 
