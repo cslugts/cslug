@@ -120,6 +120,13 @@
     "packages/notification": {
       "name": "@cslug/notification",
       "version": "0.2.0",
+      "devDependencies": {
+        "@cslug/database": "workspace:*",
+        "@cslug/mail": "workspace:*",
+        "@cslug/queue": "workspace:*",
+        "@cslug/redis": "workspace:*",
+        "@cslug/testing": "workspace:*",
+      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/database": "workspace:*",

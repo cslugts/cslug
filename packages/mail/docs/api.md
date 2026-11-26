@@ -4,7 +4,7 @@
 |---|---|
 | `Mailable` | `build()`; in it: `subject`, `view(Component, props)`, `html`, `text`, `attach(content \| promise, { name, type })`, `tag`, `from`, `replyTo`, `header`. Optional statics: `queued`, `preview()` |
 | `Mailer` | `to(...addresses)` → `PendingMail`; `send(message)` (a rendered `Message`, now); `transport`; `enqueue` (set by the provider with the queue) |
-| `PendingMail` | `cc(...)`, `bcc(...)`, `locale(l)`, `send(mailable)`, `sendNow(mailable)` |
+| `PendingMail` | `cc(...)`, `bcc(...)`, `locale(l)`, `send(mailable)`, `queue(mailable)` (queued even if the mailable is not), `sendNow(mailable)` |
 | `renderMail(mailable, { to, cc?, bcc? }, { locale?, from? })` | → `Message` |
 | `Message` | `{ from, to, cc, bcc, replyTo?, subject, html?, text?, attachments, tags, headers }` |
 | `address(x)`, `formatAddress(a)`, `toMime(message, { messageId, date? })` | Addresses (`string`, `{ email, name }`, `{ address, name }`) and MIME |
