@@ -26,7 +26,14 @@ export {
   uuid,
   varchar,
 } from './columns'
-export { DbDiffCommand, DbSeedCommand, databaseCommands, MakeMigrationCommand, MigrateCommand } from './commands'
+export {
+  DbDiffCommand,
+  DbSeedCommand,
+  DbShellCommand,
+  databaseCommands,
+  MakeMigrationCommand,
+  MigrateCommand,
+} from './commands'
 export { Database, type DatabaseConfig, type Json, Queryable, Transaction, type TransactionOptions } from './database'
 export {
   type Change,

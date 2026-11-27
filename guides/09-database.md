@@ -250,6 +250,7 @@ cslug migrate:status
 cslug migrate:rollback --step 1
 cslug migrate:fresh --seed             # refused when APP_ENV=production
 cslug db:diff                          # show drift between tables and the database, write nothing
+cslug db:shell                         # psql on the app database (-c 'select …' for one statement)
 ```
 
 ```
