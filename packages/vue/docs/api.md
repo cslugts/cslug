@@ -13,7 +13,8 @@
 | `useT()` | `t`, `tr`, `locale`, `formatMoney`, `formatDate` in the current locale |
 | `route(name, params?, options?)` | |
 | `formatDuration(minutes)`, `formatMoney`, `formatDate` | |
-| `useForm(initial)` | `data`, `errors`, `error`, `processing`, `response`, `post/put/patch/delete(url)` → boolean, `reset`, `clearErrors`; JSON with `X-CSRF-Token` |
+| `useForm(initial, callbacks?)` | `data`, `errors`, `hasErrors`, `error`, `processing`, `progress`, `isDirty`, `wasSuccessful`, `recentlySuccessful`, `response`; `submit(event \| method, url?, options?)`, `get/post/put/patch/delete(url, options?)` → boolean, `cancel`, `transform`, `setError`, `clearErrors(...fields)`, `reset(...fields)`, `defaults(field?, value?)`. Callbacks (`FormCallbacks`): `onBefore`, `onStart`, `onProgress`, `onSuccess(response, { redirect })`, `onError(errors, { status, message })`, `onCancel`, `onFinish`; per call also `followRedirects`, `headers` (`SubmitOptions`) |
+| `http` | `get(url, query?, options?)`, `post/put/patch/delete(url, data?, options?)` → `HttpResult` (`{ ok, status, data, errors, error, redirect?, cancelled? }`); JSON or multipart, CSRF, `X-Cslug-Request`; `RequestOptions` `{ headers, onProgress, signal }` |
 | `csrfHeaders()` | For hand-written `fetch` |
 | `defineStore(name, init, { persist? })` | State shared by the page's islands (fresh per call on the server) |
 | `mountIslands({ setup? })` | Browser: hydrate the page's islands (`resources/client.ts`) |

@@ -38,7 +38,9 @@ the container (DI).
 Return a `Response`, a `Responsable` (`toResponse(ctx)`), an object/array (JSON: bigint → string, Date → ISO,
 `toJSON()`), a string (`text/plain`), or `null`/`undefined` (204). Helpers: `json`, `created`, `accepted`,
 `noContent`, `download(content, filename, type?)`, `stream(asyncIterable)`, `sse(asyncIterable)`,
-`redirect().route(name, params) / .to(url) / .away(url) / .back(fallback) / .intended(fallback) / .with(key, value)`
+`redirect().route(name, params) / .to(url) / .away(url) / .back(fallback) / .intended(fallback) / .with(key, value)`.
+For a request with `X-Cslug-Request: 1` (from `@cslug/vue`'s `useForm` / `http`), it answers `204` with
+`X-Cslug-Redirect: <url>` instead of a 3xx (flashes are kept), so `fetch` can read where to go.
 (303 after non-GET; `.with()` and `.intended()` need the session).
 
 ## Errors (`ExceptionHandler`)

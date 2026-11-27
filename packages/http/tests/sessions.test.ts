@@ -91,6 +91,29 @@ describe('sessions, CSRF, flash, old input (guide 08 forms without JavaScript)',
     expect((await (await b('/form')).json()).flash).toEqual({ success: 'Todo added.' })
   })
 
+  test('from useForm / http (X-Cslug-Request): redirect() answers 204 + X-Cslug-Redirect, flashes kept; 422 as JSON', async () => {
+    const h = await httpApp(routes)
+    app = h.app
+    const b = browser(h.call)
+    const { token } = await (await b('/form')).json()
+    const headers = {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-cslug-request': '1',
+      'x-csrf-token': token,
+    }
+    const ok = await b('/todos', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ title: 'Buy bread', priority: 'low' }),
+    })
+    expect([ok.status, ok.headers.get('x-cslug-redirect'), ok.headers.get('location')]).toEqual([204, '/form', null])
+    expect((await (await b('/form')).json()).flash).toEqual({ success: 'Todo added.' })
+    const bad = await b('/todos', { method: 'POST', headers, body: JSON.stringify({ title: '', priority: 'x' }) })
+    expect(bad.status).toBe(422)
+    expect(Object.keys((await bad.json()).errors).sort()).toEqual(['priority', 'title'])
+  })
+
   test('CSRF: missing or wrong token → 419; header X-CSRF-Token also accepted; JSON clients get problem+json', async () => {
     const h = await httpApp(routes)
     app = h.app
