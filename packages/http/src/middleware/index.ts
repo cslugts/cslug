@@ -3,6 +3,8 @@ import { CslugError, ForbiddenError, parseDuration } from '@cslug/core'
 import type { MiddlewareFn } from '../router'
 import { verifySignedUrl } from '../url'
 
+import { csrf, session } from './web'
+
 export { csrf, locale, type SessionOptions, session, throttle } from './web'
 
 /** Security headers on every response (CSP is opt-in: it depends on your assets). */
@@ -81,6 +83,39 @@ export const signed = (): MiddlewareFn => async (ctx, next) => {
   if (!key || !verifySignedUrl(ctx.request.url.toString(), key))
     throw new ForbiddenError('http.invalid_signature', 'This link is invalid or has expired.')
   return next()
+}
+
+/**
+ * Is this request from the app's own pages? Its `Origin` (or, without one, its `Referer`) is one of `origins`, or the
+ * browser says `Sec-Fetch-Site: same-origin`.
+ */
+export function fromFrontEnd(headers: { header(name: string): string | undefined }, origins: string[]): boolean {
+  const originOf = (url: string | undefined) => {
+    try {
+      return url ? new URL(url).origin : undefined
+    } catch {
+      return undefined
+    }
+  }
+  const origin = headers.header('origin') ?? originOf(headers.header('referer'))
+  if (origin) return origins.includes(origin)
+  return headers.header('sec-fetch-site') === 'same-origin'
+}
+
+/**
+ * The session for API routes called by the app's own pages (`http.api.stateful`, what Laravel Sanctum calls an SPA):
+ * a request from one of `origins` (default: `app.url`'s) gets `session()` and `csrf()`, so `useForm` / `http` in an
+ * island reach `routes/api.ts` with the signed-in user. Other clients are left to API tokens. Runs before
+ * `authenticate()`.
+ */
+export const statefulApi = (origins?: string[]): MiddlewareFn => {
+  const withSession = session()
+  const withCsrf = csrf()
+  return (ctx, next) => {
+    const allowed = origins ?? [new URL(ctx.app.config<string>('app.url') ?? 'http://localhost').origin]
+    if (!fromFrontEnd(ctx.request, allowed)) return next()
+    return withSession(ctx, () => Promise.resolve(withCsrf(ctx, next)))
+  }
 }
 
 /** CORS for API routes. `origins: ['*']` allows any origin (without credentials). */

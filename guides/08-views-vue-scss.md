@@ -401,7 +401,16 @@ const done = await http.post(route('todos.toggle', { todo: id }))               
 
 `http.get/post/put/patch/delete(url, data?, options?)` use the same CSRF, JSON and error handling as `useForm`, and
 never throw for HTTP errors or network failures. For a hand-written `fetch`, `csrfHeaders()` gives the CSRF header.
-Islands call `web` routes (the session and CSRF are there); routes in `routes/api.ts` authenticate with API tokens.
+Islands call `web` routes (the session and CSRF are there). To call `routes/api.ts` from the app's own pages as the
+signed-in user, turn on stateful API requests:
+
+```ts
+// config/http.ts
+api: { stateful: true },          // or a list of origins: ['https://app.albastr.test']
+```
+
+Requests from the app's own pages (their `Origin`, else `Referer`, else `Sec-Fetch-Site: same-origin`) then get the
+session and CSRF on API routes, so `useForm` and `http` work there unchanged; other clients still use API tokens.
 
 ## Shared state between islands
 

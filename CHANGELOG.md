@@ -18,6 +18,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 ### @cslug/http
 - `redirect()` answers `204` + `X-Cslug-Redirect` to requests from `useForm` / `http` (`X-Cslug-Request: 1`), so
   one controller serves plain forms and islands.
+- `http.api.stateful` (and `statefulApi()`): requests from the app's own pages (Origin, Referer or
+  `Sec-Fetch-Site: same-origin`) get the session and CSRF on `routes/api.ts`, so islands call API routes as the
+  signed-in user; other clients keep API tokens.
 - `.validates(schema)` on a route: validate-only requests (`X-Cslug-Validate`) run its middleware and that schema,
   answer 204 or 422 for the asked fields, and never call the handler.
 

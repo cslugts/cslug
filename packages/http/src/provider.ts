@@ -4,7 +4,7 @@ import { Logger, ServiceProvider } from '@cslug/core'
 import { httpCommands, routeRows } from './commands'
 import { ExceptionHandler } from './errors'
 import { HttpKernel } from './kernel'
-import { bodyLimit, cors, csrf, securityHeaders, session } from './middleware'
+import { bodyLimit, cors, csrf, securityHeaders, session, statefulApi } from './middleware'
 import { type GroupOptions, type Middleware, type RouteRegistrar, Router } from './router'
 
 export type HttpConfig = {
@@ -17,6 +17,12 @@ export type HttpConfig = {
   public?: boolean | string
   trustedProxies?: string[]
   cors?: { origins: string[]; credentials?: boolean }
+  /**
+   * `stateful: true` (the origin of `app.url`) or a list of origins: requests from the app's own pages to
+   * `routes/api.ts` get the session and CSRF (`statefulApi()`), so islands call API routes as the signed-in user.
+   * Other clients authenticate with API tokens.
+   */
+  api?: { stateful?: boolean | string[] }
   /** Extra middleware for the `web` (routes/web.ts) and `api` (routes/api.ts) groups. */
   groups?: { web?: Middleware[]; api?: Middleware[] }
   /** Global middleware added after the defaults. */
@@ -79,6 +85,9 @@ export class HttpProvider extends ServiceProvider {
         {
           middleware: [
             ...(config.cors ? [cors(config.cors)] : []),
+            ...(config.api?.stateful
+              ? [statefulApi(Array.isArray(config.api.stateful) ? config.api.stateful : undefined)]
+              : []),
             ...this.app.tagged<Middleware>(API_MIDDLEWARE),
             ...(config.groups?.api ?? []),
           ],

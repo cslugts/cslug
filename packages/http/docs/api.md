@@ -54,7 +54,9 @@ Extend with `handler.render(fn)` (first match wins) and `handler.report(fn)` (5x
 ## Middleware (`@cslug/http/middleware`)
 
 `securityHeaders({ hsts?, csp?, frameOptions? })` (global by default), `bodyLimit(size)` (global `1mb`; also
-enforced on bytes read), `timeout(duration)` (503, aborts `ctx.signal`), `signed()`, `cors({ origins, … })`.
+enforced on bytes read), `timeout(duration)` (503, aborts `ctx.signal`), `signed()`, `cors({ origins, … })`,
+`statefulApi(origins?)` (session + CSRF for requests from the app's own pages: `Origin`, else `Referer`, else
+`Sec-Fetch-Site: same-origin`; `fromFrontEnd(request, origins)` is the check).
 Function middleware `(ctx, next) => Response`, or a class with `handle(ctx, next)` built by the container.
 
 ## Kernel
@@ -65,7 +67,8 @@ the database's). One log line per request: method, path, status, ms, route, requ
 
 ## `HttpProvider`
 
-Config `http`: `port`, `host`, `shutdownTimeout`, `bodyLimit`, `trustedProxies`, `cors` (api group),
+Config `http`: `port`, `host`, `shutdownTimeout`, `bodyLimit`, `trustedProxies`, `cors` (api group), `api.stateful`
+(`true` for `app.url`'s origin, or a list: `statefulApi()` first in the api group, before `authenticate()`),
 `groups.{web,api}`, `middleware`, `problemBase`, `health`.
 
 ## Sessions, CSRF, forms (web group)
