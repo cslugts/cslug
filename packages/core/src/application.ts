@@ -48,7 +48,12 @@ export class Application extends Container {
     this._configs = options.configs ?? {}
     this.instance(Application, this)
     this.singleton(Clock, () => new Clock((this.config('app.timezone') as string | undefined) ?? 'UTC'))
-    this.singleton(Logger, () => new Logger((this.config('log') as LoggerOptions | undefined) ?? {}))
+    this.singleton(Logger, () => {
+      const options = (this.config('log') as LoggerOptions | undefined) ?? {}
+      // the process role under `cslug start` / `cslug dev` (web, worker, scheduler) on every line
+      const role = process.env.CSLUG_ROLE
+      return new Logger(role ? { ...options, bindings: { role, ...options.bindings } } : options)
+    })
     this.singleton(EventBus, (c) => new EventBus(this, c.resolve(Logger)))
     this.singleton(Translator, () =>
       Translator.fromDirectory(`${this.rootDir}/resources/lang`, (this.config('i18n') as I18nConfig | undefined) ?? {}),

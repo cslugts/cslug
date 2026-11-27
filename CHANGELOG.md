@@ -4,6 +4,18 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/core
+- Logger targets: `stdout`, `stderr`, `file` (daily files with `{date}` and `keep`), `custom`, each with its own
+  level and format; `LOG_LEVEL` / `LOG_FORMAT` defaults; the process role (`CSLUG_ROLE`) on every line; children
+  share their parent's targets; `originRequestId`, `traceId` and `spanId` from the context.
+
+### @cslug/queue
+- Jobs record their origin (the request, schedule or command that started the work, and its trace); job log lines
+  carry `originRequestId`, kept through jobs that dispatch jobs.
+
+### create-cslug
+- New apps (and the starter kit) have `config/log.ts`: readable logs in development, JSON in production.
+
 ## 0.7.1 (2026-11-27)
 
 Scaffolded apps handle two-factor logins; the starter kit no longer ships a Dockerfile.

@@ -4,9 +4,10 @@ import cache from './cache'
 import database from './database'
 import http from './http'
 import i18n from './i18n'
+import log from './log'
 import redis from './redis'
 
-export const configs = { app, http, database, redis, cache, i18n }
+export const configs = { app, http, database, redis, cache, i18n, log }
 
 declare module '@cslug/core' {
   /** Types `config('...')`. */

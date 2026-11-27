@@ -158,13 +158,16 @@ Immutable; integer minor units (`bigint`) + ISO 4217 currency; no floating point
 
 ## Logger
 
-Bound as a singleton from `config('log')` (`{ level?, format?, redact? }`); inject `Logger`.
+Bound as a singleton from `config('log')` (`{ level?, format?, targets?, redact?, bindings? }`; `level` defaults to
+`LOG_LEVEL`, else `info`; `format` to `LOG_FORMAT`, else `json`); inject `Logger`. Under `cslug start` / `cslug dev`
+the app binds `role` (`CSLUG_ROLE`: `web`, `worker`, `scheduler`) on every line.
 
 | | |
 |---|---|
 | `debug/info/warn/error(message, fields?)` | One JSON line (`time`, `level`, `msg`, fields); `format: 'pretty'` for terminals |
-| `child(fields)` | Adds fields to every entry |
-| context fields | `requestId`, `jobId`, `userId` from the ambient context, automatically |
+| `child(fields)` | Adds fields to every entry; children write to their parent's targets |
+| `targets` | `{ type: 'stdout' }` (default), `{ type: 'stderr' }`, `{ type: 'file', path, keep? }` (`{date}` in the path: one file per day, older ones beyond `keep` deleted), `{ type: 'custom', write }`; each with its own `level` and `format`. `write` alone is one custom target |
+| context fields | `requestId`, `jobId`, `originRequestId` (the request, schedule or command that started a job, kept through jobs that dispatch jobs), `userId`, `traceId`, `spanId` from the ambient context, automatically |
 | redaction | Keys containing `password`, `secret`, `token`, `authorization`, `cookie`, `apikey`, `api_key`, `cardnumber`, `cvv` (case-insensitive, any depth), plus `redact` (e.g. `secretKeys(envShape)`) |
 | safe serialisation | bigint → string, Date → ISO, `toJSON()` (Money), errors with `code`/`status`/`cause`/`stack`, cycles cut |
 | `Logger.null()` | Writes nothing |

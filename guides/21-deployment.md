@@ -180,8 +180,10 @@ platform wants an image, write the Dockerfile you need around these commands.
 
 ## Observability
 
-- JSON logs on stdout, one line per request and per job, carrying `requestId` / `jobId`, `userId` and the role;
-  secrets redacted.
+- JSON logs on stdout, one line per request and per job, carrying `requestId` / `jobId`, `userId` and the role
+  (`web`, `worker`, `scheduler`); a job's lines also carry `originRequestId`, the request that started the work,
+  so one search follows a request into its jobs. Secrets are redacted. `config/log.ts` sets the level and format
+  (`LOG_LEVEL`, `LOG_FORMAT`) and more destinations (stderr, daily files with retention).
 - `/metrics` (behind `auth('token')`): request counts and latencies, jobs by state, queue lag, DB pool usage.
 - Error reporting hook: `this.app.resolve(ExceptionHandler).report((error, ctx) => sentry.captureException(error))`.
 - OpenTelemetry tracing: optional.
