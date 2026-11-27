@@ -20,7 +20,8 @@ export type ModelRequest = {
   maxTokens?: number
   effort?: Effort
 }
-export type Usage = { inputTokens: number; outputTokens: number }
+/** Tokens a model call used; cache reads and writes are counted apart from `inputTokens` (Anthropic). */
+export type Usage = { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
 export type ModelResponse = { content: Block[]; stopReason: string; usage: Usage }
 /** While streaming: text as it arrives, then the whole response. */
 export type StreamEvent = { type: 'text'; text: string } | { type: 'done'; response: ModelResponse }

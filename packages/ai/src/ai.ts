@@ -1,5 +1,6 @@
-import { type Application, CslugError, type Logger, resolve } from '@cslug/core'
+import { type Application, Cache, Clock, CslugError, type Logger, resolve } from '@cslug/core'
 import type { AgentSettings, RunnableTool, RunOptions } from './agent'
+import { Budget, type BudgetConfig, costOf, type ModelPrice } from './budget'
 import {
   type AnthropicConfig,
   AnthropicProvider,
@@ -7,7 +8,7 @@ import {
   OpenAiCompatibleProvider,
 } from './drivers'
 import { McpConnection, type McpServerConfig, McpTools } from './mcp-client'
-import { type Block, type ModelRequest, type ModelResponse, modelSchema, type Provider } from './model'
+import { type Block, type ModelRequest, type ModelResponse, modelSchema, type Provider, type Usage } from './model'
 
 /** `config/ai.ts`. */
 export type AiConfig = {
@@ -17,6 +18,22 @@ export type AiConfig = {
   models?: Record<string, string>
   /** MCP servers whose tools agents use: `mcp('maps').tools([...])`. */
   mcp?: Record<string, McpServerConfig>
+  /** A daily spending limit: `{ perDay: { usd: 20 }, alertAt: 0.8 }` (`AiBudgetError` once spent). */
+  budget?: BudgetConfig
+  /** USD per million tokens for models the built-in table lacks (or to override it). */
+  prices?: Record<string, ModelPrice>
+}
+
+/** A finished run in detail: the value `run()` returns, the model's raw answer (JSON or text), what it cost. */
+export type AiResult = {
+  value: unknown
+  /** The answer before validation: parsed JSON with an `output` schema, else the text. Fixtures store this. */
+  raw: unknown
+  model: string
+  steps: number
+  usage: Usage
+  /** Estimated from the model's price; `undefined` when it has none. */
+  costUsd: number | undefined
 }
 
 /** The model's final answer did not match the agent's `output` schema (or was not JSON). */
@@ -35,6 +52,7 @@ const textOf = (blocks: Block[]) => blocks.flatMap((b) => (b.type === 'text' ? [
 export class Ai {
   private readonly providers = new Map<string, Provider>()
   private readonly connections = new Map<string, McpConnection>()
+  private budgetTracker?: Budget
 
   constructor(
     protected readonly app: Application,
@@ -58,6 +76,19 @@ export class Ai {
       config.driver === 'anthropic' ? new AnthropicProvider(config) : new OpenAiCompatibleProvider(config)
     this.providers.set(name, provider)
     return provider
+  }
+
+  /** The daily budget (`ai.budget`), or `undefined` without one. */
+  get budget(): Budget | undefined {
+    if (!this.config.budget) return undefined
+    this.budgetTracker ??= new Budget(
+      this.config.budget,
+      this.config.prices ?? {},
+      this.app.resolve(Cache),
+      this.app.resolve(Clock),
+      this.log,
+    )
+    return this.budgetTracker
   }
 
   /** An MCP server's tools as a run calls them (its result: `structuredContent`, else the text). */
@@ -93,7 +124,12 @@ export class Ai {
   }
 
   async run(agent: AgentSettings, options: RunOptions): Promise<unknown> {
-    for await (const event of this.steps(agent, options, false)) if (event.type === 'result') return event.value
+    return (await this.result(agent, options)).value
+  }
+
+  /** Like `run()`, with the raw answer, the model, the token usage and the estimated cost (`ai:record`, `ai:eval`). */
+  async result(agent: AgentSettings, options: RunOptions): Promise<AiResult> {
+    for await (const event of this.steps(agent, options, false)) if (event.type === 'result') return event.result
     throw new CslugError('ai.no_result', 'The agent finished without a result')
   }
 
@@ -119,8 +155,10 @@ export class Ai {
       ...(agent.maxTokens ? { maxTokens: agent.maxTokens } : {}),
     }
     const provider = this.provider(agent.provider)
-    const usage = { inputTokens: 0, outputTokens: 0 }
+    const usage: Required<Usage> = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
+    const budget = this.budget
     for (let step = 1; step <= maxSteps; step++) {
+      await budget?.check()
       let response: ModelResponse | undefined
       if (streaming)
         for await (const event of provider.stream(request)) {
@@ -129,16 +167,24 @@ export class Ai {
         }
       else response = await provider.complete(request)
       if (!response) throw new CslugError('ai.provider', 'The stream ended without a response')
-      usage.inputTokens += response.usage.inputTokens
-      usage.outputTokens += response.usage.outputTokens
+      for (const k of Object.keys(usage) as (keyof Usage)[]) usage[k] += response.usage[k] ?? 0
+      await budget?.charge(request.model, response.usage)
       request.messages.push({ role: 'assistant', content: response.content })
       const calls = response.content.filter((b) => b.type === 'tool_use')
       if (!calls.length) {
-        this.log.info('ai.run', { agent: agent.constructor.name, model: request.model, steps: step, ...usage })
-        yield {
-          type: 'result' as const,
-          value: agent.output ? this.parse(agent, textOf(response.content)) : textOf(response.content),
+        const costUsd = costOf(request.model, usage, this.config.prices)
+        this.log.info('ai.run', { agent: agent.constructor.name, model: request.model, steps: step, ...usage, costUsd })
+        const text = textOf(response.content)
+        const raw = agent.output ? this.json(text) : text
+        const result: AiResult = {
+          raw,
+          value: this.validate(agent, raw, text),
+          model: request.model,
+          steps: step,
+          usage,
+          costUsd,
         }
+        yield { type: 'result' as const, result }
         return
       }
       // every result of one turn goes back in one message
@@ -167,14 +213,12 @@ export class Ai {
     }
   }
 
-  protected parse(agent: AgentSettings, text: string): unknown {
-    let json: unknown
+  private json(text: string): unknown {
     try {
-      json = JSON.parse(text)
+      return JSON.parse(text)
     } catch {
       throw new AiOutputError(text, 'not JSON')
     }
-    return this.validate(agent, json, text)
   }
 
   /** The value through the agent's `output` schema (coercions applied), or `AiOutputError`. */
