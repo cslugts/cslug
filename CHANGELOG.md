@@ -4,6 +4,12 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.6.0 (2026-11-27)
+
+`@cslug/search`: full-text search over any table and document indexes on PostgreSQL, multilingual and
+accent-insensitive, with semantic and hybrid search through pgvector; embedding drivers and search tools for agents
+in `@cslug/ai`; generated and hidden columns and index methods in `@cslug/database`.
+
 ### @cslug/search (new)
 - `searchable(weights, { language, unaccent })`: a hidden generated `tsvector` column, weighted `A`–`D`, in one
   language or one per row (a language column), accent-insensitive through `cslug_<config>` configurations.

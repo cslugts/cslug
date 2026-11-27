@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M10 are done (0.5.0 released: `@cslug/ai` with MCP and conversations, `cslug mcp:dev`, `cslug agents:sync`; M10 `@cslug/search` unreleased). Next: a 0.6.0 release (M10 `@cslug/search` is done), then TOTP in auth (deferred since M5).
+> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M10 are done (0.6.0 released: `@cslug/search` with full text, document indexes, semantic and hybrid search; embedding drivers and search tools in `@cslug/ai`). Next: TOTP in auth (deferred since M5).
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
