@@ -1,6 +1,6 @@
 {
   "name": "@cslug/search",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Full-text search over any table on PostgreSQL: weighted, multilingual, accent-insensitive, ranked.",
   "license": "MIT",
   "type": "module",

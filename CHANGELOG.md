@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.8.0 (2026-11-27)
+
+Observability: log targets and request → job correlation, tracing and metrics contracts in core with every package
+instrumented, and the new `@cslug/telemetry` (OpenTelemetry export, `/metrics`).
+
 ### @cslug/telemetry (new)
 - Records the spans and metrics cslug's packages report and exports them, with log lines (opt in), to any
   OpenTelemetry collector over OTLP/HTTP JSON: batched, bounded, flushed at shutdown, never throwing into the app;

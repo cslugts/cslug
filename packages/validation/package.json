@@ -1,6 +1,6 @@
 {
   "name": "@cslug/validation",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Schemas and validators (Zod-like API, Standard Schema, JSON Schema export).",
   "license": "MIT",
   "type": "module",
