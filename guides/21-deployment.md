@@ -189,6 +189,18 @@ platform wants an image, write the Dockerfile you need around these commands.
 - Error reporting hook: `this.app.resolve(ExceptionHandler).report((error, ctx) => sentry.captureException(error))`.
 - Tracing: a request, the jobs it dispatches and their queries share one trace; log lines carry its `traceId`.
 
+## Rotating APP_KEY
+
+`APP_KEY` encrypts `encrypted()` columns and two-factor secrets, and signs URLs and magic links. To change it
+(a leak, a departing admin, a schedule) without losing data or breaking links:
+
+1. `cslug key:rotate --write` (or without `--write`, to print the values for your host's settings): a new
+   `APP_KEY`, the old one first in `APP_PREVIOUS_KEYS`.
+2. Set both on every process (web, worker, scheduler) and deploy. Old values still decrypt and old links still
+   verify; everything new uses the new key.
+3. `cslug db:reencrypt`: encrypted columns move to the new key (safe to run again).
+4. Once links signed before the rotation have expired, remove the old key from `APP_PREVIOUS_KEYS`.
+
 ## Production checklist
 
 `cslug about --production` checks: `APP_KEY` set, debug off, HTTPS URL, session cookie `Secure`, mail transport

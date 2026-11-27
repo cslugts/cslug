@@ -1,5 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
-import { AppError, type AuthUser, type Clock, type Lock, parseDuration } from '@cslug/core'
+import { AppError, type AuthUser, type Clock, Encrypter, type Lock, parseDuration } from '@cslug/core'
 import { idOf, type UserSource } from './config'
 
 export class MagicLinkError extends AppError {
@@ -24,17 +23,21 @@ const b64 = (s: string) => Buffer.from(s).toString('base64url')
  * expiry; "single use" is an atomic `Lock` on its nonce (Redis with @cslug/redis), so no table is needed.
  */
 export class MagicLinks {
+  private readonly keys: Encrypter
+
   constructor(
-    private readonly key: string,
+    /** The app's `Encrypter` (links signed with `APP_KEY`, accepted with a previous key too), or a key. */
+    key: string | Encrypter,
     private readonly users: () => Promise<UserSource>,
     private readonly lock: Lock,
     private readonly clock: Clock,
     private readonly options: { lifetime?: string | number; singleUse?: boolean } = {},
   ) {
-    if (!key) throw new Error('Magic links need APP_KEY (config app.key)')
+    this.keys = typeof key === 'string' ? new Encrypter(key) : key
+    if (!this.keys.configured) throw new Error('Magic links need APP_KEY (config app.key)')
   }
 
-  private sign = (data: string) => createHmac('sha256', this.key).update(`magic:${data}`).digest('base64url')
+  private sign = (data: string) => this.keys.sign(`magic:${data}`)
 
   /** A token for the user. `redirect` must be a path on this site (`/bookings`). Put it in a URL with `route()`. */
   create(
@@ -58,9 +61,7 @@ export class MagicLinks {
   async consume(token: string): Promise<{ user: AuthUser; redirectTo: string }> {
     const [data, signature] = String(token).split('.')
     if (!data || !signature) throw new MagicLinkError('invalid')
-    const a = Buffer.from(signature)
-    const b = Buffer.from(this.sign(data))
-    if (a.length !== b.length || !timingSafeEqual(a, b)) throw new MagicLinkError('invalid')
+    if (!this.keys.verify(`magic:${data}`, signature)) throw new MagicLinkError('invalid')
     let payload: Payload
     try {
       payload = JSON.parse(Buffer.from(data, 'base64url').toString())

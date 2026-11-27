@@ -1,5 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
-import { CslugError, currentApp, parseDuration } from '@cslug/core'
+import { CslugError, currentApp, Encrypter, parseDuration } from '@cslug/core'
 import { Router } from './router'
 
 export type UrlOptions = {
@@ -19,13 +18,16 @@ const fill = (pattern: string, params: Record<string, unknown>, name: string, us
     return encodeURIComponent(String(value))
   })
 
-const signature = (key: string, url: string) => createHmac('sha256', key).update(url).digest('base64url')
+/** The app's `Encrypter` (current and previous keys), or one for a plain key. */
+const signer = (key: string | Encrypter | undefined): Encrypter | undefined =>
+  typeof key === 'string' ? (key ? new Encrypter(key) : undefined) : key?.configured ? key : undefined
 
 /** Build a URL from a route name. Without `absolute`, a path is returned unless the route is on another domain. */
 export function urlFor(
   router: Router,
   appUrl: string | undefined,
-  key: string | undefined,
+  /** `APP_KEY`, or the app's `Encrypter` (signed with `APP_KEY`, verified with previous keys too). */
+  key: string | Encrypter | undefined,
   name: string,
   params: Record<string, unknown> = {},
   options: UrlOptions = {},
@@ -48,27 +50,27 @@ export function urlFor(
     origin = `${base.protocol}//${host ?? base.host}${host && base.port ? `:${base.port}` : ''}`
   }
   if (options.signed) {
-    if (!key) throw new CslugError('http.no_app_key', 'Signed URLs need APP_KEY (config app.key)')
+    const keys = signer(key)
+    if (!keys) throw new CslugError('http.no_app_key', 'Signed URLs need APP_KEY (config app.key)')
     if (options.expiresIn !== undefined)
       query.set('expires', String(Math.floor((Date.now() + parseDuration(options.expiresIn)) / 1000)))
     query.sort()
     const unsigned = `${origin}${path}${query.size ? `?${query}` : ''}`
-    query.set('signature', signature(key, unsigned))
+    query.set('signature', keys.sign(unsigned))
   }
   return `${origin}${path}${query.size ? `?${query}` : ''}`
 }
 
-/** Is a request URL correctly signed (and not expired)? */
-export function verifySignedUrl(url: string, key: string, now = Date.now()): boolean {
+/** Is a request URL correctly signed (with `APP_KEY` or a previous key) and not expired? */
+export function verifySignedUrl(url: string, key: string | Encrypter | undefined, now = Date.now()): boolean {
+  const keys = signer(key)
+  if (!keys) return false
   const u = new URL(url)
   const given = u.searchParams.get('signature')
   if (!given) return false
   u.searchParams.delete('signature')
   u.searchParams.sort()
-  const expected = signature(key, `${u.origin}${u.pathname}${u.searchParams.size ? `?${u.searchParams}` : ''}`)
-  const a = Buffer.from(given)
-  const b = Buffer.from(expected)
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return false
+  if (!keys.verify(`${u.origin}${u.pathname}${u.searchParams.size ? `?${u.searchParams}` : ''}`, given)) return false
   const expires = u.searchParams.get('expires')
   return !expires || Number(expires) * 1000 > now
 }
@@ -79,7 +81,7 @@ export function route(name: string, params: Record<string, unknown> = {}, option
   return urlFor(
     app.resolve(Router),
     app.config<string | undefined>('app.url'),
-    app.config<string | undefined>('app.key'),
+    app.resolve(Encrypter),
     name,
     params,
     options,

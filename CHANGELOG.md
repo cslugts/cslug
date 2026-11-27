@@ -4,6 +4,22 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/core
+- `Encrypter`: encryption (AES-256-GCM, same `v1.` format) and HMAC signatures with `APP_KEY`, and key rotation:
+  values and signatures made with a key in `APP_PREVIOUS_KEYS` still decrypt and verify. `safeEqual`, `hmac`.
+
+### @cslug/database, @cslug/http, @cslug/auth, @cslug/storage
+- Encrypted columns, signed URLs, magic links and two-factor secrets use the app's `Encrypter` (one
+  implementation instead of three), so they survive a key rotation. `cslug db:reencrypt` moves encrypted columns
+  to the new key.
+- `@cslug/auth` emits events: `LoginAttempting` (a listener can refuse the attempt), `LoginSucceeded`,
+  `LoginFailed`, `LoggedOut`, `TwoFactorEnabled`, `TwoFactorDisabled`, `RecoveryCodesRegenerated`, `TokenCreated`,
+  `TokenRevoked`.
+
+### @cslug/cli, create-cslug
+- `cslug key:rotate [--write]`. New apps declare `APP_PREVIOUS_KEYS` (a secret) and pass it as
+  `app.previousKeys`.
+
 ## 0.8.0 (2026-11-27)
 
 Observability: log targets and request → job correlation, tracing and metrics contracts in core with every package

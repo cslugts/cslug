@@ -10,6 +10,7 @@ import {
 } from '@cslug/core'
 import type { HttpContext } from '@cslug/http'
 import { type AuthConfig, field, idOf, type UserSource } from './config'
+import { LoggedOut, LoginAttempting, LoginFailed, LoginSucceeded } from './events'
 import type { Hash } from './hash'
 import { type Abilities, type AbilityArgs, checkPolicy, Gate, type PolicyClass } from './policy'
 import { type AccessToken, type Tokens, tokenCan } from './tokens'
@@ -107,6 +108,11 @@ export class Auth {
     this.ctx.session.put(SESSION_KEY, idOf(user))
     this.loaded = true
     this.set(user, 'web')
+    await LoginSucceeded.emit({ userId: idOf(user), ip: this.ip })
+  }
+
+  private get ip(): string | undefined {
+    return this.ctx.request?.ip()
   }
 
   /**
@@ -152,9 +158,13 @@ export class Auth {
     const limiter = this.ctx.resolve(RateLimiter)
     const key = `two-factor:${id}`
     const hit = await limiter.hit(key, this.deps.config.throttle ?? '5/min')
-    if (!hit.allowed) throw new TooManyRequestsError(hit.retryAfter)
+    if (!hit.allowed) {
+      await LoginFailed.emit({ reason: 'throttled', userId: id, ip: this.ip })
+      throw new TooManyRequestsError(hit.retryAfter)
+    }
     if (!(await this.deps.twoFactor().verify(id, code))) {
       this.ctx.log.warn('auth.two_factor_failed', { userId: id })
+      await LoginFailed.emit({ reason: 'two_factor', userId: id, ip: this.ip })
       return false
     }
     await limiter.reset(key)
@@ -167,8 +177,10 @@ export class Auth {
 
   /** Sign out: the session is emptied and gets a new id. */
   async logout(): Promise<void> {
+    const user = this.userOrNull()
     if (this.hasSession) this.ctx.session.invalidate()
     this.set(null)
+    await LoggedOut.emit({ userId: user ? idOf(user) : undefined, ip: this.ip })
   }
 
   /**
@@ -181,8 +193,12 @@ export class Auth {
     const hash = this.deps.hash()
     const limiter = this.ctx.resolve(RateLimiter)
     const key = `login:${email.trim().toLowerCase()}|${this.ctx.request.ip() ?? ''}`
+    await LoginAttempting.emit({ email: email.trim().toLowerCase(), ip: this.ip })
     const hit = await limiter.hit(key, config.throttle ?? '5/min')
-    if (!hit.allowed) throw new TooManyRequestsError(hit.retryAfter)
+    if (!hit.allowed) {
+      await LoginFailed.emit({ reason: 'throttled', email: email.trim().toLowerCase(), ip: this.ip })
+      throw new TooManyRequestsError(hit.retryAfter)
+    }
     const emailField = config.fields?.email ?? 'email'
     const passwordField = config.fields?.password ?? 'passwordHash'
     const users = await this.deps.users()
@@ -192,6 +208,12 @@ export class Auth {
     const ok = await hash.verify(password, stored ?? (await dummyHash(hash)))
     if (!user || !stored || !ok) {
       this.ctx.log.warn('auth.failed', { email })
+      await LoginFailed.emit({
+        reason: 'credentials',
+        email: email.trim().toLowerCase(),
+        ...(user ? { userId: idOf(user) } : {}),
+        ip: this.ip,
+      })
       return null
     }
     await limiter.reset(key)

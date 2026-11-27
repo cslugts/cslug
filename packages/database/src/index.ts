@@ -31,6 +31,7 @@ export {
 } from './columns'
 export {
   DbDiffCommand,
+  DbReencryptCommand,
   DbSeedCommand,
   DbShellCommand,
   databaseCommands,
@@ -58,7 +59,7 @@ export {
   type TableSpec,
   tableSpec,
 } from './differ'
-export { decrypt, encrypt, setEncryptionKey } from './encryption'
+export { decrypt, encrypt, needsReencrypt, setEncrypter, setEncryptionKey } from './encryption'
 export { isRetryable, QueryError, RowCountError, SerializationError, UniqueViolationError } from './errors'
 export { Factory, type FactoryContext, type FactoryValues, factory, isSeeder, type Seeder, seeder } from './factory'
 export { Fake } from './fake'

@@ -1,44 +1,52 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
-import { CslugError } from '@cslug/core'
+import { CslugError, Encrypter } from '@cslug/core'
 
-let key: Buffer | undefined
+let source: (() => Encrypter | undefined) | undefined
 
-/** Set the encryption key from `APP_KEY` (DatabaseProvider does this at register). */
-export function setEncryptionKey(appKey: string | undefined): void {
-  key = appKey ? createHash('sha256').update(appKey).digest() : undefined
+/**
+ * The app's `Encrypter` (`APP_KEY`, and `APP_PREVIOUS_KEYS` for reading), or a function returning it on first use
+ * (DatabaseProvider passes one at register, when it cannot be resolved yet).
+ */
+export function setEncrypter(value: Encrypter | (() => Encrypter) | undefined): void {
+  source = typeof value === 'function' ? value : () => value
 }
 
-const requireKey = (): Buffer => {
-  if (!key)
+/** Set the key directly (scripts, tests): `setEncryptionKey(APP_KEY, [previous keys])`. */
+export function setEncryptionKey(appKey: string | undefined, previous: readonly string[] = []): void {
+  setEncrypter(appKey ? new Encrypter(appKey, previous) : undefined)
+}
+
+const requireEncrypter = (): Encrypter => {
+  const encrypter = source?.()
+  if (!encrypter?.configured)
     throw new CslugError(
       'db.no_encryption_key',
       'Encrypted columns need APP_KEY (config app.key). Run `cslug key:generate`.',
     )
-  return key
+  return encrypter
 }
 
-/** AES-256-GCM with a random IV: `v1.<iv>.<tag>.<ciphertext>` (base64url). */
+/** AES-256-GCM with a random IV and the current key: `v1.<iv>.<tag>.<ciphertext>` (base64url). */
 export function encrypt(plain: string): string {
-  const iv = randomBytes(12)
-  const cipher = createCipheriv('aes-256-gcm', requireKey(), iv)
-  const data = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()])
-  return ['v1', iv.toString('base64url'), cipher.getAuthTag().toString('base64url'), data.toString('base64url')].join(
-    '.',
-  )
+  return requireEncrypter().encrypt(plain)
 }
 
-/** Reverse of `encrypt()`; throws `db.decrypt_failed` on a tampered value or a wrong APP_KEY. */
+/** Reverse of `encrypt()` (current or previous key); throws `db.decrypt_failed` on a tampered value or an unknown key. */
 export function decrypt(stored: string): string {
-  const [version, iv, tag, data] = stored.split('.')
-  if (version !== 'v1' || !iv || !tag || data === undefined)
-    throw new CslugError('db.decrypt_failed', 'Not an encrypted value')
+  const e = requireEncrypter()
   try {
-    const decipher = createDecipheriv('aes-256-gcm', requireKey(), Buffer.from(iv, 'base64url'))
-    decipher.setAuthTag(Buffer.from(tag, 'base64url'))
-    return Buffer.concat([decipher.update(Buffer.from(data, 'base64url')), decipher.final()]).toString('utf8')
+    return e.decrypt(stored)
   } catch (error) {
-    throw new CslugError('db.decrypt_failed', 'Could not decrypt a value (wrong APP_KEY, or the value was altered)', {
-      cause: error,
-    })
+    throw new CslugError(
+      'db.decrypt_failed',
+      (error as Error).message.startsWith('Not an')
+        ? 'Not an encrypted value'
+        : 'Could not decrypt a value (wrong APP_KEY, or the value was altered)',
+      { cause: error },
+    )
   }
+}
+
+/** Whether a stored value was encrypted with a previous key (`cslug key:rotate` re-encrypts those). */
+export function needsReencrypt(stored: string): boolean {
+  return requireEncrypter().needsReencrypt(stored)
 }

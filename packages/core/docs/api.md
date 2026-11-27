@@ -172,6 +172,23 @@ the app binds `role` (`CSLUG_ROLE`: `web`, `worker`, `scheduler`) on every line.
 | safe serialisation | bigint → string, Date → ISO, `toJSON()` (Money), errors with `code`/`status`/`cause`/`stack`, cycles cut |
 | `Logger.null()` | Writes nothing |
 
+## Encryption and signatures (`Encrypter`)
+
+Bound from `config('app.key')` and `config('app.previousKeys')` (`APP_PREVIOUS_KEYS`, comma-separated). Encrypted
+columns, signed URLs, magic links and two-factor secrets use it.
+
+| | |
+|---|---|
+| `encrypt(plain)` / `decrypt(stored)` | AES-256-GCM, `v1.<iv>.<tag>.<data>`; decrypts with the current key or a previous one; `crypto.decrypt_failed` |
+| `needsReencrypt(stored)` | Made with a previous key (`cslug db:reencrypt` re-encrypts those columns) |
+| `sign(data)` / `verify(data, signature)` | HMAC-SHA256 base64url; signs with the current key, verifies with any (constant time) |
+| `configured` | `APP_KEY` is set |
+| `Encrypter.random(bytes?)` | Random base64url |
+| `safeEqual(a, b)`, `hmac(key, data)`, `parseKeys(value)` | Helpers |
+
+Rotating the key: `cslug key:rotate --write` (new `APP_KEY`, the old one first in `APP_PREVIOUS_KEYS`), deploy,
+`cslug db:reencrypt`, and once links signed before have expired, drop the old key.
+
 ## Tracing and metrics (`Tracer`, `Metrics`)
 
 Contracts with no-op implementations bound by default; `@cslug/telemetry` binds ones that record and export. http,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { type Application, inject } from '@cslug/core'
+import { type Application, Encrypter, inject } from '@cslug/core'
 import { type HttpContext, Router, route, urlFor, verifySignedUrl } from '../src'
 import { signed } from '../src/middleware'
 import { httpApp } from './support'
@@ -142,6 +142,17 @@ describe('routing (guide 05)', () => {
     )
     expect(verifySignedUrl(expired, key, Date.now() + 5000)).toBe(false)
     expect(verifySignedUrl(expired, 'another key', Date.now())).toBe(false)
+
+    // after a key rotation (APP_KEY new, the old one in APP_PREVIOUS_KEYS) the link still opens
+    h.app.swap(Encrypter, new Encrypter('n'.repeat(32), [key]))
+    expect((await h.call(url)).status).toBe(200)
+    expect(route('download', { file: 'x' }, { signed: true })).not.toContain(
+      urlFor(h.app.resolve(Router), 'https://example.test', key, 'download', { file: 'x' }, { signed: true }).split(
+        'signature=',
+      )[1],
+    )
+    h.app.swap(Encrypter, new Encrypter('n'.repeat(32)))
+    expect((await h.call(url)).status).toBe(403) // the old key removed: the link stops working
   })
 
   test('duplicate route names are refused at compile', async () => {
