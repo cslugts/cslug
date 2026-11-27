@@ -4,6 +4,10 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.4.1 (2026-11-27)
+
+Apps created with `bun create cslug` type-check out of the box.
+
 ### @cslug/testing
 - Fix: an app that does not install every optional package (an `--api` app without vue, a `--web` app without
   queue or mail) failed `typecheck` with "Cannot find module" inside `@cslug/testing`. The optional packages' types

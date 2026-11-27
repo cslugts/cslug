@@ -34,7 +34,7 @@ export class BookingController {
 
 ## Status
 
-Version **0.4.0** is on npm: HTTP, validation, database, Vue pages, auth, Redis, queue and scheduler, mail,
+Version **0.4.1** is on npm: HTTP, validation, database, Vue pages, auth, Redis, queue and scheduler, mail,
 webhooks, notifications and storage. Start an app with `bun create cslug my-app`. The AI package comes next; see
 the [implementation plan](./docs/implementation-plan.md) for the roadmap.
 
