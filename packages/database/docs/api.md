@@ -13,18 +13,23 @@
 | `date()` | `date` | `'YYYY-MM-DD'` |
 | `timestamp()` | `timestamptz` | `Date` |
 | `jsonb<T>()` / `translated()` | `jsonb` | `T` / `{ fr?, en?, … }` |
+| `custom<T>(sqlType)` | any type (`tsvector`, `inet`…) | `T` (default `string`), as the driver returns it |
 | `amount()` / `currency()` | `bigint` / `char(3)` | money |
 | `shortCode('ALB')` | `text unique` | `ALB-7K2Q9F`, generated |
 | `timestamps()` / `softDeletes()` | `created_at`, `updated_at` / `deleted_at` | `Date` / `Date \| null` |
 
 Modifiers: `.nullable()` (columns are NOT NULL otherwise), `.default(v)`, `.defaultSql('now()')`, `.unique()`,
-`.references(() => table, { onDelete })`, `.check(sql\`…\`)`.
+`.references(() => table, { onDelete })`, `.check(sql\`…\`)`, `.generatedAs((c) => sql)` (`generated always as (…)
+stored`; `c(key)` quotes a sibling's SQL name; never written by inserts or updates; not in `NewRow`), `.hidden()` (left
+out of selects, `RETURNING` and `Row`). Types: `Generated`, `Hidden`.
 
 ## Tables
 
-`table(name, columns, { indexes: (t) => [t.index('a', 'b'), t.unique('c')] })` → `Table` with:
-`c.<key>` (column refs for the sql tag), `star`, `sqlNames`, `primaryKey`, `softDeletes`, `fromDb(row)`,
-`toDb(values)`. Types: `Row<typeof t>`, `NewRow<typeof t>`. Keys are camelCase in TS, snake_case in SQL.
+`table(name, columns, { indexes: (t) => [t.index('a', 'b'), t.unique('c'), t.using('gin', 'search'),
+t.using('gin', ['name', 'gin_trgm_ops'])] })` → `Table` with: `c.<key>` (column refs for the sql tag), `star`,
+`selection` (`star`, or the visible columns when some are hidden), `generatedSql`, `sqlNames`, `primaryKey`,
+`softDeletes`, `fromDb(row, extras?)`, `toDb(values)` (generated columns skipped). `IndexDef` has `using` and `ops`
+(an operator class per column, `null` for the default). Types: `Row<typeof t>`, `NewRow<typeof t>`. Keys are camelCase in TS, snake_case in SQL.
 
 Reading converts driver values: `date` → `'YYYY-MM-DD'`, `bigint` → bigint, `numeric` → string, `char(n)` trimmed.
 
@@ -77,6 +82,8 @@ Binds `Database` from `config('database')`, pings at boot, closes at shutdown.
 | `where({ key: value \| null \| op })` | AND of conditions; `null` → IS NULL; `undefined` keys ignored (so `...(cond && {…})` works). Keys and value types are checked against the table |
 | operators | `eq ne gt gte lt lte between inList notIn like ilike isNull notNull not(op)`. `inList([])` matches nothing |
 | `orWhere({...})` / `whereSql(sql\`…\`)` | OR group / raw condition |
+| `orderBySql(sql\`…\`)` | A raw sort term, after the others |
+| `selectSql(name, sql<V>\`…\`)` | A computed value on each row: `Query<T, R & { name: V }>` (as the driver returns it) |
 | `orderBy(key, 'asc' \| 'desc', { nulls: 'first' \| 'last' })` | Chainable |
 | `limit`, `offset`, `select(...keys)` | `select` narrows the row type to `Pick<Row, K>` |
 | `lockForUpdate({ skipLocked?, noWait? })` | Must be inside a transaction (clear error otherwise) |
@@ -134,9 +141,9 @@ prints the same changes (and the SQL with `--sql`) without writing a file.
 | | |
 |---|---|
 | `loadTables(rootDir)` | The tables `app/tables/` exports |
-| `tableSpec(table)` / `introspect(db)` | Both sides in one shape (`TableSpec`): columns (type as `format_type()` reports it, nullability, default), unique, check (`oneOf`) and foreign-key constraints, indexes. `introspect` reads the `public` schema and skips `cslug_*` tables (packages migrate those) |
+| `tableSpec(table)` / `introspect(db)` | Both sides in one shape (`TableSpec`): columns (type as `format_type()` reports it, nullability, default, generated expression + hash), unique, check (`oneOf`) and foreign-key constraints, indexes (columns, method, operator classes). `introspect` reads the `public` schema and skips `cslug_*` tables (packages migrate those) |
 | `renameCandidates(desired, actual)` | A column in the database only and one in the tables only, same table and type: maybe a rename (the command asks; without a terminal it assumes a rename, which keeps the data) |
-| `diffSchemas(desired, actual, renames?)` | `Change[]` (`{ table, label, up, down, warning? }`): new tables (referenced ones first), added / dropped / renamed columns, type, nullability and default changes, constraints and indexes compared by name and definition, dropped tables |
+| `diffSchemas(desired, actual, renames?)` | `Change[]` (`{ table, label, up, down, warning? }`): new tables (referenced ones first), added / dropped / renamed columns, type, nullability and default changes, generated expressions (`set expression`, from the hash in the column comment; a column that becomes or stops being generated is dropped and added again, with its indexes), constraints and indexes compared by name and definition (method and operator classes included), dropped tables |
 | `migrationSql(changes)` | `-- up` in order, `-- down` in reverse |
 
 Constraint names follow PostgreSQL's defaults (`t_col_key`, `t_col_fkey`, `t_col_check`), so a table created by a

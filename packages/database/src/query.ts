@@ -10,7 +10,7 @@ export type Where<T extends Table> = {
   [K in keyof Row<T>]?: Row<T>[K] | Op<NonNullable<Row<T>[K]>> | (null extends Row<T>[K] ? null : never) | undefined
 }
 
-type Order = { key: string; dir: 'asc' | 'desc'; nulls?: 'first' | 'last' }
+type Order = { key: string; dir: 'asc' | 'desc'; nulls?: 'first' | 'last' } | { sql: SqlFragment<unknown> }
 type Trashed = 'without' | 'with' | 'only'
 
 export type Page<R> = { data: R[]; meta: { page: number; perPage: number; total: number; lastPage: number } }
@@ -49,6 +49,8 @@ export class Query<T extends Table, R = Row<T>> {
       columns?: string[]
       lock?: 'update' | 'update skip locked' | 'update nowait'
       trashed: Trashed
+      /** Computed values added to each row: `[name, expression]`. */
+      extras?: [string, SqlFragment<unknown>][]
     } = { ands: [], ors: [], order: [], trashed: 'without' },
   ) {}
 
@@ -78,6 +80,19 @@ export class Query<T extends Table, R = Row<T>> {
     options: { nulls?: 'first' | 'last' } = {},
   ): Query<T, R> {
     return this.with({ order: [...this.state.order, { key, dir, nulls: options.nulls }] })
+  }
+
+  /** A raw ORDER BY term, after the others: `.orderBySql(sql\`ts_rank_cd(${t.c.search}, ${q}) desc\`)`. */
+  orderBySql(term: SqlFragment<unknown>): Query<T, R> {
+    return this.with({ order: [...this.state.order, { sql: term }] })
+  }
+
+  /**
+   * Add a computed value to each row, as `name`: `.selectSql('rank', sql<number>\`ts_rank_cd(…)\`)`. The value
+   * comes as the driver returns it (no column conversion).
+   */
+  selectSql<K extends string, V = unknown>(name: K, expression: SqlFragment<V>): Query<T, R & { [P in K]: V }> {
+    return this.with<R & { [P in K]: V }>({ extras: [...(this.state.extras ?? []), [name, expression]] })
   }
 
   limit(n: number): Query<T, R> {
@@ -132,14 +147,17 @@ export class Query<T extends Table, R = Row<T>> {
   /** The SELECT statement. */
   toSql(): SqlFragment<unknown> {
     const t = this.table
-    const cols = this.state.columns
+    const base = this.state.columns
       ? sql.join(this.state.columns.map((k) => (t.c as Record<string, unknown>)[k]))
-      : t.star
+      : sql`${t.selection}`
+    const extras = (this.state.extras ?? []).map(([name, expression]) => sql`${expression} as ${sql.ident(name)}`)
+    const cols = extras.length ? sql.join([base, ...extras]) : base
     const order = this.state.order.length
       ? sql` order by ${sql.join(
-          this.state.order.map(
-            (o) =>
-              sql`${(t.c as Record<string, unknown>)[o.key]} ${sql.raw(o.dir)}${o.nulls ? sql.raw(` nulls ${o.nulls}`) : sql.empty}`,
+          this.state.order.map((o) =>
+            'sql' in o
+              ? o.sql
+              : sql`${(t.c as Record<string, unknown>)[o.key]} ${sql.raw(o.dir)}${o.nulls ? sql.raw(` nulls ${o.nulls}`) : sql.empty}`,
           ),
         )}`
       : sql.empty
@@ -158,7 +176,8 @@ export class Query<T extends Table, R = Row<T>> {
   }
 
   async all(): Promise<R[]> {
-    return (await this.db().many(this.toSql(), this.table)) as R[]
+    const extras = (this.state.extras ?? []).map(([name]) => name)
+    return (await this.db().many(this.toSql(), this.table, extras)) as R[]
   }
 
   async first(): Promise<R | null> {

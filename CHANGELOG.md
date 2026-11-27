@@ -4,6 +4,14 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/database
+- Generated columns: `.generatedAs((c) => sql)` (`generated always as (…) stored`), never written by inserts or
+  updates; the differ creates them and follows expression changes (`set expression`, PostgreSQL 17+).
+- Hidden columns: `.hidden()` keeps a column out of selects and `Row`. `custom<T>(sqlType)` for any type.
+- Indexes with an access method and operator classes: `t.using('gin', 'search')`,
+  `t.using('gin', ['name', 'gin_trgm_ops'])`, created and compared by the differ.
+- Query: `orderBySql(sql)` and typed computed values with `selectSql(name, sql)`.
+
 ### @cslug/ai
 - Prompts: `{{ trip.circuit.name }}` reads nested values, objects and lists are written as JSON, and
   `{{ language | English }}` gives a default; `ai:prompts` marks variables with a default (`language?`).

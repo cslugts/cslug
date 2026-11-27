@@ -50,10 +50,10 @@ export abstract class Queryable {
 
   /** Run a query; rows keyed in camelCase, or mapped and typed by `table`. */
   async many<T>(query: SqlFragment<T>): Promise<T[]>
-  async many<T extends Table>(query: SqlFragment<unknown>, table: T): Promise<Row<T>[]>
-  async many(query: SqlFragment<unknown>, table?: Table): Promise<unknown[]> {
+  async many<T extends Table>(query: SqlFragment<unknown>, table: T, extras?: readonly string[]): Promise<Row<T>[]>
+  async many(query: SqlFragment<unknown>, table?: Table, extras: readonly string[] = []): Promise<unknown[]> {
     const rows = await this.run(query)
-    return table ? rows.map((r) => table.fromDb(r)) : rows.map(camelKeys)
+    return table ? rows.map((r) => table.fromDb(r, extras)) : rows.map(camelKeys)
   }
 
   /** Exactly one row, else `RowCountError`. */

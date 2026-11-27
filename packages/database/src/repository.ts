@@ -124,6 +124,10 @@ export function Repository<T extends Table>(table: T) {
     protected prepare(values: Record<string, unknown>): Record<string, unknown> {
       const out = { ...values }
       for (const [key, column] of Object.entries(table.columns)) {
+        if (column.def.generated) {
+          delete out[key] // computed by PostgreSQL: never written
+          continue
+        }
         if (out[key] !== undefined) continue
         if (column.def.generate) out[key] = column.def.generate()
         else if (column.def.defaultValue !== undefined) out[key] = column.def.defaultValue
@@ -147,13 +151,16 @@ export function Repository<T extends Table>(table: T) {
             keys.map((k) => (p[k] === undefined ? sql`default` : writeValue(p[k], table.columns[k] as never))),
           )})`,
       )
-      return this.exec.many(sql`insert into ${table} (${names}) values ${sql.join(rows)} returning *`, table)
+      return this.exec.many(
+        sql`insert into ${table} (${names}) values ${sql.join(rows)} returning ${table.selection}`,
+        table,
+      )
     }
 
     async update(id: unknown, values: Partial<Row<T>>) {
       const where = whereSql(table, this.byId(id))
       const row = await this.exec.maybeOne(
-        sql`update ${table} set ${setClause(table, values as Record<string, unknown>)} where ${where} returning *`,
+        sql`update ${table} set ${setClause(table, values as Record<string, unknown>)} where ${where} returning ${table.selection}`,
         table,
       )
       if (!row) throw new NotFoundError(this.resource, String(id))
@@ -180,7 +187,7 @@ export function Repository<T extends Table>(table: T) {
       const row = await this.exec.maybeOne(
         sql`insert into ${table} (${sql.join(keys.map((k) => sql.ident(table.sqlNames.get(k) as string)))})
           values (${sql.join(keys.map((k) => writeValue(p[k], table.columns[k] as never)))})
-          on conflict (${conflict}) ${action} returning *`,
+          on conflict (${conflict}) ${action} returning ${table.selection}`,
         table,
       )
       return (
