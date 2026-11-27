@@ -35,4 +35,5 @@ bun run check:graph            # dependency rules
    - UUIDv7 ids
 5. **Don't reopen settled decisions** (`docs/decisions.md`, `docs/open-questions.md` § Decided). Propose changes
    explicitly instead.
-6. Keep packages within the size budget in `docs/packages.md`.
+6. Mind the size budgets in `docs/packages.md`: guides, not hard limits (report the size; simplify a package far
+   over its budget).

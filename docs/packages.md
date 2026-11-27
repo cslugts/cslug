@@ -95,7 +95,8 @@ Albastr uses `--full` + notification + webhook. AI is added after the MVP.
 ## Size budget
 
 Budgets count **lines of code**: no tests, comments or blank lines (`grep -cvE '^\s*(//|\*|/\*\*|\*/)|^\s*$'`).
-Doc comments are encouraged, not penalised.
+Doc comments are encouraged, not penalised. They are **guides, not hard limits**: a package may go over when the
+feature needs it. Report the size in the PR; a package far over its budget is a sign it should be simplified.
 
 | Package | Lines of code |
 |---|---|
@@ -109,7 +110,7 @@ Doc comments are encouraged, not penalised.
 | auth | 1,000 |
 | mail + notification | 1,200 |
 | storage, webhook | 600 |
-| ai | 1,000 |
+| ai | 1,500 |
 | cli + testing | 1,800 |
 | create-cslug (templates not counted) | 200 |
-| **Total** | **~17,000** |
+| **Total** | **~18,000** |
