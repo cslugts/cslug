@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M10 are done (0.6.0 released: `@cslug/search` with full text, document indexes, semantic and hybrid search; embedding drivers and search tools in `@cslug/ai`). TOTP two-factor authentication is on main (unreleased). Next: to be planned.
+> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M10 are done; 0.6.1 released (0.6.0: `@cslug/search` with full text, document indexes, semantic and hybrid search, embedding drivers and search tools in `@cslug/ai`; 0.6.1: TOTP two-factor authentication). Next: to be planned.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
