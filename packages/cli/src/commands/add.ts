@@ -44,6 +44,7 @@ export const ADDITIONS: Record<string, Addition> = {
   search: {
     packages: ['@cslug/search'],
     providers: { from: '@cslug/search', names: ['SearchProvider'] },
+    config: 'search',
     next: 'cslug migrate (adds unaccent, pg_trgm and the cslug_<language> search configurations)',
   },
   ai: {

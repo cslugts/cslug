@@ -1,0 +1,5 @@
+import { defineConfig } from '@cslug/core'
+
+export default defineConfig({
+  // vectors: true, // semantic search (searchIndex({ semantic: true })): needs pgvector on the server, then cslug migrate
+})

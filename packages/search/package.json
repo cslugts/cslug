@@ -23,6 +23,7 @@
   "files": [
     "src",
     "migrations",
+    "migrations-vectors",
     "docs",
     "README.md"
   ],

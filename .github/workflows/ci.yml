@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17
+        image: pgvector/pgvector:pg17 # postgres 17 with pgvector (semantic search tests)
         env: { POSTGRES_USER: cslug, POSTGRES_PASSWORD: cslug, POSTGRES_DB: cslug }
         ports: ["5432:5432"]
         options: >-

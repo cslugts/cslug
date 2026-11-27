@@ -17,7 +17,7 @@ jobs:
     # same services as ci.yml: the release runs the full check, database and Redis tests included
     services:
       postgres:
-        image: postgres:17
+        image: pgvector/pgvector:pg17 # postgres 17 with pgvector (semantic search tests)
         env: { POSTGRES_USER: cslug, POSTGRES_PASSWORD: cslug, POSTGRES_DB: cslug }
         ports: ["5432:5432"]
         options: >-

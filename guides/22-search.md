@@ -70,4 +70,20 @@ const results = await helpIndex.search('visa arrivée', { highlight: true })   /
 Keep it current where the data changes (`upsert` / `remove`), and refill it from its source with
 `cslug search:reindex help`: documents the source no longer yields are removed.
 
-Coming next: semantic search (by meaning, with pgvector) and a search tool for agents.
+## By meaning
+
+A traveller asks "louer une voiture" and the FAQ says "location de 4x4 avec chauffeur": no word in common. A
+semantic index finds it by meaning:
+
+```ts
+// config/search.ts: vectors: true (needs pgvector on the server; then cslug migrate)
+export const helpIndex = searchIndex('help', { languages: ['french', 'english'], semantic: true, documents })
+
+await helpIndex.search('louer une voiture')     // hybrid: words and meaning, a page like paginate()
+```
+
+Documents are embedded when they are upserted, and only again when their text changes. Searches combine full-text
+and nearest-vector results (`mode: 'text' | 'semantic' | 'hybrid'`). The embedding model comes from the app's
+`Embedder`; tests use `FakeEmbedder`.
+
+Coming next: embedding drivers in `@cslug/ai` and a search tool for agents.
