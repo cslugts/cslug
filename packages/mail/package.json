@@ -1,6 +1,6 @@
 {
   "name": "@cslug/mail",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Mailer and mailables, CSS inlining, SMTP and HTTP API transports.",
   "license": "MIT",
   "type": "module",

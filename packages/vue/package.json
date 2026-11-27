@@ -1,6 +1,6 @@
 {
   "name": "@cslug/vue",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Vue views rendered on the server, components hydrated as islands, composables and asset build.",
   "license": "MIT",
   "type": "module",
