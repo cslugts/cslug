@@ -47,6 +47,12 @@ export const ADDITIONS: Record<string, Addition> = {
     config: 'search',
     next: 'cslug migrate (adds unaccent, pg_trgm and the cslug_<language> search configurations)',
   },
+  telemetry: {
+    packages: ['@cslug/telemetry'],
+    providers: { from: '@cslug/telemetry', names: ['TelemetryProvider'] },
+    config: 'telemetry',
+    next: 'set OTEL_EXPORTER_OTLP_ENDPOINT (your OpenTelemetry collector) and METRICS_TOKEN (for /metrics)',
+  },
   ai: {
     packages: ['@cslug/ai'],
     providers: { from: '@cslug/ai', names: ['AiProvider'] },

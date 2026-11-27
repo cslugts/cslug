@@ -213,6 +213,20 @@
         "@cslug/http",
       ],
     },
+    "packages/telemetry": {
+      "name": "@cslug/telemetry",
+      "version": "0.7.1",
+      "devDependencies": {
+        "@cslug/http": "workspace:*",
+      },
+      "peerDependencies": {
+        "@cslug/core": "workspace:*",
+        "@cslug/http": "workspace:*",
+      },
+      "optionalPeers": [
+        "@cslug/http",
+      ],
+    },
     "packages/testing": {
       "name": "@cslug/testing",
       "version": "0.7.1",
@@ -352,6 +366,8 @@
     "@cslug/search": ["@cslug/search@workspace:packages/search"],
 
     "@cslug/storage": ["@cslug/storage@workspace:packages/storage"],
+
+    "@cslug/telemetry": ["@cslug/telemetry@workspace:packages/telemetry"],
 
     "@cslug/testing": ["@cslug/testing@workspace:packages/testing"],
 

@@ -115,12 +115,14 @@ export class RecordedSpan implements Span {
     attributes: Attributes,
     parent: string | undefined,
     private readonly onEnd: (span: RecordedSpan) => void,
+    /** For a new trace (no valid parent): whether it is sampled. A continued trace follows the caller's flag. */
+    sampled = true,
   ) {
     const p = parseTraceparent(parent)
     this.traceId = p?.traceId ?? hex(16)
     this.spanId = hex(8)
     this.parentSpanId = p?.spanId
-    this.sampled = p?.sampled ?? true
+    this.sampled = p?.sampled ?? sampled
     this.attributes = { ...attributes }
   }
 
@@ -162,18 +164,34 @@ export class BasicTracer extends Tracer {
   readonly enabled = true
   readonly finished: RecordedSpan[] = []
 
-  constructor(private readonly options: { onEnd?: (span: RecordedSpan) => void; keep?: number } = {}) {
+  constructor(
+    private readonly options: {
+      onEnd?: (span: RecordedSpan) => void
+      /** How many finished spans `finished` keeps (default 1000; 0: none). */
+      keep?: number
+      /** 0–1: the share of new traces sampled (default 1). Spans are created either way; `sampled` says which. */
+      sampleRate?: number
+    } = {},
+  ) {
     super()
   }
 
   startSpan(name: string, options: SpanOptions = {}): RecordedSpan {
-    return new RecordedSpan(name, options.kind ?? 'internal', options.attributes ?? {}, options.parent, (span) => {
-      if (this.options.keep !== 0) {
-        this.finished.push(span)
-        if (this.finished.length > (this.options.keep ?? 1000)) this.finished.shift()
-      }
-      this.options.onEnd?.(span)
-    })
+    const rate = this.options.sampleRate ?? 1
+    return new RecordedSpan(
+      name,
+      options.kind ?? 'internal',
+      options.attributes ?? {},
+      options.parent,
+      (span) => {
+        if (this.options.keep !== 0) {
+          this.finished.push(span)
+          if (this.finished.length > (this.options.keep ?? 1000)) this.finished.shift()
+        }
+        this.options.onEnd?.(span)
+      },
+      rate >= 1 || Math.random() < rate,
+    )
   }
 }
 

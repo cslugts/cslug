@@ -107,7 +107,7 @@ export const providers = [
     const unknown = await cli(['add', 'queue,payments', '--no-install'], { root })
     expect(unknown.code).toBe(1)
     expect(unknown.out).toContain(
-      'Unknown: payments. Available: queue, mail, storage, notification, webhook, search, ai, tailwind',
+      'Unknown: payments. Available: queue, mail, storage, notification, webhook, search, telemetry, ai, tailwind',
     )
     const { code, out } = await cli(['add', 'webhook', '--no-install'], { root })
     expect(code).toBe(0)
