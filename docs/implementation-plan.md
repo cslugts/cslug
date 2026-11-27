@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M8 are done; M9 is in progress (0.4.1 released: create-cslug, `cslug add`, `describe`, `repl`, the migration differ). Next: M9f part 2 (`mcp:dev`, `agents:sync`).
+> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M8 are done; M9 is in progress (0.4.1 released: create-cslug, `cslug add`, `describe`, `repl`, the migration differ). Next: M9g AI conversations, then M9h (`mcp:dev`, `agents:sync`), then M10 `@cslug/search`.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
@@ -20,7 +20,8 @@
 | M6 queue | ✅ M6a engine: `Job` (tries, backoff, timeout, `failed`, `Job.schema`), dispatch (delay, at, queue, priority bands, unique, held until COMMIT), Redis Streams worker (lease renewal, `XAUTOCLAIM` takeover, graceful stop), failed store, `queue:work/failed/retry/forget/clear/stats`, discovery of `app/jobs` + `app/listeners`, queued listeners, `QueueFake`. Acceptance: rolled-back dispatch never runs ✅, killed worker's job reclaimed ✅. M6b scheduler: own cron parser with time zones, `defineSchedule`, once-per-tick locks, no overlap, `catchUp('once')`, history, `schedule:*`, `t.schedule.runDue()`. Acceptance: two schedulers → one run per tick ✅. M6c: durable outbox (`cslug_queue_outbox`, relayed at COMMIT and by workers), chains, batches, per-queue `rateLimit`, `queue:health`, `serve --with-worker/--with-scheduler`. All three M6 acceptance tests pass |
 | M7 webhook, mail → 0.2.0 | ✅ M7a `@cslug/webhook`: `verifySignature` (HMAC, constant time, timestamp tolerance), `WebhookInbox` (exactly once, processors, replay, prune), `webhooks:replay`. Acceptance: webhook delivered 10× (concurrently) → one effect ✅. M7b `@cslug/mail`: mailables on Vue views, CSS inlining, text part, MIME, own SMTP client (STARTTLS, AUTH), Resend/Postmark/Brevo/log/array, queued mail rendered at send time (`cslug.mail`), `mail:preview`, `MailFake`. Acceptance: reminder email received by Mailpit over SMTP ✅ (CI). The starter kit runs end to end (`bun run check:starter`: vue-tsc, feature tests, real processes from register to the reminder email in Mailpit) ✅. **Released as 0.2.0.** |
 | M8 notification, storage → 0.3.0 | ✅ M8a `@cslug/storage`: disks (local, S3 through `Bun.s3`, memory), safe keys, `putFile` with the type sniffed from the bytes, signed downloads, direct uploads + `verifyUpload`, local signed URLs served at `/_storage/:disk`, `StorageFake`. S3 tested against RustFS in CI. M8b `@cslug/notification`: `Notification` (`via`, `to<Channel>`), recipients and `recipient()`, messages built in the recipient's locale, mail through the Mailer, `database` channel, `whatsapp`/`sms` with `log` and `manual` drivers, custom channels, one job per delivery, delivery records, `NotificationFake`. **Released as 0.3.0.** |
-| M9 ai, create-cslug, extras | 🟡 M9a `create-cslug`: presets `--api` / `--web` / `--full` + `--tailwind` from literal template layers, `.env` with a fresh `APP_KEY`, exact lockstep versions; `bun run check:create` scaffolds each preset and typechecks, builds and tests it. M9b `cslug add` (queue, mail, storage, notification, webhook, tailwind): installs at the CLI's version, adds providers and config, idempotent; checked by scaffolding a web app and adding five packages. M9c `cslug describe` (sections contributed by providers: routes, tables, jobs, schedules, providers, config keys) and `cslug repl`. M9d the migration differ: `make:migration --from-tables` and `db:diff` (tables, columns, renames asked, unique/check/foreign-key constraints, indexes; up and down), verified by applying the generated SQL and diffing again. M9e `@cslug/ai` (first part): agents with structured output and tool loops, tools, prompts, streaming + `sse()`, Anthropic (Messages API over `fetch`) and OpenAI-compatible providers, `AiFake`, `cslug add ai`, `ai:prompts`. M9f MCP: `@mcp()` tools served at `POST /mcp` (api middleware, abilities) and by `cslug mcp:serve` (stdio), protocol 2026-07-28 plus the `initialize` versions; `mcp('server').tools()` for agents (HTTP and stdio, discover then initialize). Recorded fixtures (`t.ai.fixture()`, `cslug ai:record`), `cslug ai:eval` (schema failures and diffs), the daily budget (estimated cost per model, shared through the cache, `AiBudgetError` / `AiBudgetAlert`). Next: `mcp:dev`, `agents:sync` |
+| M9 ai, create-cslug, extras | 🟡 M9a `create-cslug`: presets `--api` / `--web` / `--full` + `--tailwind` from literal template layers, `.env` with a fresh `APP_KEY`, exact lockstep versions; `bun run check:create` scaffolds each preset and typechecks, builds and tests it. M9b `cslug add` (queue, mail, storage, notification, webhook, tailwind): installs at the CLI's version, adds providers and config, idempotent; checked by scaffolding a web app and adding five packages. M9c `cslug describe` (sections contributed by providers: routes, tables, jobs, schedules, providers, config keys) and `cslug repl`. M9d the migration differ: `make:migration --from-tables` and `db:diff` (tables, columns, renames asked, unique/check/foreign-key constraints, indexes; up and down), verified by applying the generated SQL and diffing again. M9e `@cslug/ai` (first part): agents with structured output and tool loops, tools, prompts, streaming + `sse()`, Anthropic (Messages API over `fetch`) and OpenAI-compatible providers, `AiFake`, `cslug add ai`, `ai:prompts`. M9f MCP: `@mcp()` tools served at `POST /mcp` (api middleware, abilities) and by `cslug mcp:serve` (stdio), protocol 2026-07-28 plus the `initialize` versions; `mcp('server').tools()` for agents (HTTP and stdio, discover then initialize). Recorded fixtures (`t.ai.fixture()`, `cslug ai:record`), `cslug ai:eval` (schema failures and diffs), the daily budget (estimated cost per model, shared through the cache, `AiBudgetError` / `AiBudgetAlert`). Next: M9g conversations, M9h `mcp:dev` + `agents:sync` |
+| M10 search | ⬜ `@cslug/search` (planned, see [M10](#m10-cslugsearch)) |
 
 ## Context
 
@@ -104,13 +105,63 @@ at the end.
 | **M6** | Background work | `queue` | Redis Streams engine, `Job`, retries/backoff/delay/unique, after-commit dispatch, durable outbox, failed store + commands, scheduler (cron, once-per-tick lock, history), worker + scheduler roles in `cslug start` | Acceptance: rolled-back dispatch never runs; killed worker's job reclaimed; two schedulers → one run per tick |
 | **M7** | Payments plumbing | `webhook`, `mail` | `verifySignature`, `WebhookInbox` + replay; `Mailer`, `Mailable`, Vue templates, CSS inlining + text part, SMTP client, HTTP transports, `mail:preview` | Webhook replayed 10× → one effect; starter-kit reminder email sent to Mailpit. **→ 0.2.0**: Albastr MVP build order (1) unblocked |
 | **M8** | MVP completion | `notification`, `storage` | Channels (mail, database, whatsapp/sms with `log` + `manual` drivers), delivery records; disks (local, s3), signed URLs, upload sniffing | Albastr check-ins (#7), crisis broadcast (#15), operator documents (#11). **→ 0.3.0** |
-| **M9** | After MVP | `ai`, `create-cslug`, extras | Agents, tools, MCP; scaffolder with presets; migration differ; `cslug describe`, `mcp:dev`, `agents:sync` | As needed by Albastr post-pilot |
+| **M9** | After MVP | `ai`, `create-cslug`, extras | Agents, tools, MCP; scaffolder with presets; migration differ; `cslug describe`; AI conversations (M9g); `mcp:dev`, `agents:sync` (M9h) | As needed by Albastr post-pilot |
+| **M10** | Search | `search` | Full-text search over any table (Postgres `tsvector`, per-language configs, ranking, highlights, typo tolerance), an index for arbitrary documents, semantic search with pgvector through an `Embedder` contract, hybrid ranking; used by `@cslug/ai` for retrieval and conversation recall | Albastr circuit pages searchable in FR/EN/IT; an agent answers from indexed documents |
 
 ### Albastr track (parallel, from 0.1.0)
 - Create `albastr` from the starter kit. Build in MVP order: operator onboarding and booking/escrow states (M5),
   payment webhook + ledger + staged release with manual approval (M6–M7), check-in messages + offline trip
   pack (M7–M8), then circuit pages (FR/EN/IT), the trip request form, proposals and the visa page.
 - Any framework change Albastr needs goes into `cslug` first (PR + release), never patched in the app.
+
+### M9g: AI conversations
+
+Today a run is one exchange: `run({ input, context })` sends one user message, and the tool loop's messages are
+dropped when it ends. Two PRs, each merged before the next:
+
+1. **History in and out (no storage).** `run` / `stream` / `result` accept `history: Message[]` and `AiResult`
+   returns `messages` (the whole exchange: tool calls, tool results and provider blocks such as thinking, unchanged).
+   History is append-only, and the Anthropic driver puts a cache breakpoint on the last message, so each turn reads
+   the earlier ones from the prompt cache (a sliding window would invalidate it). Apps store messages wherever they
+   like. `AiFake` records the history it was given.
+2. **Conversations and run records (with `@cslug/database`, optional).**
+   - `ai_conversations` (UUIDv7 id, agent, owner type + id, title, metadata, timestamps) and `ai_messages`
+     (conversation id, role, content blocks as `jsonb`, model, usage, created at), as package migrations.
+   - `Conversations` service: `start(Agent, { owner })`, `find(id)` (checks the owner against the current user, so
+     a conversation is never read by someone else), `chat.send(text)` / `chat.stream(text)` (→ `sse()`),
+     `chat.messages()`. The owner is polymorphic, like notification recipients.
+   - Long conversations: when the history passes a token limit, the Anthropic driver's server-side compaction, or a
+     queued summary of older turns (stored as a message, the originals kept).
+   - `ai_runs`: one row per run (agent, conversation, model, steps, usage, estimated cost, status, error): an audit
+     trail, spend per owner, and real runs to turn into fixtures.
+   - Left out: working memory (an app writes it as a `Tool` over its own repository), semantic recall (comes with
+     M10), resumable runs that wait for a human (still deferred).
+
+## M10: @cslug/search
+
+A search package for any text the app holds, not only AI: circuit pages, operators, documents, conversation
+messages. Built on Postgres, so an app needs no search server; no third-party runtime dependency.
+
+- **Full text over tables.** A table declares what is searchable and with which weight (`search: { title: 'A',
+  summary: 'B', body: 'C' }`) and in which language (a fixed `regconfig` or a column, for FR/EN/IT content). The
+  migration differ generates the `tsvector` generated column and its GIN index. Queries compose with the query
+  builder: `repo.search('isalo 4x4').where({ published: true }).paginate()`, ranked (`ts_rank_cd`), with
+  `websearch_to_tsquery` syntax (quotes, `-word`, `or`), `unaccent`, highlights (`ts_headline`), and `pg_trgm` for
+  typos and prefixes.
+- **An index for anything else.** `SearchIndex` stores documents that are not rows (files, pages, messages) in one
+  table (`search_documents`: index name, key, text, metadata, `tsvector`, optional embedding), with `upsert`,
+  `remove`, `search`.
+- **Semantic search.** A `vector(n)` column when the `pgvector` extension is installed (otherwise semantic search is
+  off and says why). Embeddings come from an `Embedder` contract that `@cslug/search` defines; `@cslug/ai` provides
+  drivers (OpenAI-compatible `/embeddings`, Voyage; Anthropic has no embeddings API). Embedding happens in a queued
+  job after commit when `@cslug/queue` is installed, inline otherwise.
+- **Hybrid ranking.** Full-text and vector results merged with reciprocal rank fusion.
+- **Keeping indexes fresh.** Table search needs nothing (generated columns); `SearchIndex` and embeddings are
+  updated by the code that writes, plus `cslug search:reindex [index]`.
+- **AI use.** A `SearchTool` (an agent searches an index, results with keys and snippets) and conversation recall:
+  earlier messages of the owner found by meaning.
+- Depends on core, database · optional: queue. `@cslug/ai` ··► search (optional). Engines such as Meilisearch or
+  Typesense (over `fetch`) could become drivers later; not in the first version.
 
 ---
 
