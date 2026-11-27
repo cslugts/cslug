@@ -216,6 +216,18 @@ const base: ModelRequest = {
 describe('AnthropicProvider (Messages API over fetch)', () => {
   const claude = () => new AnthropicProvider({ driver: 'anthropic', apiKey: 'sk-test', baseUrl: server.url.origin })
 
+  test('compact: the compaction beta and edit on the models that have it, beside fallbacks; ignored elsewhere', async () => {
+    reply = () => json({ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} })
+    await claude().complete({ ...base, compact: true })
+    const seen = requests.at(-1) as Seen
+    expect(seen.headers.get('anthropic-beta')).toBe('server-side-fallback-2026-07-01,compact-2026-01-12')
+    expect(seen.body).toMatchObject({ context_management: { edits: [{ type: 'compact_20260112' }] } })
+    await claude().complete({ ...base, model: 'claude-haiku-4-5', compact: true })
+    const old = requests.at(-1) as Seen
+    expect(old.headers.get('anthropic-beta')).toBeNull()
+    expect(old.body).not.toHaveProperty('context_management')
+  })
+
   test('a conversation (more than one message) is cached automatically after the system prompt; promptCaching: false sends no cache_control', async () => {
     reply = () => json({ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} })
     const conversation = {

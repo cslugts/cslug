@@ -20,7 +20,7 @@ installs `@cslug/ai`.
 | `@cslug/notification` | `Notifier`, `Notification`, channels: mail, database, whatsapp, sms; delivery records | core · optional: mail, queue, database | — |
 | `@cslug/storage` | `Storage` disks (local, s3, memory), signed URLs, direct uploads, upload type sniffing | core · optional: http (serves local signed URLs) | `Bun.file`, `Bun.s3` |
 | `@cslug/webhook` | `verifySignature()`, `WebhookInbox` (exactly-once receipt), replay command | http, database | Web Crypto |
-| `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake); conversations and run records (planned, M9g); embedding drivers for search (planned) | core, validation · optional: queue, database (conversations), search (retrieval, recall) | `fetch` |
+| `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake); stored conversations and run records; embedding drivers for search (planned) | core, validation · optional: queue, http, database (conversations, runs), search (planned: retrieval, recall) | `fetch` |
 | `@cslug/search` *(planned, M10)* | Full-text search over tables (`tsvector`, ranking, highlights, trigram), `SearchIndex` for other documents, semantic search (pgvector) through an `Embedder` contract, hybrid ranking, `search:reindex` | core, database · optional: queue | PostgreSQL full text, `pg_trgm`, `pgvector` |
 | `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `dev`, `start` supervisor | core | `Bun.spawn` |
 | `@cslug/testing` | `testApp()`, HTTP/HTML assertions, DB isolation, fakes, time travel | peers: every package it fakes | `bun test` |

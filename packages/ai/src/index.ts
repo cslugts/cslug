@@ -13,7 +13,7 @@ export {
   Tool,
   type ToolClass,
 } from './agent'
-export { Ai, type AiConfig, AiOutputError, type AiResult } from './ai'
+export { Ai, type AiConfig, AiOutputError, type AiResult, type RunMeta, type RunRecord } from './ai'
 export { AiEvalCommand, jsonDiff } from './ai-eval-command'
 export { AiPromptsCommand, AiProvider, AiRecordCommand, McpServeCommand } from './ai-provider'
 export { AiStream } from './ai-stream'
@@ -26,6 +26,16 @@ export {
   MODEL_PRICES,
   type ModelPrice,
 } from './budget'
+export { AI_MIGRATIONS } from './conversation-store'
+export {
+  Conversation,
+  type ConversationRow,
+  type ConversationStore,
+  Conversations,
+  type FindOptions,
+  type OwnerRef,
+  type StartOptions,
+} from './conversations'
 export {
   type AnthropicConfig,
   AnthropicProvider,

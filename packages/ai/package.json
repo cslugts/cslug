@@ -20,6 +20,7 @@
   },
   "files": [
     "src",
+    "migrations",
     "docs",
     "stubs",
     "README.md"
@@ -31,7 +32,8 @@
     "@cslug/core": "workspace:*",
     "@cslug/validation": "workspace:*",
     "@cslug/queue": "workspace:*",
-    "@cslug/http": "workspace:*"
+    "@cslug/http": "workspace:*",
+    "@cslug/database": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@cslug/queue": {
@@ -39,10 +41,14 @@
     },
     "@cslug/http": {
       "optional": true
+    },
+    "@cslug/database": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@cslug/testing": "workspace:*",
-    "@cslug/http": "workspace:*"
+    "@cslug/http": "workspace:*",
+    "@cslug/database": "workspace:*"
   }
 }

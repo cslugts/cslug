@@ -4,6 +4,8 @@ import { arg, Command, flag, Logger, resolve, ServiceProvider } from '@cslug/cor
 import type { HttpContext } from '@cslug/http'
 import { Ai, type AiConfig } from './ai'
 import { AiEvalCommand } from './ai-eval-command'
+import { databaseStore } from './conversation-store'
+import { Conversations } from './conversations'
 import { discoverTools, handleMcp, type McpCaller, type McpReply, mcpTools } from './mcp'
 
 /**
@@ -82,8 +84,9 @@ export class AiRecordCommand extends Command {
 }
 
 /**
- * Binds `Ai` from `config/ai.ts` (`default`, `providers`, `models`, `mcp`, `budget`, `prices`); contributes
- * `ai:prompts`, `ai:record`, `ai:eval` and `mcp:serve`.
+ * Binds `Ai` from `config/ai.ts` (`default`, `providers`, `models`, `mcp`, `budget`, `prices`, `runs`) and
+ * `Conversations`; contributes `ai:prompts`, `ai:record`, `ai:eval` and `mcp:serve`. With @cslug/database: the
+ * `cslug_ai_*` tables, stored conversations and a record per run.
  * With `@mcp()` tools in `app/tools/` and @cslug/http installed: `POST /mcp` (streamable HTTP, in the api group's
  * middleware, so API tokens authenticate callers).
  */
@@ -94,9 +97,15 @@ export class AiProvider extends ServiceProvider {
       Ai,
       (c) => new Ai(this.app, this.app.config<AiConfig | undefined>('ai') ?? {}, c.resolve(Logger)),
     )
+    this.app.singleton(Conversations, () => new Conversations(this.app))
   }
 
   async boot() {
+    const store = await databaseStore(this.app)
+    if (store) {
+      this.app.resolve(Conversations).store = store
+      if (this.app.config<boolean | undefined>('ai.runs') !== false) this.app.resolve(Ai).recorder = store.recordRun
+    }
     await discoverTools(this.app)
     if (!mcpTools().length) return
     const http = await import('@cslug/http').catch(() => undefined)

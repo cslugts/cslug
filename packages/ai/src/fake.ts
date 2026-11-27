@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { type Application, CslugError, Logger } from '@cslug/core'
 import type { Agent, AgentSettings, RunOptions } from './agent'
-import { Ai, type AiConfig, type AiResult } from './ai'
+import { Ai, type AiConfig, type AiResult, type RunMeta } from './ai'
 import { AiStream } from './ai-stream'
 import type { Message } from './model'
 
@@ -89,7 +89,11 @@ export class AiFake extends Ai {
   }
 
   /** The fake's answer as a run result: no provider call, no cost; `messages` continue the `history`. */
-  override async result(agent: AgentSettings, { input, context = {}, history = [] }: RunOptions): Promise<AiResult> {
+  override async result(
+    agent: AgentSettings,
+    { input, context = {}, history = [] }: RunOptions,
+    _meta?: RunMeta,
+  ): Promise<AiResult> {
     const run: AiRun = { agent, input, context, history }
     this.runs.push(run)
     const answer = [...this.answers].find(([cls]) => agent instanceof cls)?.[1]
@@ -98,6 +102,7 @@ export class AiFake extends Ai {
     const raw = await answer(run)
     const value = agent.output ? this.validate(agent, raw) : String(raw)
     return {
+      runId: Bun.randomUUIDv7(),
       value,
       raw,
       model: 'fake',
@@ -113,7 +118,7 @@ export class AiFake extends Ai {
   }
 
   /** The whole answer as one piece of text, then the result. */
-  override stream(agent: AgentSettings, options: RunOptions): AiStream {
+  override stream(agent: AgentSettings, options: RunOptions, _meta?: RunMeta): AiStream {
     const result = this.result(agent, options)
     return new AiStream(
       (async function* () {

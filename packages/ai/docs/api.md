@@ -7,9 +7,14 @@
 | `AiStream` | Async iterable of text; `result: Promise<AiResult>`, settled once the text is read |
 | `Tool` | Abstract `name`, `description`, `input` (a `v` schema), `handle(input)` |
 | `prompt(name)` / `Prompt` | `resources/prompts/<name>.md`; `render(vars)`, `ai.prompt_variables` when one is missing |
-| `Ai` | Injectable runtime: `run(agent, options)`, `result(agent, options)` → `AiResult`, `stream(agent, options)`, `provider(name?)`, `extend(name, provider)`, `budget` |
-| `AiResult` | `{ value, raw, model, steps, usage, costUsd, messages }` |
-| `AiProvider` | Config `ai`: `default`, `providers.<name>`, `models`, `mcp`, `budget`, `prices`; commands `ai:prompts`, `ai:record`, `ai:eval`, `mcp:serve` |
+| `Ai` | Injectable runtime: `run(agent, options)`, `result(agent, options, meta?)` → `AiResult`, `stream(agent, options, meta?)`, `provider(name?)`, `extend(name, provider)`, `budget`, `recorder` |
+| `AiResult` | `{ runId, value, raw, model, steps, usage, costUsd, messages }` |
+| `Conversations` | `start(Agent, options)`, `find(Agent, id, options)`, `list(options)`; `store` (set with @cslug/database) |
+| `Conversation` | `id`, `agent`, `title`, `metadata`, `owner`, `createdAt`; `send(input)`, `stream(input)`, `messages()`, `update(changes)`, `delete()` |
+| `ConversationStore`, `ConversationRow`, `OwnerRef`, `StartOptions`, `FindOptions` | The store contract and shapes |
+| `RunRecord`, `RunMeta` | A `cslug_ai_runs` row; `ai.result(agent, options, meta)`'s third argument (`conversationId`, `compact`) |
+| `AI_MIGRATIONS` | The migrations folder (registered at boot with @cslug/database) |
+| `AiProvider` | Config `ai`: `default`, `providers.<name>`, `models`, `mcp`, `budget`, `prices`, `runs`; binds `Conversations`; commands `ai:prompts`, `ai:record`, `ai:eval`, `mcp:serve` |
 | `AiRecordCommand` | `cslug ai:record [path] [--all]`: `bun test` with `CSLUG_AI_RECORD` set, writing missing (all) fixtures |
 | `AiEvalCommand` | `cslug ai:eval [folder] [--strict] [--json]`: fixtures through the real model; `jsonDiff(a, b)` |
 | `Budget` | The daily budget: `spent()`, `check()`, `charge(model, usage)`; `BudgetConfig` `{ perDay: { usd }, alertAt? }` |
