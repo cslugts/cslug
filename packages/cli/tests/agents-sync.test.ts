@@ -12,10 +12,8 @@ const sections = [
 
 describe('mergeAgents', () => {
   test('a new file: a hand-editable header, then the generated sections between markers', () => {
-    const text = mergeAgents(undefined, sections, '`albastr`')
-    expect(text).toStartWith(
-      '# AGENTS.md\n\nInstructions for AI coding agents working on `albastr`.\n\n## Project notes',
-    )
+    const text = mergeAgents(undefined, sections, '`demo`')
+    expect(text).toStartWith('# AGENTS.md\n\nInstructions for AI coding agents working on `demo`.\n\n## Project notes')
     expect(text).toContain('<!-- cslug:begin stack -->\n## Stack\n\nv2\n<!-- cslug:end stack -->')
     expect(text.indexOf('cslug:begin stack')).toBeLessThan(text.indexOf('cslug:begin rules'))
     expect(mergeAgents(text, sections)).toBe(text) // stable: a second sync changes nothing
@@ -23,7 +21,7 @@ describe('mergeAgents', () => {
 
   test('hand-written text is kept; generated sections are replaced in place; missing ones are appended', () => {
     const existing = [
-      '# AGENTS.md — Albastr',
+      '# AGENTS.md — Demo',
       '',
       'Glossary: a *circuit* is a multi-day route.',
       '',

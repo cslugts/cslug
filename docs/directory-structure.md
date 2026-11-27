@@ -5,7 +5,7 @@ Two layouts: the **app** a developer works in every day, and the **framework rep
 ## 1. A cslug application: grouped by type ✅
 
 ```
-albastr/
+my-app/
 ├── app/
 │   ├── controllers/                       # HTTP controllers
 │   │   ├── booking-controller.ts
@@ -114,8 +114,7 @@ bun/
 │   ├── testing/                           # @cslug/testing
 │   └── create-cslug/                      # `bun create cslug` scaffolder (literal template files)
 ├── apps/
-│   ├── starter-kit/                       # reference app: todos, exercises most packages
-│   └── albastr/                           # the real product, built on cslug as we go
+│   └── starter-kit/                       # reference app: todos, exercises most packages
 ├── docs/                                  # this documentation
 ├── guides/
 ├── scripts/release.ts                     # lockstep version bump + publish in dependency order
@@ -140,5 +139,5 @@ packages/queue/
 └── package.json                           # "peerDependencies": { "@cslug/core": "0.1.0", "@cslug/redis": "0.1.0" }
 ```
 
-**Albastr is the reference app.** Rather than a toy "reference app", the framework is validated by building
-the MVP's riskiest flows first (operator verification, escrow, check-ins — the MVP build order) inside `apps/albastr`.
+**The pilot app is the real test.** Besides the starter kit, the framework is validated by building a private
+product's riskiest flows first (operator verification, escrow, check-ins — the MVP build order) in its own repository.

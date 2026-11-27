@@ -52,7 +52,7 @@ signal to split or simplify.
 
 ## 5. Correct by default for money
 
-Albastr moves other people's money. Defaults are chosen for correctness, not speed:
+The pilot app moves other people's money. Defaults are chosen for correctness, not speed:
 
 - jobs dispatched inside a DB transaction are sent **after commit** (or not at all),
 - schedules run **once per tick across all instances**,

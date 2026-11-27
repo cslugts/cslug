@@ -92,7 +92,7 @@ version, so nothing can drift.
 | `--full` | web + queue, mail, storage |
 | add later | `cslug add queue`, `mail`, `storage`, `notification`, `webhook`, `search`, `ai`, `tailwind` (several: `cslug add queue,mail`): installs the package, adds its provider and config |
 
-Albastr uses `--full` + notification + webhook. AI is added after the MVP.
+The pilot app uses `--full` + notification + webhook. AI is added after the MVP.
 
 ## Size budget
 

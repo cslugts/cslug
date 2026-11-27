@@ -3,7 +3,7 @@
 Developer-facing guides. They are written **before** the code, to decide whether the API feels right.
 Every snippet is meant to compile against the final framework; if one can't, the API or the guide changes.
 
-> New here? Read [00 — A tour](./00-tour.md) first: one Albastr feature through every layer.
+> New here? Read [00 — A tour](./00-tour.md) first: one feature through every layer.
 
 | # | Guide | |
 |---|---|---|

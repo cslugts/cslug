@@ -9,7 +9,7 @@ afterAll(() => rmSync(work, { recursive: true, force: true }))
 const read = (dir: string, path: string) => Bun.file(join(dir, path)).text()
 
 test('names: package, title and database names from the folder', () => {
-  expect(names('/tmp/albastr')).toEqual({ name: 'albastr', title: 'Albastr', db: 'albastr' })
+  expect(names('/tmp/demo')).toEqual({ name: 'demo', title: 'Demo', db: 'demo' })
   expect(names('./My_trip-Planner')).toEqual({
     name: 'my-trip-planner',
     title: 'My Trip Planner',

@@ -149,7 +149,7 @@ A development MCP server over stdio, for coding agents (Claude Code and others).
 everything else as you wrote it:
 
 ```md
-# AGENTS.md — Albastr
+# AGENTS.md — My app
 
 Glossary: a *circuit* is a multi-day route; an *operator* runs it.     ← yours, never touched
 

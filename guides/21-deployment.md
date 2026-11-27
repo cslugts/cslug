@@ -31,7 +31,7 @@ while idle, so requests keep flowing.
 | One `SIGTERM` drains everything | Uses one CPU core |
 
 Use it for development, previews, and small deployments where jobs are I/O-bound (sending mail, calling APIs,
-DB updates), which describes all of Albastr's MVP jobs.
+DB updates), which describes all of the pilot app's MVP jobs.
 
 ### 2. One container, several processes: `cslug start` (recommended for a single instance)
 
@@ -91,18 +91,15 @@ and each role scales independently.
 
 ### A single service (MVP, staging)
 
-```json
-// railway.json
-{
-  "$schema": "https://railway.com/railway.schema.json",
-  "build": { "builder": "DOCKERFILE" },
-  "deploy": {
-    "startCommand": "bun cslug migrate --force && bun cslug start",
-    "healthcheckPath": "/health/ready",
-    "restartPolicyType": "ON_FAILURE"
-  }
-}
-```
+Railway detects a Bun project and installs it; set the build and start commands on the service (or in
+`railway.json`):
+
+| Setting | Value |
+|---|---|
+| Build command | `bun cslug build` |
+| Start command | `bun cslug migrate --force && bun cslug start` |
+| Health check path | `/health/ready` |
+| Restart policy | on failure |
 
 One service runs web, worker and scheduler. Postgres and Redis are Railway services in the same project,
 connected through `DATABASE_URL` and `REDIS_URL`.
@@ -114,9 +111,9 @@ Only the start command differs:
 
 | Service | Start command | Public domain | Healthcheck |
 |---|---|---|---|
-| `albastr-web` | `bun cslug migrate --force && bun cslug serve` | yes | `/health/ready` |
-| `albastr-worker` | `bun cslug queue:work` | no | — (`cslug queue:health` exits non-zero if stuck) |
-| `albastr-scheduler` | `bun cslug schedule:work` | no | — |
+| `app-web` | `bun cslug migrate --force && bun cslug serve` | yes | `/health/ready` |
+| `app-worker` | `bun cslug queue:work` | no | — (`cslug queue:health` exits non-zero if stuck) |
+| `app-scheduler` | `bun cslug schedule:work` | no | — |
 
 Moving from one service to three is **a deployment change only**: no code changes, because every role reads
 the same config.
@@ -150,21 +147,16 @@ never need two terminals or two instances in development.
 
 ## Build
 
-```dockerfile
-FROM oven/bun:1.3 AS build
-WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
-COPY . .
-RUN bun cslug build                     # Bun.build: islands, CSS, precompiled Vue render functions, manifest
+cslug needs no container image of its own: any host that runs Bun builds and starts the app with two commands.
 
-FROM oven/bun:1.3-slim
-WORKDIR /app
-COPY --from=build /app /app
-ENV APP_ENV=production
-EXPOSE 3000
-CMD ["bun", "@cslug/core", "start"]           # overridden per service by the start command
+```bash
+bun install --frozen-lockfile
+bun cslug build          # Bun.build: islands, CSS, precompiled Vue render functions, manifest
 ```
+
+Then the start command of each service (above): `bun cslug start`, or `serve` / `queue:work` / `schedule:work`
+for separate services, after `bun cslug migrate --force`. Set `APP_ENV=production` in the environment. If your
+platform wants an image, write the Dockerfile you need around these commands.
 
 ## Release steps
 

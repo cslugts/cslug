@@ -22,7 +22,7 @@ export async function vueApp(routes: (r: RouteRegistrar) => void = () => {}, con
   const app = new Application({
     root: FIXTURE,
     configs: {
-      app: { env: 'test', key: 'k'.repeat(32), url: 'https://albastr.test' },
+      app: { env: 'test', key: 'k'.repeat(32), url: 'https://example.test' },
       i18n: { locales: ['en', 'fr'], default: 'en' },
       ...configs,
     },
@@ -34,7 +34,7 @@ export async function vueApp(routes: (r: RouteRegistrar) => void = () => {}, con
   const kernel = app.resolve(HttpKernel)
   kernel.compile()
   const call = (path: string, init?: RequestInit) =>
-    kernel.handle(new Request(`https://albastr.test${path}`, init), { ip: '127.0.0.1' })
+    kernel.handle(new Request(`https://example.test${path}`, init), { ip: '127.0.0.1' })
   return { app, call }
 }
 

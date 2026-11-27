@@ -5,7 +5,7 @@
 > Sign-off on both is the gate before implementation starts.
 
 **cslug** is a small, Laravel-flavoured web framework for **Bun + TypeScript + PostgreSQL + Redis + Vue**.
-It is built first to ship the MVP of **Albastr** (a travel booking platform with escrowed payments) and nothing
+It is built first to ship the MVP of a private pilot app (a travel booking platform with escrowed payments) and nothing
 it does not need.
 
 ```ts
@@ -38,7 +38,7 @@ export class BookingController {
 
 ## Relationship to earlier work
 
-- **An earlier requirements draft** (kept privately with Albastr) was an input. Its *correctness* requirements
+- **An earlier requirements draft** (kept privately with the pilot app) was an input. Its *correctness* requirements
   (idempotency, job leases, once-per-tick scheduling, RFC 9457 errors, money as minor units, UUIDv7)
   are carried over. Its *structural* choices (no decorators, no Redis, no views, `src/core` + `src/app`)
   are **superseded** — see [decisions.md](./decisions.md).

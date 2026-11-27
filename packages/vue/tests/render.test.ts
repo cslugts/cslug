@@ -132,7 +132,7 @@ describe('view() in a request', () => {
 
     const post = await h.call('/login', {
       method: 'POST',
-      headers: { cookie, referer: 'https://albastr.test/login', 'content-type': 'application/x-www-form-urlencoded' },
+      headers: { cookie, referer: 'https://example.test/login', 'content-type': 'application/x-www-form-urlencoded' },
       body: `_token=${token}&email=nope`,
     })
     expect(post.status).toBe(303)
@@ -165,8 +165,8 @@ describe('view() in a request', () => {
     const html = await (await h2.call('/fr/itinerary?ref=x')).text()
     expect(html).toContain('<html lang="fr">')
     expect(html).toContain('<h1>Itinéraire · 2 jours</h1>')
-    expect(html).toContain('<link rel="alternate" hreflang="en" href="https://albastr.test/en/itinerary?ref=x">')
-    expect(html).toContain('<link rel="alternate" hreflang="fr" href="https://albastr.test/fr/itinerary?ref=x">')
+    expect(html).toContain('<link rel="alternate" hreflang="en" href="https://example.test/en/itinerary?ref=x">')
+    expect(html).toContain('<link rel="alternate" hreflang="fr" href="https://example.test/fr/itinerary?ref=x">')
   })
 })
 

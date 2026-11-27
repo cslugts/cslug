@@ -77,7 +77,7 @@ if (!ok) throw new TooManyRequestsError()
 // config/cache.ts
 export default defineConfig({
   default: 'redis',
-  prefix: 'albastr:',
+  prefix: 'app:',
   stores: {
     redis: { driver: 'redis', connection: 'default' },
     memory: { driver: 'memory', max: 1000 },

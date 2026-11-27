@@ -67,7 +67,7 @@ APIs: RFC 9457 `application/problem+json`:
 
 ```json
 {
-  "type": "https://albastr.com/errors/booking.invalid_transition",
+  "type": "https://example.com/errors/booking.invalid_transition",
   "title": "This booking cannot move from deposit_paid to completed.",
   "status": 409,
   "code": "booking.invalid_transition",

@@ -101,7 +101,7 @@ const lines: string[] = []
 const notifyApp = (configs: Record<string, unknown> = {}, providers: ProviderClass[] = []) => {
   const app = new Application({
     root: '/nonexistent-cslug-test-root',
-    configs: { app: { env: 'test', locale: 'en' }, mail: { from: { address: 'hello@albastr.test' } }, ...configs },
+    configs: { app: { env: 'test', locale: 'en' }, mail: { from: { address: 'hello@example.test' } }, ...configs },
   })
   app.useProviders([MailProvider, NotificationProvider, ...providers])
   app.singleton(Logger, () => new Logger({ write: (line) => lines.push(line) }))

@@ -9,7 +9,7 @@
 |---|---|
 | 0.1 Accounts (npm org, GitHub, `gh`) | ✅ npm org `cslug` (owner `cslugdev`), `create-cslug` claimed; GitHub org `cslugts` (`cslugdev`, `liviathan`) |
 | 0.2 `cslug` repository + skeleton + CI + release | ✅ [cslugts/cslug](https://github.com/cslugts/cslug): 15 package skeletons, CI green, graph check, release script, `main` protected |
-| 0.3 `albastr` repository | ✅ `liviathan/albastr-app` (private): product documents; the app is created from the starter kit at 0.1.0 |
+| 0.3 Pilot app repository | ✅ private: product documents; the app is created from the starter kit at 0.1.0 |
 | 0.4 Close spec gaps G1–G18 | ✅ done (folded into `docs/` and `guides/`) |
 | S Spikes | ✅ (a) [Vue islands](../spikes/a-vue-islands/README.md) · (b) decorators (verified during design) · (c) [Redis Streams](../spikes/c-redis-streams/README.md) · (d) [async context](../spikes/d-async-context/README.md) |
 | M1 validation, core | ✅ `@cslug/validation` (62 tests) · `@cslug/core` (container, providers, config/env, errors, Clock, Money, events, logger, i18n, contracts; 87 tests) |
@@ -27,11 +27,11 @@
 
 The cslug spec is complete: `docs/` (principles, decisions D0–D12, packages, architecture, conventions),
 `guides/` (00–21), and `apps/starter-kit` (a todo app written against the spec, which surfaced 18 spec gaps,
-G1–G18). Nothing is implemented. The goal is to build the framework in an order that gets the **Albastr MVP**
-(kept privately in the `albastr` repo) buildable as early as possible, with every step shippable and tested.
+G1–G18). Nothing is implemented. The goal is to build the framework in an order that gets the **pilot app's MVP**
+(kept privately in its own repository) buildable as early as possible, with every step shippable and tested.
 
 Decided with the user:
-- **Two repositories.** `cslug`: framework packages, docs, guides, starter kit; public, MIT. `albastr`: the
+- **Two repositories.** `cslug`: framework packages, docs, guides, starter kit; public, MIT. The pilot app's repository: the
   product; private; consumes `@cslug/*`.
 - **Publishing:** public `@cslug/*` packages on npm, 15 packages in lockstep (docs/packages.md).
 
@@ -54,7 +54,7 @@ npm is not logged in. The current `bun/` folder is not a git repo.
 
 ### 0.2 The `cslug` repository
 - Create `github.com/cslugts/cslug` (public, MIT, default branch `main`, branch protection: PR + green CI).
-- Move in from `albastr/src/bun`: `docs/` (except `docs/proposals/`, which stays private with Albastr), `guides/`,
+- Move in from the pilot app's repository: `docs/` (except `docs/proposals/`, which stays private), `guides/`,
   `apps/starter-kit/`. Add `README.md`, `LICENSE` (MIT), `CONTRIBUTING.md`, `CHANGELOG.md`, `AGENTS.md`,
   `CLAUDE.md`.
 - Workspace skeleton following docs/directory-structure.md § 2:
@@ -70,8 +70,8 @@ npm is not logged in. The current `bun/` folder is not a git repo.
   **trusted publishing** from a GitHub Actions workflow (OIDC + provenance, no long-lived npm token).
   No placeholders are needed for the scoped packages: owning the `cslug` org reserves every `@cslug/*` name.
 
-### 0.3 The `albastr` repository ✅
-- Private repo **`liviathan/albastr-app`** (`liviathan/albastr` was already taken by the product's business-documents project). Holds the product app (created later from the starter kit) and `docs/proposals/`.
+### 0.3 The pilot app's repository ✅
+- A private repository holds the product app (created later from the starter kit) and `docs/proposals/`.
 - During development it consumes the local framework with `bun link` (or a `file:` path). From 0.1.0 on, it
   uses the published versions, so Railway installs from npm with no tokens.
 
@@ -83,7 +83,7 @@ becomes the **acceptance test** for each milestone.
 
 ---
 
-## Phase 1: Packages, in Albastr MVP order
+## Phase 1: Packages, in the pilot app's MVP order
 
 The MVP build order is (1) operator verification + protected payment, (2) check-ins + offline trip pack,
 (3) public pages and forms. The MVP runs many steps by hand (WhatsApp, payouts, document checks), so the
@@ -101,18 +101,18 @@ at the end.
 | **M2** | Data | `database` | **First test: the async context survives `await sql` and `sql.begin()`** (not verifiable in spike d). `Bun.sql` pool, column builders, `Row`/`NewRow`, query builder, `sql` tag, `Repository`, `preload`, ambient transactions + savepoints, `lockForUpdate`, advisory locks, `idempotent`, **SQL-file migrations + runner** (advisory-locked), factories, seeders. **Deferred:** the migration differ (`--from-tables`) | Concurrency tests: two concurrent migrations run once, rollback discards after-commit callbacks |
 | **M3** | Running apps | `cli`, `http`, `testing` (base) | CLI kernel, `Command`, packages contribute commands, `make:*` stubs, `migrate*`, `serve`, `dev`, `start` supervisor; router (groups, names, domains, resources), middleware, `HttpContext`, `request.validate`, responses, RFC 9457 + redirect-back errors, sessions (memory), CSRF, `throttle`, health endpoints, graceful shutdown; `testApp()`, HTTP assertions, DB isolation | Starter-kit JSON routes + 422 shape + SIGTERM drain tests pass |
 | **M4** | Pages | `vue` | Server loader, `view()`, layouts/slots, islands (`hydrate`, SSR by default, `serialize`), `<Assets>`, `useT/useRequest/useForm/defineStore/route`, `Bun.build` pipeline (Vue, SCSS, optional Tailwind), live reload, `cslug build`, `cslug typecheck` (vue-tsc), `renderStandalone` | Starter-kit todo page renders, islands hydrate, forms work with and without JS |
-| **M5** | Users | `redis`, `auth` | Redis connection + drivers (cache, lock, rate limiter, session store); session guard, `Hash`, `attempt`, policies, gates, `ability()`, tokens, magic links | Starter-kit auth flows + policy tests. **→ release 0.1.0**, create the `albastr` app from the starter kit |
+| **M5** | Users | `redis`, `auth` | Redis connection + drivers (cache, lock, rate limiter, session store); session guard, `Hash`, `attempt`, policies, gates, `ability()`, tokens, magic links | Starter-kit auth flows + policy tests. **→ release 0.1.0**, create the pilot app from the starter kit |
 | **M6** | Background work | `queue` | Redis Streams engine, `Job`, retries/backoff/delay/unique, after-commit dispatch, durable outbox, failed store + commands, scheduler (cron, once-per-tick lock, history), worker + scheduler roles in `cslug start` | Acceptance: rolled-back dispatch never runs; killed worker's job reclaimed; two schedulers → one run per tick |
-| **M7** | Payments plumbing | `webhook`, `mail` | `verifySignature`, `WebhookInbox` + replay; `Mailer`, `Mailable`, Vue templates, CSS inlining + text part, SMTP client, HTTP transports, `mail:preview` | Webhook replayed 10× → one effect; starter-kit reminder email sent to Mailpit. **→ 0.2.0**: Albastr MVP build order (1) unblocked |
-| **M8** | MVP completion | `notification`, `storage` | Channels (mail, database, whatsapp/sms with `log` + `manual` drivers), delivery records; disks (local, s3), signed URLs, upload sniffing | Albastr check-ins (#7), crisis broadcast (#15), operator documents (#11). **→ 0.3.0** |
-| **M9** | After MVP | `ai`, `create-cslug`, extras | Agents, tools, MCP; scaffolder with presets; migration differ; `cslug describe`; AI conversations (M9g); `mcp:dev`, `agents:sync` (M9h) | As needed by Albastr post-pilot |
-| **M10** | Search | `search` | Full-text search over any table (Postgres `tsvector`, per-language configs, ranking, highlights, typo tolerance), an index for arbitrary documents, semantic search with pgvector through an `Embedder` contract, hybrid ranking; used by `@cslug/ai` for retrieval and conversation recall | Albastr circuit pages searchable in FR/EN/IT; an agent answers from indexed documents |
+| **M7** | Payments plumbing | `webhook`, `mail` | `verifySignature`, `WebhookInbox` + replay; `Mailer`, `Mailable`, Vue templates, CSS inlining + text part, SMTP client, HTTP transports, `mail:preview` | Webhook replayed 10× → one effect; starter-kit reminder email sent to Mailpit. **→ 0.2.0**: the pilot app's MVP build order (1) unblocked |
+| **M8** | MVP completion | `notification`, `storage` | Channels (mail, database, whatsapp/sms with `log` + `manual` drivers), delivery records; disks (local, s3), signed URLs, upload sniffing | The pilot app's check-ins (#7), crisis broadcast (#15), operator documents (#11). **→ 0.3.0** |
+| **M9** | After MVP | `ai`, `create-cslug`, extras | Agents, tools, MCP; scaffolder with presets; migration differ; `cslug describe`; AI conversations (M9g); `mcp:dev`, `agents:sync` (M9h) | As needed by the pilot app after its pilot |
+| **M10** | Search | `search` | Full-text search over any table (Postgres `tsvector`, per-language configs, ranking, highlights, typo tolerance), an index for arbitrary documents, semantic search with pgvector through an `Embedder` contract, hybrid ranking; used by `@cslug/ai` for retrieval and conversation recall | The pilot app's circuit pages searchable in FR/EN/IT; an agent answers from indexed documents |
 
-### Albastr track (parallel, from 0.1.0)
-- Create `albastr` from the starter kit. Build in MVP order: operator onboarding and booking/escrow states (M5),
+### Pilot app track (parallel, from 0.1.0)
+- Create the pilot app from the starter kit. Build in MVP order: operator onboarding and booking/escrow states (M5),
   payment webhook + ledger + staged release with manual approval (M6–M7), check-in messages + offline trip
   pack (M7–M8), then circuit pages (FR/EN/IT), the trip request form, proposals and the visa page.
-- Any framework change Albastr needs goes into `cslug` first (PR + release), never patched in the app.
+- Any framework change the pilot app needs goes into `cslug` first (PR + release), never patched in the app.
 
 ### M9g: AI conversations
 

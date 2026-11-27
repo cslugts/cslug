@@ -63,7 +63,7 @@ const routes = (r: Parameters<Parameters<typeof httpApp>[0]>[0]) => {
 }
 const form = (fields: Record<string, string>, token?: string) => ({
   method: 'POST',
-  headers: { referer: 'http://albastr.test/form', accept: 'text/html' },
+  headers: { referer: 'http://example.test/form', accept: 'text/html' },
   body: new URLSearchParams({ ...fields, ...(token ? { _token: token } : {}) }),
 })
 
@@ -74,7 +74,7 @@ describe('sessions, CSRF, flash, old input (guide 08 forms without JavaScript)',
     const b = browser(h.call)
     const { token } = await (await b('/form')).json()
     const res = await b('/todos', form({ title: '', priority: 'urgent', password: 'secret' }, token))
-    expect([res.status, res.headers.get('location')]).toEqual([303, 'http://albastr.test/form'])
+    expect([res.status, res.headers.get('location')]).toEqual([303, 'http://example.test/form'])
     const page = await (await b('/form')).json()
     expect(page.errors).toEqual({ title: ['Must be at least 1 characters.'], priority: ['Must be one of: low, high.'] })
     expect(page.old).toEqual({ title: '', priority: 'urgent' }) // no password, no _token

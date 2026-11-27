@@ -7,8 +7,8 @@ Bun ≥ 1.3, Docker (for Postgres 17, Redis 7 and Mailpit in development).
 ## Create an app
 
 ```bash
-bun create cslug albastr             # --api (no views, no Vue), --full (+ queue, mail, storage), --tailwind
-cd albastr
+bun create cslug my-app             # --api (no views, no Vue), --full (+ queue, mail, storage), --tailwind
+cd my-app
 docker compose up -d                 # postgres, redis (and mailpit with --full)
 cslug migrate                        # .env was written with a fresh APP_KEY
 cslug dev                            # app (bun --hot) + asset watcher + queue worker + scheduler, one terminal

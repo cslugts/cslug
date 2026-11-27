@@ -120,7 +120,7 @@ const { locale, user, flash, alternates } = useRequest()     // the current requ
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <title>{{ title }} · Albastr</title>
+      <title>{{ title }} · My app</title>
       <meta v-if="description" name="description" :content="description" />
       <link v-for="alt in alternates" :key="alt.locale" rel="alternate" :hreflang="alt.locale" :href="alt.url" />
       <Assets entry="client" />      <!-- CSS always; JS only if the page has islands -->
@@ -406,7 +406,7 @@ signed-in user, turn on stateful API requests:
 
 ```ts
 // config/http.ts
-api: { stateful: true },          // or a list of origins: ['https://app.albastr.test']
+api: { stateful: true },          // or a list of origins: ['https://app.example.test']
 ```
 
 Requests from the app's own pages (their `Origin`, else `Referer`, else `Sec-Fetch-Site: same-origin`) then get the
@@ -470,7 +470,7 @@ No Vite. `cslug dev` and `cslug build` use `Bun.build` with cslug's plugins:
   the page over SSE; CSS changes swap the stylesheet without a reload. A server-side change restarts the
   process (`bun --watch`) and open pages reload when it is back. (Vue state-preserving HMR is not in v1.)
 - **`cslug build`**: minified, hashed output in `public/build/` plus `manifest.json`. Run it before deploying
-  (the Dockerfile does). Files in `public/` are served for GET requests no route matches; hashed build files
+  (the build command of your host does: see guide 21). Files in `public/` are served for GET requests no route matches; hashed build files
   are cached for a year. Server templates are compiled on first use (a few ms each) and cached.
 - **`cslug typecheck`**: runs `vue-tsc --noEmit`. It checks `.ts` files, every `.vue` template and every
   `view(Page, props)` call. This replaces `tsc` in CI.
@@ -499,6 +499,6 @@ import TripPack from '#views/trip-pack/show.vue'
 async tripPack({ params, auth }: HttpContext) {
   const booking = await this.bookings.findOrFail(params.booking)
   await auth.authorize(BookingPolicy, 'view', booking)
-  return download(await renderStandalone(TripPack, await this.tripPacks.props(booking)), `albastr-${booking.ref}.html`)
+  return download(await renderStandalone(TripPack, await this.tripPacks.props(booking)), `trip-pack-${booking.ref}.html`)
 }
 ```

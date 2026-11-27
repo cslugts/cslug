@@ -57,7 +57,7 @@ Names are joined with dots: `as: 'bookings'` + `.name('show')` → `bookings.sho
 | Option | Example | Effect |
 |---|---|---|
 | `prefix` | `'/admin'`, `'/:locale'` | Path prefix; may contain params |
-| `domain` | `'api.albastr.com'`, `':operator.albastr.com'` | Matches the `Host` header; may contain params |
+| `domain` | `'api.example.com'`, `':operator.example.com'` | Matches the `Host` header; may contain params |
 | `middleware` | `[auth(), can('admin.access')]` | Runs for every route in the group |
 | `as` | `'admin'` | Route-name prefix (`admin.` + name) |
 | `ssr` | `false` | Default `:ssr` for islands on pages of the group |
@@ -75,14 +75,14 @@ import { throttle } from '@cslug/http/middleware'
 import { auth } from '@cslug/auth'
 
 export default defineRoutes((r) => {
-  // https://api.albastr.com/v1/quotes
-  r.group({ domain: 'api.albastr.com', prefix: '/v1', middleware: [auth('token'), throttle('60/min')], as: 'api' }, (r) => {
+  // https://api.example.com/v1/quotes
+  r.group({ domain: 'api.example.com', prefix: '/v1', middleware: [auth('token'), throttle('60/min')], as: 'api' }, (r) => {
     r.get('/quotes', [QuoteController, 'index']).name('quotes.index')
     r.post('/quotes', [QuoteController, 'store']).name('quotes.store')
   })
 
-  // https://partners.albastr.com/…: operator portal on its own host
-  r.group({ domain: 'partners.albastr.com', middleware: [auth()], as: 'partners' }, (r) => {
+  // https://partners.example.com/…: operator portal on its own host
+  r.group({ domain: 'partners.example.com', middleware: [auth()], as: 'partners' }, (r) => {
     r.get('/', [OperatorDashboardController, 'index']).name('dashboard')
     r.get('/bookings/:booking', [OperatorBookingController, 'show']).name('bookings.show')
   })
@@ -94,8 +94,8 @@ export default defineRoutes((r) => {
 Parts of the host can be parameters, like path parameters, and they appear in `params` next to them:
 
 ```ts
-// https://ravinala-tours.albastr.com/: a public page per verified operator
-r.group({ domain: ':operator.albastr.com', as: 'operator-site' }, (r) => {
+// https://ravinala-tours.example.com/: a public page per verified operator
+r.group({ domain: ':operator.example.com', as: 'operator-site' }, (r) => {
   r.get('/', [OperatorSiteController, 'home']).name('home')
   r.get('/circuits/:slug', [OperatorSiteController, 'circuit']).name('circuits.show')
 })
@@ -124,9 +124,9 @@ Hard-coded hosts break on `localhost` and staging, so put them in config:
 // config/http.ts
 export default defineConfig({
   domains: {
-    app: env.APP_DOMAIN,                    // 'albastr.com'        | 'localhost'
-    api: env.API_DOMAIN,                    // 'api.albastr.com'    | 'api.localhost'
-    partners: env.PARTNERS_DOMAIN,          // 'partners.albastr.com' | 'partners.localhost'
+    app: env.APP_DOMAIN,                    // 'example.com'        | 'localhost'
+    api: env.API_DOMAIN,                    // 'api.example.com'    | 'api.localhost'
+    partners: env.PARTNERS_DOMAIN,          // 'partners.example.com' | 'partners.localhost'
   },
 })
 ```
@@ -145,23 +145,23 @@ without editing `/etc/hosts`.
   as a fallback.
 - The host is compared without the port, case-insensitively. Behind a proxy, `X-Forwarded-Host` is used only
   when the proxy is listed in `http.trustedProxies`.
-- The same path may exist on several domains (`GET /` on `albastr.com` and on `partners.albastr.com`).
-- `cslug routes` shows the domain column, and `cslug routes --domain=api.albastr.com` filters by it.
+- The same path may exist on several domains (`GET /` on `example.com` and on `partners.example.com`).
+- `cslug routes` shows the domain column, and `cslug routes --domain=api.example.com` filters by it.
 
 ### URLs to other domains
 
 `route()` knows each route's domain. A route on another host comes back as an absolute URL:
 
 ```ts
-route('api.quotes.index')                                        // 'https://api.albastr.com/v1/quotes'
-route('operator-site.home', { operator: 'ravinala-tours' })      // 'https://ravinala-tours.albastr.com/'
-route('partners.dashboard')                                      // relative ('/') when already on partners.albastr.com
+route('api.quotes.index')                                        // 'https://api.example.com/v1/quotes'
+route('operator-site.home', { operator: 'ravinala-tours' })      // 'https://ravinala-tours.example.com/'
+route('partners.dashboard')                                      // relative ('/') when already on partners.example.com
 ```
 
 ### Cookies and sessions across subdomains
 
-Sessions are per host by default. To share a login between `albastr.com` and `partners.albastr.com`, set
-`session.cookieDomain: '.albastr.com'` in `config/session.ts`. Leave it unset when subdomains belong to
+Sessions are per host by default. To share a login between `example.com` and `partners.example.com`, set
+`session.cookieDomain: '.example.com'` in `config/session.ts`. Leave it unset when subdomains belong to
 different parties (operator sites).
 
 ### Resource routes
@@ -258,8 +258,8 @@ DOMAIN                  METHOD  PATH                        NAME                
 *                       GET     /:locale/circuits/:slug     public.circuits.show   CircuitController.show           web, locale
 *                       POST    /bookings/:booking/accept   bookings.accept        BookingController.accept         web, auth
 *                       POST    /webhooks/payments          webhooks.payments      PaymentWebhookController.handle  api, verifySignature(payments)
-api.albastr.com         GET     /v1/quotes                  api.quotes.index       QuoteController.index            api, auth(token), throttle
-:operator.albastr.com   GET     /                           operator-site.home     OperatorSiteController.home      web
+api.example.com         GET     /v1/quotes                  api.quotes.index       QuoteController.index            api, auth(token), throttle
+:operator.example.com   GET     /                           operator-site.home     OperatorSiteController.home      web
 ```
 
 `cslug routes --json` adds the validator and body schema for each route (see `cslug describe`).

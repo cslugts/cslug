@@ -34,9 +34,9 @@ const envShape = {
   MANGOPAY_API_KEY: v.secret().optional(),
 }
 const good = {
-  APP_URL: 'https://albastr.com',
+  APP_URL: 'https://example.com',
   APP_KEY: 'k'.repeat(32),
-  DATABASE_URL: 'postgres://cslug:secret@db:5432/albastr',
+  DATABASE_URL: 'postgres://cslug:secret@db:5432/demo',
 }
 
 describe('defineEnv', () => {
@@ -52,7 +52,7 @@ describe('defineEnv', () => {
   test('every problem listed at once, with a hint, and no secret value printed', () => {
     const error = (() => {
       try {
-        defineEnv(envShape, { APP_URL: 'https://albastr.com', APP_KEY: 'too-short-secret' })
+        defineEnv(envShape, { APP_URL: 'https://example.com', APP_KEY: 'too-short-secret' })
       } catch (e) {
         return e as EnvError
       }
@@ -91,7 +91,7 @@ const payments = defineConfig({
   stages: [30, 40, 30],
   mangopay: { apiKey: env.MANGOPAY_API_KEY, baseUrl: 'https://api.sandbox.mangopay.com' },
 })
-const app = defineConfig({ name: 'Albastr', timezone: 'Indian/Antananarivo' })
+const app = defineConfig({ name: 'Demo', timezone: 'Indian/Antananarivo' })
 const configs = { app, payments }
 type Configs = typeof configs
 

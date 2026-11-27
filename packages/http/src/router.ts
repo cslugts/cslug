@@ -31,7 +31,7 @@ export type RouteDef = {
 
 export type GroupOptions = {
   prefix?: string
-  /** Host to match, may contain parameters: `':operator.albastr.com'`. */
+  /** Host to match, may contain parameters: `':operator.example.com'`. */
   domain?: string
   middleware?: Middleware[]
   /** Route-name prefix: `as: 'admin'` + `.name('show')` → `admin.show`. */

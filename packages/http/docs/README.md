@@ -10,7 +10,7 @@ export default defineRoutes((r) => {
     r.get('/circuits/:slug', [CircuitController, 'show']).name('circuits.show')
   })
   r.resource('operators', OperatorController).only(['index', 'show'])
-  r.group({ domain: 'api.albastr.com', prefix: '/v1' }, (r) => { … })
+  r.group({ domain: 'api.example.com', prefix: '/v1' }, (r) => { … })
 })
 
 // a controller action
