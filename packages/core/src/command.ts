@@ -334,3 +334,9 @@ const toPascal = (s: string) =>
 
 /** Tag of the command classes contributed by providers (`this.commands([...])`). */
 export const COMMANDS = 'cslug.commands'
+
+/** Tag of the `cslug describe` sections contributed by providers (`this.describe('routes', () => …)`). */
+export const DESCRIBE = 'cslug.describe'
+
+/** One section of `cslug describe`: JSON-ready data about the app (routes, tables, jobs…). */
+export type DescribeSection = { name: string; collect: () => unknown }

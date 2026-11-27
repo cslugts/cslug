@@ -98,15 +98,24 @@ cslug> b.status
 'deposit_paid'
 ```
 
-Top-level `await`, `resolve()`, all tables and repositories pre-imported.
+TypeScript with top-level `await`. In scope: `app`, `resolve()`, `config()` and everything `app/tables/` and
+`app/repositories/` export. Declarations (`const`, `let`, functions, classes) stay for the next lines; an open brace
+continues on the next line. `.help` lists the names in scope, `.exit` leaves. Import other modules with
+`await import('#app/services/escrow-service')`.
 
 ## `describe`
 
 ```bash
-cslug describe                   # summary
-cslug describe routes --json     # routes with middleware, validator and JSON Schema of the body
-cslug describe tables --json     # tables, columns, types, indexes, foreign keys
-cslug describe jobs --json       # jobs, queues, tries, backoff, payload schema
+cslug describe                   # summary: each section and its size
+cslug describe --json            # every section
+cslug describe routes --json     # method, path, name, action, middleware
+cslug describe tables --json     # tables, columns (type, nullable, unique, oneOf, default, references), indexes
+cslug describe jobs --json       # jobs, queue, tries, backoff, timeout, payload JSON Schema (Job.schema)
+cslug describe schedules         # name, when, timezone, job, overlap
+cslug describe config            # config keys per file (never the values)
 ```
+
+Sections come from the installed packages: a provider adds one with `this.describe('name', () => data)` in
+`register()`.
 
 Designed for scripts and AI coding agents; see [docs/ai-readiness.md](../docs/ai-readiness.md).

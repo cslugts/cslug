@@ -5,6 +5,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 ## Unreleased
 
 ### @cslug/cli
+- `cslug describe [section] [--json]`: routes, tables, jobs, schedules, providers, config keys; providers contribute
+  sections with `this.describe(name, fn)` (core: `DESCRIBE`, `DescribeSection`, `app.providers`).
+- `cslug repl`: TypeScript, top-level `await`, declarations kept between lines, tables and repositories in scope.
 - `cslug add <names>` (`queue`, `mail`, `storage`, `notification`, `webhook`, `tailwind`): installs the packages at
   the CLI's version, adds their providers and config files, the worker and scheduler for `queue`; idempotent.
 

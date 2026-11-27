@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { arg, Command, CslugError, flag, Logger, ServiceProvider } from '@cslug/core'
+import { jobName } from './job'
 import { QueueProvider } from './provider'
 import { RedisQueue } from './redis-queue'
 import { buildSchedule, type ScheduleDefinition } from './schedule'
@@ -15,6 +16,15 @@ export class ScheduleProvider extends ServiceProvider {
 
   register() {
     this.commands(scheduleCommands)
+    this.describe('schedules', () =>
+      this.app.resolve(Scheduler).entries.map((e) => ({
+        name: e.name,
+        when: e.description,
+        ...(e.tz ? { timezone: e.tz } : {}),
+        ...(e.job ? { job: jobName(e.job) } : {}),
+        overlap: e.overlap,
+      })),
+    )
     this.app.singleton(
       Scheduler,
       (c) =>

@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import { arg, Command, type CommandClass, flag, names } from '@cslug/core'
 import { DevCommand, StartCommand } from '../supervisor'
 import { AddCommand } from './add'
+import { DescribeCommand } from './describe'
+import { ReplCommand } from './repl'
 
 export const STUBS = join(import.meta.dir, '../../stubs')
 
@@ -168,6 +170,8 @@ export const builtinCommands: CommandClass[] = [
   ConfigShowCommand,
   KeyGenerateCommand,
   AddCommand,
+  DescribeCommand,
+  ReplCommand,
   StartCommand,
   DevCommand,
   generator('command', 'app/commands', 'Create a command class'),

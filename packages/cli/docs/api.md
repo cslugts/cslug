@@ -40,6 +40,8 @@ plus `app`, `clock`, `log`, `io`. When the session is not interactive, prompts r
 | `Supervisor(specs, options)` | `.start()`, `.stop(signal)` → exit code; `plannedProcesses(config, flags)` |
 | `generator(kind, dir, description)` | a `make:<kind>` command from `stubs/<kind>.stub` |
 | `AddCommand`, `ADDITIONS` | `cslug add <names>` and what each name installs and wires |
+| `DescribeCommand` | `cslug describe [section] [--json]` |
+| `ReplCommand`, `evaluate(code, scope)`, `replScope(app)` | `cslug repl` and its evaluator |
 | `BufferedIO(answers?)` | capture output in tests: `app.instance(ConsoleIO, io)` |
 | `defineCslugConfig()` | `cslug.config.ts`: `processes` (`web.instances`, `worker[]`, `scheduler`), `shutdownTimeout`, `assets` |
 | `commandHelp(cmd)` | |

@@ -8,6 +8,8 @@
 export { arg, Command, type CommandClass, ConsoleIO, flag, names } from '@cslug/core'
 export { ADDITIONS, AddCommand } from './commands/add'
 export { generator, STUBS } from './commands/builtin'
+export { DescribeCommand } from './commands/describe'
+export { type Evaluated, evaluate, ReplCommand, replScope } from './commands/repl'
 export { type CslugConfig, defineCslugConfig } from './config'
 export { BufferedIO, commandHelp } from './io'
 export { CliKernel } from './kernel'

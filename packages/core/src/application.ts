@@ -85,6 +85,11 @@ export class Application extends Container {
     return this.state === 'running'
   }
 
+  /** The providers given to `useProviders()`, in that order. */
+  get providers(): readonly ProviderClass[] {
+    return this.providerClasses
+  }
+
   /** The providers to run, from `bootstrap/providers.ts`. Order matters only where `dependsOn` doesn't decide. */
   useProviders(providers: readonly ProviderClass[]): this {
     if (this.state !== 'created') throw new ProviderError('useProviders() must be called before start().')
