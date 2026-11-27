@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M10 are done; 0.7.0 released (0.6.0: `@cslug/search`, embedding drivers and search tools; 0.6.1: TOTP; 0.7.0: AJAX forms in `@cslug/vue` with callbacks, live validation and stateful API requests). Next: to be planned.
+> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M10 are done; 0.7.1 released (0.6.0: `@cslug/search`, embedding drivers and search tools; 0.6.1: TOTP; 0.7.0: AJAX forms in `@cslug/vue`; 0.7.1: two-factor logins in scaffolded apps). Next: to be planned.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status

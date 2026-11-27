@@ -1,6 +1,6 @@
 {
   "name": "@cslug/database",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "PostgreSQL on Bun.sql: typed tables, query builder, sql tag, repositories, migrations.",
   "license": "MIT",
   "type": "module",
