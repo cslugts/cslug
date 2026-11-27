@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { type Class, CslugError, currentApp, resolve } from '@cslug/core'
 import type { Schema } from '@cslug/validation'
 import { Ai } from './ai'
+import type { McpTools } from './mcp-client'
 import type { Effort } from './model'
 
 /** A prompt file, `resources/prompts/<name>.md`, with `{{ variables }}` filled from the run's `context`. */
@@ -40,6 +41,14 @@ export abstract class Tool {
   abstract input: Schema<unknown>
   abstract handle(input: never): unknown
 }
+
+/** What a run calls: a `Tool`, or an MCP server's tool (its input is checked by that server). */
+export type RunnableTool = {
+  name: string
+  description: string
+  input: Pick<Schema<unknown>, 'toJSONSchema' | 'safeParse'>
+  handle(input: never): unknown
+}
 export type ToolClass = Class<Tool>
 
 export type RunOptions = { input: string; context?: Record<string, unknown> }
@@ -54,7 +63,8 @@ export type AgentSettings = {
   instructions?: string | Prompt
   /** Structured output: the answer is parsed and validated (`AiOutputError` otherwise). */
   output?: Schema<unknown>
-  tools?: ToolClass[]
+  /** Tool classes, and MCP servers' tools: `tools = [FindOperatorsTool, ...mcp('maps').tools(['route_duration'])]`. */
+  tools?: (ToolClass | McpTools)[]
   /** Model calls before giving up (each tool round is one); default 8. */
   maxSteps?: number
   /** A provider from config `ai.providers` (default: `ai.default`). */

@@ -43,10 +43,12 @@
       },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
+        "@cslug/http": "workspace:*",
         "@cslug/queue": "workspace:*",
         "@cslug/validation": "workspace:*",
       },
       "optionalPeers": [
+        "@cslug/http",
         "@cslug/queue",
       ],
     },

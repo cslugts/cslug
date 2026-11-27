@@ -8,12 +8,13 @@ export {
   type AgentSettings,
   Prompt,
   prompt,
+  type RunnableTool,
   type RunOptions,
   Tool,
   type ToolClass,
 } from './agent'
 export { Ai, type AiConfig, AiOutputError } from './ai'
-export { AiPromptsCommand, AiProvider } from './ai-provider'
+export { AiPromptsCommand, AiProvider, McpServeCommand } from './ai-provider'
 export {
   type AnthropicConfig,
   AnthropicProvider,
@@ -21,6 +22,16 @@ export {
   OpenAiCompatibleProvider,
 } from './drivers'
 export { AiFake, type AiRun, installAiFake } from './fake'
+export {
+  discoverTools,
+  handleMcp,
+  MCP_VERSIONS,
+  type McpCaller,
+  type McpOptions,
+  type McpReply,
+  mcpTools,
+} from './mcp'
+export { McpConnection, type McpServerConfig, McpTools, mcp } from './mcp-client'
 export {
   AiRefusalError,
   type Block,

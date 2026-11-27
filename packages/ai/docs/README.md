@@ -38,6 +38,27 @@ Without `config/ai.ts`, the default provider is `anthropic`. `ai.extend(name, pr
 agent its answer (checked against its `output` schema); `assertRan(Agent, where?)`, `assertNotRan(Agent)`,
 `ran(Agent)`, `runs`.
 
+## MCP
+
+**Serving.** `@mcp(options)` on a `Tool` class in `app/tools/` (imported at boot) exposes it:
+
+- `POST /mcp` (when @cslug/http is installed and a tool is exposed): streamable HTTP with JSON responses, `202` for
+  notifications, `404` for an unknown method, `405` for GET, `403` when `Origin` is not `app.url`'s. It runs the api
+  group's middleware, so `ctx.auth` (from @cslug/auth) is the caller. Options: none → any authenticated caller;
+  `public: true` → anyone; `guard: 'token'` → that guard; `ability: 'mcp:x'` → a token with that ability (session
+  users pass). A tool the caller may not use is not listed and is "unknown" when called.
+- `cslug mcp:serve`: stdio (newline-delimited JSON-RPC on stdout, logs on stderr); every exposed tool.
+
+Protocol: `server/discover` and per-request versions (2026-07-28), and `initialize` for 2025-11-25, 2025-06-18 and
+2025-03-26 (the client's version if supported, else 2025-11-25). `tools/list`, `tools/call` (input validated; a
+plain-object result is also `structuredContent`; an error is `isError: true`), `ping`. An unsupported
+`_meta["io.modelcontextprotocol/protocolVersion"]` is error `-32022`.
+
+**Using a server.** `config/ai.ts` → `mcp.<name>`: `{ url, headers? }` or `{ command, env? }` (stdio, started on first
+use, stopped at shutdown). In an agent: `tools = [...mcp('maps').tools(['route_duration'])]` (all tools without a
+list). The client tries `server/discover` (2026-07-28), else `initialize` (2025-11-25), keeps `Mcp-Session-Id` for
+older HTTP servers, reads JSON or SSE responses. A tool error comes back to the model as an error result.
+
 ## Not yet
 
-MCP (server and client), `ai:record` / `ai:eval` and the daily budget come in the next part of this package.
+`ai:record` / `ai:eval` and the daily budget come next.

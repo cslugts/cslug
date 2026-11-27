@@ -5,6 +5,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 ## Unreleased
 
 ### @cslug/ai
+- MCP: `@mcp()` exposes tools at `POST /mcp` (streamable HTTP, API-token abilities, Origin checked) and with
+  `cslug mcp:serve` (stdio); protocol 2026-07-28 and the `initialize` versions back to 2025-03-26.
+  `mcp('server').tools([...])` gives an agent another server's tools (HTTP or stdio).
 - `Agent` (`model` or a role, `instructions`, `output`, `tools`, `maxSteps`, `effort`): `run()` with structured output
   parsed and validated by the `v` schema, a tool loop (inputs validated, errors returned to the model), `stream()`.
 - `Tool`, `prompt()` (Markdown files with `{{ variables }}`), `sse()` for streaming to the browser.
