@@ -21,6 +21,9 @@ installs `@cslug/ai`.
 | `@cslug/storage` | `Storage` disks (local, s3, memory), signed URLs, direct uploads, upload type sniffing | core · optional: http (serves local signed URLs) | `Bun.file`, `Bun.s3` |
 | `@cslug/webhook` | `verifySignature()`, `WebhookInbox` (exactly-once receipt), replay command | http, database | Web Crypto |
 | `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake); stored conversations and run records; embedding drivers for search (Voyage, OpenAI-compatible) | core, validation · optional: queue, http, database (conversations, runs), search (embeddings, `searchTool`, recall) | `fetch` |
+| `@cslug/telemetry` *(planned, M12)* | Tracing and metrics: OTLP/HTTP export of traces, metrics and logs, `/metrics` (Prometheus), sampling; drives the `Tracer` / `Metrics` contracts of core | core · optional: http, auth | `fetch` |
+| `@cslug/security` *(planned, M13)* | CSP nonces, account lockout, breached-password check, audit log, IP filter, `security.txt`; builds on core's `Crypto` and auth's events | core, http · optional: database, auth, vue, notification | Web Crypto, `fetch` |
+| `@cslug/workflow` *(planned, M15)* | Durable execution (journaled steps, durable sleeps, waits for events and signals), workflows, sagas with compensations, `workflow:*` commands | core, database, queue | PostgreSQL, Redis Streams |
 | `@cslug/search` | Full-text search over tables (`searchable()`: weighted, per-row language, accent-insensitive; `search()`: ranked, highlights, typos), `searchIndex()` for other documents, `search:reindex`, semantic and hybrid search (pgvector) through an `Embedder` contract | core, database · optional (planned): queue | PostgreSQL full text, `unaccent`, `pg_trgm`, `pgvector` (opt in) |
 | `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `mcp:dev`, `dev`, `start` supervisor | core · optional: database (`mcp:dev` query) | `Bun.spawn` |
 | `@cslug/testing` | `testApp()`, HTTP/HTML assertions, DB isolation, fakes, time travel | peers: every package it fakes | `bun test` |
@@ -45,7 +48,8 @@ No package has a runtime dependency outside `@cslug/*`. The only third-party pac
 
   @cslug/mail ··► vue, queue (optional)        @cslug/notification ··► mail, queue, database (optional)
   @cslug/storage ··► http (optional)
-  @cslug/search ─► database, ··► queue (planned)        @cslug/ai ··► database, search (planned)
+  @cslug/search ─► database, ··► queue (planned)        planned: @cslug/telemetry ··► http · @cslug/security ─► http ·
+  @cslug/workflow ─► database, queue        @cslug/ai ··► database, search (planned)
   ─► required     ··► optional peer
 ```
 
@@ -114,6 +118,9 @@ feature needs it. Report the size in the PR; a package far over its budget is a 
 | storage, webhook | 600 |
 | ai | 1,500 |
 | search | 1,000 |
+| telemetry (planned) | 800 |
+| security (planned) | 900 |
+| workflow (planned) | 1,200 |
 | cli + testing | 1,800 |
 | create-cslug (templates not counted) | 200 |
-| **Total** | **~19,000** |
+| **Total** | **~22,000** |
