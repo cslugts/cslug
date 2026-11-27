@@ -4,6 +4,13 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/search (new)
+- `searchable(weights, { language, unaccent })`: a hidden generated `tsvector` column, weighted `A`–`D`, in one
+  language or one per row (a language column), accent-insensitive through `cslug_<config>` configurations.
+- `search(repoOrQuery, term, options)`: ranked web-search queries (phrases, `-without`, `or`), HTML-safe highlights,
+  typo tolerance (pg_trgm), per-language queries; composes with `where` and `paginate`.
+- `SearchProvider` and its migration (`unaccent`, `pg_trgm`, the configurations); `cslug add search`.
+
 ### @cslug/database
 - Generated columns: `.generatedAs((c) => sql)` (`generated always as (…) stored`), never written by inserts or
   updates; the differ creates them and follows expression changes (`set expression`, PostgreSQL 17+).

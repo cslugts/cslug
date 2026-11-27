@@ -41,6 +41,11 @@ export const ADDITIONS: Record<string, Addition> = {
     config: 'webhooks',
     next: 'cslug migrate (creates cslug_webhook_inbox)',
   },
+  search: {
+    packages: ['@cslug/search'],
+    providers: { from: '@cslug/search', names: ['SearchProvider'] },
+    next: 'cslug migrate (adds unaccent, pg_trgm and the cslug_<language> search configurations)',
+  },
   ai: {
     packages: ['@cslug/ai'],
     providers: { from: '@cslug/ai', names: ['AiProvider'] },

@@ -29,3 +29,4 @@ Every snippet is meant to compile against the final framework; if one can't, the
 | 19 | [Testing](./19-testing.md) | `testApp()`, fakes, DB isolation |
 | 20 | [CLI & commands](./20-cli.md) | `cslug`, generators, custom commands |
 | 21 | [Deployment](./21-deployment.md) | Processes, Docker, health checks |
+| 22 | [Search](./22-search.md) | Full-text search over tables: languages, accents, ranking, highlights |
