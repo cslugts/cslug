@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### create-cslug
+- The `--web` and `--full` apps handle two-factor logins: after the password, a user with 2FA goes to `/two-factor`
+  (`TwoFactorChallengeController`, `auth/two-factor.vue`) and is signed in by an app code or a recovery code;
+  the starter kit too (English and French). Starter-kit `Dockerfile` and `railway.json` removed.
+
 ## 0.7.0 (2026-11-27)
 
 Forms without page reloads in `@cslug/vue`: `useForm` callbacks and progressive enhancement, an `http` client, live

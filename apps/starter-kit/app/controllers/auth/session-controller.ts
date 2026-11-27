@@ -15,6 +15,8 @@ export class SessionController {
     const { email, password } = await request.validate(LoginValidator)
     const user = await auth.attempt(email, password)      // throttled; failures logged without the password
     if (!user) throw new ValidationError({ email: ['auth.failed'] })
+    // two-factor authentication on: not signed in until the code (TwoFactorChallengeController)
+    if (auth.twoFactorPending) return redirect().to(route('two-factor'))
     return redirect().intended(route('todos.index'))
   }
 

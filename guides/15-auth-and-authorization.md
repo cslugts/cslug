@@ -109,6 +109,9 @@ export class TwoFactorController {
 - The secret is stored encrypted with `APP_KEY` in `cslug_two_factor`; recovery codes as hashes.
 - `twoFactor.enabled(user)`, `regenerateRecoveryCodes(user)`, `remainingRecoveryCodes(user)`, `disable(user)`.
   Requiring it for staff is a gate: `gate.define('staff.secure', (u) => …)` with `twoFactor.enabled(u)`.
+- Apps made with `bun create cslug --web` (or `--full`) already have the code step: `SessionController` sends a
+  waiting login to `/two-factor`, and `TwoFactorChallengeController` signs it in. Add enrolment (a settings page
+  calling `enable` and `confirm`) when your users need it.
 - cslug gives the `otpauth://` URI, not a QR image: render it in the browser with a QR component, or show the
   secret to type in.
 
