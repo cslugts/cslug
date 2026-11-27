@@ -37,7 +37,15 @@ export {
   MakeMigrationCommand,
   MigrateCommand,
 } from './commands'
-export { Database, type DatabaseConfig, type Json, Queryable, Transaction, type TransactionOptions } from './database'
+export {
+  Database,
+  type DatabaseConfig,
+  type Json,
+  Queryable,
+  querySummary,
+  Transaction,
+  type TransactionOptions,
+} from './database'
 export {
   type Change,
   type ColumnSpec,

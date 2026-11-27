@@ -1,6 +1,7 @@
 /**
  * @cslug/core: application, container and `@inject`, service providers, ambient context, config and env,
- * typed errors, Clock, Money, events, logger, i18n, and the Cache/Lock/RateLimiter/SessionStore contracts.
+ * typed errors, Clock, Money, events, logger, i18n, and the Cache/Lock/RateLimiter/SessionStore/Tracer/Metrics
+ * contracts.
  */
 
 /** Re-exported: `v` and `ValidationError` for config/env.ts; `sniffType` and `parseSize` for @cslug/storage. */
@@ -102,7 +103,15 @@ export {
   withLocale,
 } from './i18n'
 export { inject, type Lifetime } from './inject'
-export { DEFAULT_REDACT, type LogFields, Logger, type LoggerOptions, type LogLevel } from './logger'
+export {
+  DEFAULT_REDACT,
+  type LogFields,
+  type LogFormat,
+  Logger,
+  type LoggerOptions,
+  type LogLevel,
+  type LogTarget,
+} from './logger'
 export {
   handleMcpMessage,
   MCP_VERSIONS,
@@ -114,4 +123,20 @@ export {
 } from './mcp'
 export { Money, minorDigits } from './money'
 export { type ProviderClass, type ProviderHooks, ServiceProvider } from './provider'
+export {
+  type Attributes,
+  BasicMetrics,
+  BasicTracer,
+  DEFAULT_BUCKETS,
+  type MetricPoint,
+  Metrics,
+  NoopMetrics,
+  NoopTracer,
+  parseTraceparent,
+  RecordedSpan,
+  type Span,
+  type SpanKind,
+  type SpanOptions,
+  Tracer,
+} from './telemetry'
 export { type Class, InjectionToken, type Resolved, type Token, token } from './token'

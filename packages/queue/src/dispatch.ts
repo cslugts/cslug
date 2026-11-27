@@ -6,9 +6,10 @@ import {
   type Duration,
   parseDuration,
   resolve,
+  Tracer,
   type TransactionHooks,
 } from '@cslug/core'
-import type { JobClass } from './job'
+import { type JobClass, jobName } from './job'
 import { Outbox } from './outbox'
 import { type Envelope, envelopeOf, type PushOptions, Queue } from './queue'
 
@@ -86,8 +87,24 @@ export class PendingDispatch implements PromiseLike<string | null> {
     onFulfilled?: ((id: string | null) => A | PromiseLike<A>) | null,
     onRejected?: ((reason: unknown) => B | PromiseLike<B>) | null,
   ): Promise<A | B> {
-    this.sent ??= this.send()
+    this.sent ??= this.traced()
     return this.sent.then(onFulfilled, onRejected)
+  }
+
+  /** A producer span around the dispatch: the envelope records it, so the job's span is its child. */
+  private traced(): Promise<string | null> {
+    const app = currentContext()?.app
+    const tracer = app && typeof app.has === 'function' && app.has(Tracer) ? app.resolve(Tracer) : undefined
+    if (!tracer?.enabled) return this.send()
+    return tracer.span(
+      `publish ${jobName(this.job)}`,
+      { kind: 'producer', attributes: { 'messaging.system': 'cslug', 'messaging.operation.type': 'send' } },
+      async (span) => {
+        const id = await this.send()
+        span.setAttributes({ 'messaging.message.id': id ?? undefined, 'cslug.job.deduplicated': id === null })
+        return id
+      },
+    )
   }
 
   private async send(): Promise<string | null> {

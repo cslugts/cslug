@@ -19,6 +19,7 @@ import { EventBus } from './events'
 import { type I18nConfig, Translator } from './i18n'
 import { Logger, type LoggerOptions } from './logger'
 import { dependenciesOf, type ProviderClass, type ProviderHooks, type ServiceProvider } from './provider'
+import { Metrics, NoopMetrics, NoopTracer, Tracer } from './telemetry'
 
 export type ApplicationOptions = {
   /** The app's root directory (where bootstrap/, config/, routes/ live). */
@@ -60,6 +61,9 @@ export class Application extends Container {
     )
     // in-memory drivers; @cslug/redis replaces them
     this.singleton(Cache, () => new MemoryCache())
+    // no-op until @cslug/telemetry binds real ones
+    this.singleton(Tracer, () => new NoopTracer())
+    this.singleton(Metrics, () => new NoopMetrics())
     this.singleton(Lock, () => new MemoryLock())
     this.singleton(RateLimiter, () => new MemoryRateLimiter())
     this.singleton(SessionStore, () => new MemorySessionStore())

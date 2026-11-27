@@ -5,9 +5,11 @@ import {
   HEALTH_CHECKS,
   type HealthCheck,
   Logger,
+  Metrics,
   NotFoundError,
   runInContext,
   type Token,
+  Tracer,
   ValidationError,
 } from '@cslug/core'
 import { type HttpContext, HttpRequest, ResponseBuilder } from './context'
@@ -140,58 +142,87 @@ export class HttpKernel {
 
     let status = 500
     let routeName: string | undefined
+    let routePath: string | undefined
+    let traceId: string | undefined
+    const tracer = this.app.resolve(Tracer)
     try {
       return await runInContext(
         { ...(currentContext() ?? {}), app: this.app, scope, requestId, locale: defaultLocale, http: ctx },
-        async () => {
-          const run = async (): Promise<Response> => {
-            // HTML forms can only send GET/POST: `<input name="_method" value="PUT">` spoofs the others
-            let method = request.method
-            if (method === 'POST' && req.isForm) {
-              const spoofed = (await req.body())._method
-              if (typeof spoofed === 'string' && ['PUT', 'PATCH', 'DELETE'].includes(spoofed.toUpperCase()))
-                method = spoofed.toUpperCase()
-            }
-            const { route, params, allowed } = this.match(method, host, url.pathname)
-            if (!route) {
-              if (this.publicDir && (request.method === 'GET' || request.method === 'HEAD')) {
-                const file = serveStatic(this.publicDir, url.pathname, request)
-                if (file) return file
+        () =>
+          // a server span per request, continuing the caller's trace (W3C `traceparent`)
+          tracer.span(
+            request.method,
+            {
+              kind: 'server',
+              parent: request.headers.get('traceparent') ?? undefined,
+              attributes: tracer.enabled
+                ? { 'http.request.method': request.method, 'url.path': url.pathname, 'server.address': host }
+                : undefined,
+            },
+            async (span) => {
+              traceId = span.traceId || undefined
+              const run = async (): Promise<Response> => {
+                // HTML forms can only send GET/POST: `<input name="_method" value="PUT">` spoofs the others
+                let method = request.method
+                if (method === 'POST' && req.isForm) {
+                  const spoofed = (await req.body())._method
+                  if (typeof spoofed === 'string' && ['PUT', 'PATCH', 'DELETE'].includes(spoofed.toUpperCase()))
+                    method = spoofed.toUpperCase()
+                }
+                const { route, params, allowed } = this.match(method, host, url.pathname)
+                if (!route) {
+                  if (this.publicDir && (request.method === 'GET' || request.method === 'HEAD')) {
+                    const file = serveStatic(this.publicDir, url.pathname, request)
+                    if (file) return file
+                  }
+                  if (allowed.size) {
+                    const allow = [...allowed, ...(allowed.has('GET') ? ['HEAD'] : [])].join(', ')
+                    return json(
+                      { title: 'Method Not Allowed', status: 405, code: 'http.method_not_allowed', requestId },
+                      { status: 405, headers: { allow } },
+                    )
+                  }
+                  throw new NotFoundError('route')
+                }
+                routeName = route.name
+                routePath = route.path
+                span.updateName(`${method} ${route.path}`)
+                Object.assign(ctx.params, params)
+                Object.assign(ctx, { routeName: route.name })
+                return this.pipeline(ctx, route.middleware, () => this.callAction(ctx, route))
               }
-              if (allowed.size) {
-                const allow = [...allowed, ...(allowed.has('GET') ? ['HEAD'] : [])].join(', ')
-                return json(
-                  { title: 'Method Not Allowed', status: 405, code: 'http.method_not_allowed', requestId },
-                  { status: 405, headers: { allow } },
-                )
+              let res: Response
+              try {
+                res = await this.pipeline(ctx, this.global, run)
+              } catch (error) {
+                res = await this.errors.handle(error, ctx)
+                if (res.status >= 500) span.recordError(error)
               }
-              throw new NotFoundError('route')
-            }
-            routeName = route.name
-            Object.assign(ctx.params, params)
-            Object.assign(ctx, { routeName: route.name })
-            return this.pipeline(ctx, route.middleware, () => this.callAction(ctx, route))
-          }
-          let res: Response
-          try {
-            res = await this.pipeline(ctx, this.global, run)
-          } catch (error) {
-            res = await this.errors.handle(error, ctx)
-          }
-          res = this.finalize(res, ctx, request.method)
-          status = res.status
-          return res
-        },
+              res = this.finalize(res, ctx, request.method)
+              status = res.status
+              span.setAttributes({ 'http.response.status_code': status, 'http.route': routePath })
+              return res
+            },
+          ),
       )
     } finally {
       await scope.dispose()
+      const ms = performance.now() - started
+      const metrics = this.app.resolve(Metrics)
+      if (metrics.enabled)
+        metrics.record('http.server.request.duration', ms / 1000, {
+          'http.request.method': request.method,
+          'http.route': routePath,
+          'http.response.status_code': status,
+        })
       this.log.info('request', {
         method: request.method,
         path: url.pathname,
         status,
-        ms: Math.round((performance.now() - started) * 10) / 10,
+        ms: Math.round(ms * 10) / 10,
         route: routeName,
         requestId,
+        ...(traceId ? { traceId } : {}),
       })
     }
   }

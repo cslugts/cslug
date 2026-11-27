@@ -9,6 +9,17 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
   level and format; `LOG_LEVEL` / `LOG_FORMAT` defaults; the process role (`CSLUG_ROLE`) on every line; children
   share their parent's targets; `originRequestId`, `traceId` and `spanId` from the context.
 
+- `Tracer` and `Metrics` contracts (no-op by default; `@cslug/telemetry` will bind real ones), W3C `traceparent`,
+  `BasicTracer` / `BasicMetrics` for tests. Spans set `traceId` / `spanId` in the context, so logs carry them.
+
+### Instrumentation (no-op until telemetry is installed)
+- http: a server span per request, named after the route, continuing an incoming `traceparent`;
+  `http.server.request.duration`.
+- queue: `publish` and `process` spans (the job's span is a child of its dispatch); `messaging.process.duration`,
+  waiting jobs and oldest job age.
+- database: a span per query (operation and table, never values); `db.client.operation.duration`.
+- ai: spans for the run, each model call (tokens) and each tool call.
+
 ### @cslug/queue
 - Jobs record their origin (the request, schedule or command that started the work, and its trace); job log lines
   carry `originRequestId`, kept through jobs that dispatch jobs.

@@ -165,6 +165,7 @@ One `AsyncLocalStorage` holds a `Context` object per unit of work:
 | `scope` | kernel | `resolve()` |
 | `requestId` / `jobId` | kernel | logger (every log line carries it) |
 | `originRequestId` | queue (from the job's envelope) | logger: the request that started a job, kept through jobs that dispatch jobs |
+| `span`, `traceId`, `spanId`, `traceparent` | `Tracer.span()` (http, queue, database, ai) | logger, dispatch (the job's trace), child spans |
 | `locale` | `locale()` middleware, job payload | `t()`, formatting helpers, mail |
 | `user` | `auth` middleware | policies, `auth.user()`, audit fields |
 | `tx` | `db.transaction()` | repositories, `db.query`, dispatch (after-commit) |

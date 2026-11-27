@@ -1,5 +1,5 @@
 import { hostname } from 'node:os'
-import { type Application, type Logger, type RateLimit, RateLimiter } from '@cslug/core'
+import { type Application, type Logger, Metrics, type RateLimit, RateLimiter } from '@cslug/core'
 import { decode, type Redis } from '@cslug/redis'
 import { backoffDelay, findJob, settingsOf } from './job'
 import { type Envelope, runFailedHook, runJob } from './queue'
@@ -49,6 +49,16 @@ export class Worker {
     for (const q of this.options.queues) {
       await this.queue.ensureGroups(q.name)
       this.loops.push(this.loop(q.name, q.concurrency))
+      const metrics = this.app.resolve(Metrics)
+      if (metrics.enabled) {
+        const attributes = { 'messaging.destination.name': q.name }
+        metrics.observe('cslug.queue.waiting', async () => (await this.queue.stats(q.name)).waiting, attributes)
+        metrics.observe(
+          'cslug.queue.oldest_age',
+          async () => (await this.queue.stats(q.name)).oldestAgeMs / 1000,
+          attributes,
+        )
+      }
     }
     this.log.info('queue.worker.started', { consumer: this.consumer, queues: this.options.queues.map((q) => q.name) })
   }
@@ -200,6 +210,14 @@ export class Worker {
       Math.max(100, Math.floor(this.leaseMs / 3)),
     )
     const started = Date.now()
+    const metrics = this.app.resolve(Metrics)
+    const measure = (outcome: 'done' | 'retry' | 'failed') =>
+      metrics.enabled &&
+      metrics.record('messaging.process.duration', (Date.now() - started) / 1000, {
+        'messaging.destination.name': envelope.queue,
+        'cslug.job.name': envelope.name,
+        'cslug.job.outcome': outcome,
+      })
     try {
       if (attempt > envelope.tries)
         throw new Error(`gave up after ${envelope.tries} attempts (the worker running it stopped)`)
@@ -209,6 +227,7 @@ export class Worker {
       await this.queue
         .finished(envelope, true)
         .catch((e) => this.log.error('queue.chain_failed', { ...fields, error: e }))
+      measure('done')
       this.log.info('queue.job.done', { ...fields, ms: Date.now() - started })
     } catch (thrown) {
       const error = thrown instanceof Error ? thrown : new Error(String(thrown))
@@ -218,6 +237,7 @@ export class Worker {
         await this.queue
           .retry(stream, id, envelope, this.queue.now() + wait)
           .catch((e) => this.log.error('queue.retry_failed', { ...fields, error: e }))
+        measure('retry')
         this.log.warn('queue.job.retrying', { ...fields, error, retryInMs: wait })
       } else {
         const hookError = await runFailedHook(this.app, envelope, error)
@@ -225,6 +245,7 @@ export class Worker {
         await this.queue
           .fail(stream, id, envelope, error)
           .catch((e) => this.log.error('queue.fail_failed', { ...fields, error: e }))
+        measure('failed')
         this.log.error('queue.job.failed', { ...fields, error })
         await this.queue
           .finished(envelope, false)

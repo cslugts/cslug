@@ -1,4 +1,15 @@
-import { type Application, Cache, Clock, CslugError, currentContext, type Logger, resolve } from '@cslug/core'
+import {
+  type Application,
+  Cache,
+  Clock,
+  CslugError,
+  currentContext,
+  type Logger,
+  resolve,
+  runInContext,
+  type Span,
+  Tracer,
+} from '@cslug/core'
 import { type AgentSettings, type RunnableTool, type RunOptions, renderInstructions } from './agent'
 import { AiStream } from './ai-stream'
 import { Budget, type BudgetConfig, costOf, type ModelPrice } from './budget'
@@ -254,42 +265,118 @@ export class Ai {
     const provider = this.provider(agent.provider)
     const usage: Required<Usage> = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
     const budget = this.budget
-    for (let step = 1; step <= maxSteps; step++) {
-      await budget?.check()
-      let response: ModelResponse | undefined
-      if (streaming)
-        for await (const event of provider.stream(request)) {
-          if (event.type === 'text') yield event
-          else response = event.response
+    // spans (OpenTelemetry gen_ai conventions): the run, each model call, each tool call inside the run
+    const tracer = this.app.resolve(Tracer)
+    const ctx = currentContext()
+    const runSpan = tracer.enabled
+      ? tracer.startSpan(`invoke_agent ${agent.constructor.name}`, {
+          parent: ctx?.traceparent as string | undefined,
+          attributes: {
+            'gen_ai.operation.name': 'invoke_agent',
+            'gen_ai.agent.name': agent.constructor.name,
+            'gen_ai.request.model': request.model,
+            'cslug.ai.run_id': runId,
+          },
+        })
+      : undefined
+    const inRun = <T>(fn: () => T): T =>
+      runSpan && ctx
+        ? runInContext(
+            {
+              ...ctx,
+              span: runSpan,
+              traceId: runSpan.traceId,
+              spanId: runSpan.spanId,
+              traceparent: runSpan.traceparent,
+            },
+            fn,
+          )
+        : fn()
+    try {
+      for (let step = 1; step <= maxSteps; step++) {
+        await budget?.check()
+        let response: ModelResponse | undefined
+        const chat: Span | undefined = runSpan
+          ? tracer.startSpan(`chat ${request.model}`, {
+              kind: 'client',
+              parent: runSpan.traceparent,
+              attributes: { 'gen_ai.operation.name': 'chat', 'gen_ai.request.model': request.model },
+            })
+          : undefined
+        try {
+          if (streaming)
+            for await (const event of provider.stream(request)) {
+              if (event.type === 'text') yield event
+              else response = event.response
+            }
+          else response = await provider.complete(request)
+        } catch (error) {
+          chat?.recordError(error)
+          throw error
+        } finally {
+          if (response)
+            chat?.setAttributes({
+              'gen_ai.usage.input_tokens': response.usage.inputTokens,
+              'gen_ai.usage.output_tokens': response.usage.outputTokens,
+            })
+          chat?.end()
         }
-      else response = await provider.complete(request)
-      if (!response) throw new CslugError('ai.provider', 'The stream ended without a response')
-      for (const k of Object.keys(usage) as (keyof Usage)[]) usage[k] += response.usage[k] ?? 0
-      await budget?.charge(request.model, response.usage)
-      request.messages.push({ role: 'assistant', content: response.content })
-      const calls = response.content.filter((b) => b.type === 'tool_use')
-      if (!calls.length) {
-        const costUsd = costOf(request.model, usage, this.config.prices)
-        this.log.info('ai.run', { agent: agent.constructor.name, model: request.model, steps: step, ...usage, costUsd })
-        const text = textOf(response.content)
-        const raw = agent.output ? this.json(text) : text
-        const result: AiResult = {
-          runId,
-          raw,
-          value: this.validate(agent, raw, text),
-          model: request.model,
-          steps: step,
-          usage,
-          costUsd,
-          messages: [...request.messages],
+        if (!response) throw new CslugError('ai.provider', 'The stream ended without a response')
+        for (const k of Object.keys(usage) as (keyof Usage)[]) usage[k] += response.usage[k] ?? 0
+        await budget?.charge(request.model, response.usage)
+        request.messages.push({ role: 'assistant', content: response.content })
+        const calls = response.content.filter((b) => b.type === 'tool_use')
+        if (!calls.length) {
+          const costUsd = costOf(request.model, usage, this.config.prices)
+          runSpan?.setAttributes({
+            'gen_ai.usage.input_tokens': usage.inputTokens,
+            'gen_ai.usage.output_tokens': usage.outputTokens,
+            'cslug.ai.steps': step,
+            'cslug.ai.cost_usd': costUsd,
+          })
+          this.log.info('ai.run', {
+            agent: agent.constructor.name,
+            model: request.model,
+            steps: step,
+            ...usage,
+            costUsd,
+          })
+          const text = textOf(response.content)
+          const raw = agent.output ? this.json(text) : text
+          const result: AiResult = {
+            runId,
+            raw,
+            value: this.validate(agent, raw, text),
+            model: request.model,
+            steps: step,
+            usage,
+            costUsd,
+            messages: [...request.messages],
+          }
+          yield { type: 'result' as const, result }
+          return
         }
-        yield { type: 'result' as const, result }
-        return
+        // every result of one turn goes back in one message
+        const results = await inRun(() =>
+          Promise.all(
+            calls.map((call) =>
+              tracer.span(
+                `execute_tool ${call.name}`,
+                { attributes: { 'gen_ai.operation.name': 'execute_tool', 'gen_ai.tool.name': call.name } },
+                () => this.call(tools, call),
+              ),
+            ),
+          ),
+        )
+        request.messages.push({ role: 'user', content: results })
       }
-      // every result of one turn goes back in one message
-      request.messages.push({ role: 'user', content: await Promise.all(calls.map((call) => this.call(tools, call))) })
+      throw new CslugError('ai.max_steps', `${agent.constructor.name} did not finish in ${maxSteps} steps`)
+    } catch (error) {
+      runSpan?.recordError(error)
+      throw error
+    } finally {
+      runSpan?.end()
     }
-    throw new CslugError('ai.max_steps', `${agent.constructor.name} did not finish in ${maxSteps} steps`)
   }
 
   private async call(tools: RunnableTool[], call: Extract<Block, { type: 'tool_use' }>): Promise<Block> {
