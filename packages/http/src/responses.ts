@@ -103,6 +103,9 @@ export class Redirect implements Responsable {
     let location = referrer ?? this.target ?? '/'
     if (this.useIntended) location = ctx.session.pull<string>('url.intended') ?? location
     for (const [k, v] of Object.entries(this.flashes)) ctx.session.flash(k, v)
+    // a request from @cslug/vue's useForm / http (fetch): the URL to go to, which fetch could not read from a 3xx
+    if (ctx.request.header('x-cslug-request') === '1')
+      return new Response(null, { status: 204, headers: { 'x-cslug-redirect': location } })
     // 303 after non-GET so the browser follows with GET
     const status =
       this.status === 302 && ctx.request.method && !['GET', 'HEAD'].includes(ctx.request.method) ? 303 : this.status

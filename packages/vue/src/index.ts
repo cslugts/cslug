@@ -26,5 +26,6 @@ export {
   view,
 } from './render'
 export { type Serialized, serialize } from './serialize'
-export { csrfHeaders, type Form, useForm } from './shared/form'
+export { type Form, type FormCallbacks, type SubmitOptions, useForm } from './shared/form'
+export { csrfHeaders, type HttpResult, http, type Progress, type RequestOptions } from './shared/http'
 export { defineStore } from './shared/store'

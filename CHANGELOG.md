@@ -4,6 +4,18 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/vue
+- `useForm(initial, callbacks)`: Inertia-style callbacks (`onBefore`, `onStart`, `onProgress`, `onSuccess`,
+  `onError`, `onCancel`, `onFinish`, on the form and per call); `form.submit(event)` reads the `<form>`'s action and
+  method, so a plain form is enhanced after hydration; a server `redirect()` is followed; `cancel()`, `isDirty`,
+  `hasErrors`, `wasSuccessful`, `recentlySuccessful`, `progress`, `transform`, `setError`, `reset(...fields)`,
+  `defaults()`; `File` values are sent as multipart with upload progress.
+- `http.get/post/put/patch/delete`: requests that are not forms, with the same CSRF, JSON and error handling.
+
+### @cslug/http
+- `redirect()` answers `204` + `X-Cslug-Redirect` to requests from `useForm` / `http` (`X-Cslug-Request: 1`), so
+  one controller serves plain forms and islands.
+
 ## 0.6.1 (2026-11-27)
 
 TOTP two-factor authentication in `@cslug/auth`.

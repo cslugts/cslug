@@ -291,47 +291,83 @@ const props = defineProps<{ circuitId: string; seasons: string[] }>()
 const { t } = useT()
 
 // typed from the server validator: same field names on both sides
-const form = useForm<v.input<typeof StoreTripRequestValidator>>({
-  circuitId: props.circuitId, groupSize: 2, interests: [],
-})
-
-async function submit() {
-  const ok = await form.post(route('public.trip-requests.store'))    // JSON; 422 errors fill form.errors
-  if (ok) window.location.href = route('public.trip-requests.thanks', { ref: form.response.ref })
-}
+const form = useForm<v.input<typeof StoreTripRequestValidator>>(
+  { circuitId: props.circuitId, groupSize: 2, interests: [] },
+  { onSuccess: () => toast(t('trip.sent')), onError: () => focusFirstError() },
+)
 </script>
 
 <template>
-  <form class="trip-form" @submit.prevent="submit">
+  <!-- a real form: before hydration (or without JS) it posts and the page reloads; after, no reload -->
+  <form :action="route('public.trip-requests.store')" method="post" class="trip-form" @submit.prevent="form.submit">
     <label>{{ t('trip.group_size') }}
-      <input type="number" v-model.number="form.data.groupSize" min="1" max="12" />
+      <input type="number" name="groupSize" v-model.number="form.data.groupSize" min="1" max="12" />
     </label>
     <p v-if="form.errors.groupSize" class="error">{{ form.errors.groupSize }}</p>
+    <p v-if="form.error" class="error">{{ form.error }}</p>
     <button :disabled="form.processing">{{ t('trip.send') }}</button>
+    <span v-if="form.recentlySuccessful">{{ t('trip.sent') }}</span>
   </form>
 </template>
 ```
 
-Rendered on the server, this is a normal `<form>`. Give it `action` and `method` attributes and it even works
-before hydration.
+`form.submit` reads the form's `action`, `method` and `_method`. The controller needs nothing special: the same
+code serves the plain form and the island.
+
+```ts
+async store({ request }: HttpContext) {
+  const data = await request.validate(StoreTripRequestValidator)        // 422 JSON for the island, redirect back otherwise
+  const trip = await this.tripRequests.create(data)
+  return redirect().route('public.trip-requests.thanks', { ref: trip.ref }).with('success', t('trip.sent'))
+}
+```
+
+For a request from `useForm` (or `http`), `redirect()` answers `204` with `X-Cslug-Redirect` instead of a 3xx
+(which `fetch` cannot read), and the page goes there after the callbacks: flash messages show up on that page as
+usual. A controller that returns JSON instead (`return { ref: trip.ref }`) fills `form.response`, and the page stays.
 
 ### `useForm()` reference
 
 ```ts
-const form = useForm<Fields>(initial)        // initial may be {} for button-only actions (toggle, delete)
+const form = useForm<Fields, Response>(initial, callbacks?)   // initial may be {} for button-only actions
 
-form.data                                    // reactive fields
-form.errors                                  // { field: message } from a 422 response, cleared on next submit
-form.processing                              // true while a request is in flight
-form.error                                   // a message for failures that are not field errors (419, 403, 500, network)
-form.response                                // parsed JSON of the last successful response (typed with useForm<Fields, Response>)
-await form.post(url) / form.put(url) / form.patch(url) / form.delete(url)   // → Promise<boolean> (true on 2xx)
-form.reset(), form.clearErrors()
+form.data                        // reactive fields (File values are sent as multipart, with upload progress)
+form.errors / form.hasErrors     // { field: message } from a 422, cleared on the next submit
+form.error                       // a message for failures that are not field errors (419, 403, 500, network)
+form.processing / form.progress  // in flight / upload { loaded, total, percentage }
+form.isDirty                     // data differs from the defaults
+form.wasSuccessful / form.recentlySuccessful   // the last submit succeeded / for 2 seconds after it
+form.response                    // parsed JSON of the last successful response
+
+await form.submit(event)                         // @submit.prevent="form.submit": the <form>'s action and method
+await form.submit('post', url, options?)         // or form.get/post/put/patch/delete(url, options?) → true on 2xx
+form.cancel()                                    // abort (a newer submit also aborts the one in flight)
+form.transform((data) => ({ ...data, remember: !!data.remember }))
+form.setError('email', '…') / form.setError({ … }), form.clearErrors(...fields)
+form.reset(...fields), form.defaults(field?, value?)
 ```
 
-Requests are sent as JSON with `Accept: application/json` and the **CSRF token**: `<Assets>` renders
-`<meta name="csrf-token">` in the page, and `useForm()` reads it and sends `X-CSRF-Token`. Islands never need
-`useRequest()` for this. For a hand-written `fetch`, use `csrfHeaders()` from `@cslug/vue`.
+Callbacks, on `useForm(initial, callbacks)` and per call (`form.post(url, { onSuccess })`; the form's run first):
+`onBefore()` (return `false` to cancel), `onStart()`, `onProgress(progress)`, `onSuccess(response, { redirect })`,
+`onError(errors, { status, message })`, `onCancel()`, `onFinish()`. Per call, `followRedirects: false` leaves the
+page where it is and passes `redirect` to `onSuccess`.
+
+Requests are sent as JSON (multipart when the data holds a `File`: nested objects as `key[sub]`, lists as `key[]`;
+keep lists of objects out of requests with files) with `Accept: application/json` and the **CSRF token**: `<Assets>`
+renders `<meta name="csrf-token">` in the page, and `useForm()` reads it and sends `X-CSRF-Token`.
+
+### Requests that are not forms
+
+```ts
+import { http, route } from '@cslug/vue'
+
+const { ok, data } = await http.get<Todo[]>(route('todos.index'), { page: 2 })   // the query string
+const done = await http.post(route('todos.toggle', { todo: id }))                // { ok, status, data, errors, error, redirect }
+```
+
+`http.get/post/put/patch/delete(url, data?, options?)` use the same CSRF, JSON and error handling as `useForm`, and
+never throw for HTTP errors or network failures. For a hand-written `fetch`, `csrfHeaders()` gives the CSRF header.
+Islands call `web` routes (the session and CSRF are there); routes in `routes/api.ts` authenticate with API tokens.
 
 ## Shared state between islands
 
