@@ -13,4 +13,9 @@
 | `sse(textStream)` | A `Responsable` streaming server-sent events |
 | `AiOutputError` | The answer is not JSON or breaks the `output` schema (`text`, `issues`) |
 | `AiRefusalError` | The model declined (`category`) |
+| `mcp(options?)` | Decorator: expose a `Tool` over MCP (`public`, `guard`, `ability`) |
+| `mcp(server).tools(names?)` | An MCP server's tools for an agent's `tools` |
+| `McpConnection(name, config)` | A client: `request(method, params)`, `close()` |
+| `handleMcp(message, tools, caller)` | One MCP message → its reply (the server); `MCP_VERSIONS`, `discoverTools(app)`, `mcpTools()` |
+| `McpServeCommand` | `cslug mcp:serve` (stdio) |
 | `AiFake`, `installAiFake(app)` | `fakes: ['ai']`: `respond`, `assertRan`, `assertNotRan`, `ran`, `runs` |
