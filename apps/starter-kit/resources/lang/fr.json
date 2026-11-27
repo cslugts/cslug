@@ -5,6 +5,11 @@
     "name": "Nom", "email": "E-mail", "password": "Mot de passe", "password_confirmation": "Confirmer le mot de passe",
     "no_account": "Pas encore de compte ?",
     "failed": "Ces identifiants ne correspondent à aucun compte.",
+    "two_factor": "Authentification à deux facteurs",
+    "two_factor_intro": "Saisissez le code à 6 chiffres de votre application d'authentification.",
+    "code": "Code", "verify": "Vérifier",
+    "recovery_hint": "Téléphone perdu ? Saisissez plutôt l'un de vos codes de secours.",
+    "two_factor_failed": "Ce code n'est pas valide.",
     "password_mismatch": "Les mots de passe ne correspondent pas.",
     "welcome": "Bienvenue, {name} !"
   },

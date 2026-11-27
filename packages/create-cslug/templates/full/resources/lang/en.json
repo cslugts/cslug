@@ -12,6 +12,12 @@
     "password_confirmation": "Confirm password",
     "no_account": "No account yet?",
     "failed": "These credentials do not match our records.",
+    "two_factor": "Two-factor authentication",
+    "two_factor_intro": "Enter the 6-digit code from your authenticator app.",
+    "code": "Code",
+    "recovery_hint": "Lost your phone? Enter one of your recovery codes instead.",
+    "verify": "Verify",
+    "two_factor_failed": "This code is not valid.",
     "password_mismatch": "The passwords do not match.",
     "welcome": "Welcome, {name}!"
   },
