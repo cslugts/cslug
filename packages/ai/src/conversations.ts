@@ -1,8 +1,19 @@
-import { type Application, Clock, ConflictError, CslugError, currentContext, NotFoundError } from '@cslug/core'
+import {
+  type Application,
+  Clock,
+  ConflictError,
+  CslugError,
+  currentContext,
+  type Logger,
+  Logger as LoggerToken,
+  NotFoundError,
+  runInContext,
+} from '@cslug/core'
 import type { Agent, AgentOutput } from './agent'
 import { Ai, type AiResult, type RunRecord } from './ai'
 import { AiStream } from './ai-stream'
 import type { Message } from './model'
+import { CONVERSATION_KEY, remember } from './search-tools'
 
 type AgentClass<A extends Agent> = abstract new (...args: never[]) => A
 
@@ -89,9 +100,16 @@ export class Conversation<A extends Agent = Agent> {
   /** Continue the conversation; the new messages are stored with the run's id. */
   async send(input: string, options: { context?: Record<string, unknown> } = {}): Promise<AiResult<AgentOutput<A>>> {
     const history = await this.messages()
-    const result = await this.ai.result(this.agent, { input, history, ...options }, this.meta())
+    const result = await this.scoped(() => this.ai.result(this.agent, { input, history, ...options }, this.meta()))
     await this.storeTurn(history.length, result)
     return result as AiResult<AgentOutput<A>>
+  }
+
+  /** Run `fn` with this conversation in the ambient context (`recallTool()` reads its owner from there). */
+  private scoped<T>(fn: () => T): T {
+    const context = currentContext()
+    if (!context) return fn()
+    return runInContext({ ...context, [CONVERSATION_KEY]: { id: this.id, owner: this.owner } }, fn)
   }
 
   /** `send` as a stream: the text as it arrives; the messages are stored once it has been read. */
@@ -100,8 +118,14 @@ export class Conversation<A extends Agent = Agent> {
     return new AiStream(
       (async function* () {
         const history = await self.messages()
-        const inner = self.ai.stream(self.agent, { input, history, ...options }, self.meta())
-        for await (const text of inner) yield { type: 'text' as const, text }
+        const inner = self.scoped(() => self.ai.stream(self.agent, { input, history, ...options }, self.meta()))
+        const iterator = inner[Symbol.asyncIterator]()
+        for (
+          let next = await self.scoped(() => iterator.next());
+          !next.done;
+          next = await self.scoped(() => iterator.next())
+        )
+          yield { type: 'text' as const, text: next.value }
         const result = await inner.result
         await self.storeTurn(history.length, result)
         yield { type: 'result' as const, result }
@@ -115,9 +139,10 @@ export class Conversation<A extends Agent = Agent> {
     this.row = { ...this.row, ...changes } as ConversationRow
   }
 
-  /** Delete the conversation and its messages (its run records stay, without the link). */
-  delete(): Promise<void> {
-    return this.store.delete(this.id)
+  /** Delete the conversation and its messages (its run records stay, without the link; recall forgets it). */
+  async delete(): Promise<void> {
+    await this.store.delete(this.id)
+    await this.ai.recallIndex?.removeWhere({ conversationId: this.id })
   }
 
   private meta() {
@@ -133,7 +158,16 @@ export class Conversation<A extends Agent = Agent> {
         'Another message was added to this conversation during the run; reload it and send again',
       )
     this.row = { ...this.row, messageCount: result.messages.length }
+    const recall = this.ai.recallIndex
+    if (recall)
+      // best effort: a turn is stored even if recall (an embedding call) fails
+      await remember(recall, { id: this.id, owner: this.owner }, after, result.messages.slice(after)).catch((error) =>
+        this.log?.warn('ai.recall_failed', { conversation: this.id, error }),
+      )
   }
+
+  /** Set by `Conversations` (recall failures are logged). */
+  log?: Logger
 }
 
 const ownerKey = (owner: OwnerRef | null | undefined, type = 'user') =>
@@ -164,7 +198,9 @@ export class Conversations {
   }
 
   private open<A extends Agent>(row: ConversationRow, agent: AgentClass<A>): Conversation<A> {
-    return new Conversation(row, this.app.resolve(agent as never) as A, this.db, this.app.resolve(Ai))
+    const conversation = new Conversation(row, this.app.resolve(agent as never) as A, this.db, this.app.resolve(Ai))
+    conversation.log = this.app.resolve(LoggerToken)
+    return conversation
   }
 
   /** A new conversation with `agent`, owned by the signed-in user unless `owner` says otherwise. */

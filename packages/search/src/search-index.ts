@@ -186,6 +186,11 @@ export class SearchIndex<M extends Record<string, unknown> = Record<string, unkn
     return this.db.exec(sql`delete from ${TABLE} where index = ${this.name} and key in (${sql.join(keys)})`)
   }
 
+  /** Remove the documents whose metadata contains `filter` (`metadata @> filter`); returns how many. */
+  removeWhere(filter: Partial<M>): Promise<number> {
+    return this.db.exec(sql`delete from ${TABLE} where index = ${this.name} and metadata @> ${sql.json(filter)}`)
+  }
+
   /** Remove every document of the index. */
   clear(): Promise<number> {
     return this.db.exec(sql`delete from ${TABLE} where index = ${this.name}`)

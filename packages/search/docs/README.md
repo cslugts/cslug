@@ -77,7 +77,8 @@ Documents live in `cslug_search_documents` (one row per index and key: title, bo
 configuration, and a vector generated from the title (A) and the body (B) in that language). A document's
 `language` must be one of the index's `languages`; the query covers them all unless `language` narrows it.
 
-- `upsert(doc)` / `upsertMany(docs)` add or replace by key (one statement); `remove(...keys)`, `clear()`, `count()`.
+- `upsert(doc)` / `upsertMany(docs)` add or replace by key (one statement); `remove(...keys)`,
+  `removeWhere(metadataFilter)`, `clear()`, `count()`.
 - `search(term, { page = 1, perPage = 20, filter, language, highlight, typos })` → `{ data, meta }` like
   `paginate()`: ranked as `search()` ranks rows, `filter` matches metadata (`metadata @> filter`), `highlight`
   (`true` or `{ words, fragments }`) marks the title and body (HTML-escaped first), `typos` also matches similar
@@ -116,6 +117,7 @@ await helpIndex.search('louer une voiture', { mode: 'semantic', minSimilarity: 0
 - Table rows are searched by meaning through an index: upsert the rows' text into a semantic `searchIndex()` where
   they change (or from its `documents()` source).
 
-## Not yet
+## From agents
 
-The AI search tool (an agent searching an index) and conversation recall come in the last part of M10.
+`@cslug/ai` has `searchTool(index)` (an agent searches an index) and `recallTool()` (a user's earlier
+conversations, kept in an index with `ai.recall`).

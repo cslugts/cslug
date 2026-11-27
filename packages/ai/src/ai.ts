@@ -19,6 +19,7 @@ import {
   type Provider,
   type Usage,
 } from './model'
+import type { SearchableIndex } from './search-tools'
 
 /** `config/ai.ts`. */
 export type AiConfig = {
@@ -36,6 +37,11 @@ export type AiConfig = {
   runs?: boolean
   /** The embedding model `@cslug/search` uses for semantic indexes (bound as its `Embedder`). */
   embeddings?: EmbeddingsConfig
+  /**
+   * Keep stored conversations' text in a search index (`ai-conversations` by default; semantic when an embedder is
+   * bound), so `recallTool()` can search an owner's earlier conversations. Needs @cslug/search and @cslug/database.
+   */
+  recall?: boolean | { index?: string }
 }
 
 /** A finished or failed run, as `cslug_ai_runs` stores it. */
@@ -98,6 +104,8 @@ export class Ai {
   private budgetTracker?: Budget
   /** Stores each run (set by `AiProvider` with @cslug/database). */
   recorder?: (record: RunRecord) => Promise<void>
+  /** Where stored conversations' turns are kept for `recallTool()` (set by `AiProvider` with `ai.recall`). */
+  recallIndex?: SearchableIndex
 
   constructor(
     protected readonly app: Application,
@@ -227,7 +235,8 @@ export class Ai {
   ) {
     const { maxSteps = 8 } = agent
     const tools: RunnableTool[] = []
-    for (const t of agent.tools ?? []) tools.push(...(t instanceof McpTools ? await this.remote(t) : [resolve(t)]))
+    for (const t of agent.tools ?? [])
+      tools.push(...(t instanceof McpTools ? await this.remote(t) : typeof t === 'function' ? [resolve(t)] : [t]))
     const request: ModelRequest = {
       model: this.config.models?.[agent.model] ?? agent.model,
       system: await renderInstructions(agent.instructions, context),

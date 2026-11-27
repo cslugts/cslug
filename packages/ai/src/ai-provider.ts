@@ -10,9 +10,14 @@ import { Conversations } from './conversations'
 import { embedderFor, type TextEmbedder } from './embedders'
 import { setFakeEmbedder } from './fake'
 import { asMcpTools, discoverTools, handleMcp, type McpCaller, type McpReply, mcpTools } from './mcp'
+import type { SearchableIndex } from './search-tools'
 
 /** What this package uses of @cslug/search (an optional peer, imported only when installed). */
-type SearchModule = { Embedder: Token<TextEmbedder>; FakeEmbedder: new () => TextEmbedder }
+type SearchModule = {
+  Embedder: Token<TextEmbedder>
+  FakeEmbedder: new () => TextEmbedder
+  SearchIndex: new (name: string, options: { semantic?: boolean }) => SearchableIndex
+}
 
 /**
  * `cslug mcp:serve`: the `@mcp()` tools over stdio, for a local client (every exposed tool: the caller is whoever
@@ -104,6 +109,7 @@ export class AiProvider extends ServiceProvider {
 
   async boot() {
     await this.bindEmbedder()
+    await this.recallIndex()
     const store = await databaseStore(this.app)
     if (store) {
       this.app.resolve(Conversations).store = store
@@ -138,6 +144,20 @@ export class AiProvider extends ServiceProvider {
     this.app.instance(search.Embedder, embedder)
     // tests (`fakes: ['ai']`) swap it for a FakeEmbedder: no paid call from a test
     setFakeEmbedder(search.Embedder, () => new search.FakeEmbedder())
+  }
+
+  /** With `ai.recall`: the index conversations' turns are kept in (semantic when an embedder is bound). */
+  private async recallIndex() {
+    const recall = this.app.config<AiConfig | undefined>('ai')?.recall
+    if (!recall) return
+    const specifier = '@cslug/search'
+    const search = (await import(specifier).catch(() => undefined)) as SearchModule | undefined
+    if (!search) {
+      this.app.resolve(Logger).warn('ai.recall_unused', { reason: '@cslug/search is not installed' })
+      return
+    }
+    const name = (typeof recall === 'object' && recall.index) || 'ai-conversations'
+    this.app.resolve(Ai).recallIndex = new search.SearchIndex(name, { semantic: this.app.has(search.Embedder) })
   }
 
   /** One MCP message over HTTP: Origin checked (DNS rebinding), notifications 202, JSON responses. */

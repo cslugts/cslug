@@ -123,8 +123,11 @@ export type AgentSettings = {
   instructions?: Instructions
   /** Structured output: the answer is parsed and validated (`AiOutputError` otherwise). */
   output?: Schema<unknown>
-  /** Tool classes, and MCP servers' tools: `tools = [FindOperatorsTool, ...mcp('maps').tools(['route_duration'])]`. */
-  tools?: (ToolClass | McpTools)[]
+  /**
+   * Tool classes, MCP servers' tools and tool objects: `tools = [FindOperatorsTool,
+   * ...mcp('maps').tools(['route_duration']), searchTool(helpIndex), recallTool()]`.
+   */
+  tools?: (ToolClass | McpTools | RunnableTool)[]
   /** Model calls before giving up (each tool round is one); default 8. */
   maxSteps?: number
   /** A provider from config `ai.providers` (default: `ai.default`). */

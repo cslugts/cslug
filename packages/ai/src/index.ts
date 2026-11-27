@@ -78,4 +78,13 @@ export {
   type ToolSpec,
   type Usage,
 } from './model'
+export {
+  CONVERSATION_KEY,
+  type ConversationScope,
+  currentConversation,
+  recallTool,
+  type SearchableIndex,
+  type SearchToolOptions,
+  searchTool,
+} from './search-tools'
 export { sse } from './sse'

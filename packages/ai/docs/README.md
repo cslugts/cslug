@@ -90,6 +90,23 @@ Without `config/ai.ts`, the default provider is `anthropic`. `ai.extend(name, pr
 `ai.result(agent, { input, context })` is `run()` in detail: `{ value, raw, model, steps, usage, costUsd }` (`raw` is
 the answer before validation: the parsed JSON, or the text).
 
+## Search tools (with @cslug/search)
+
+`tools` accepts tool objects besides classes and MCP tools.
+
+- `searchTool(index, { name = 'search_<index>', description, perPage = 5, filter, words = 40 })`: input
+  `{ query, page? }`; result `{ results: [{ key, title, snippet, metadata }], total, page, lastPage }`, snippets as
+  plain text (marks removed, entities decoded). `index` is any `searchIndex()` (typed structurally as
+  `SearchableIndex`).
+- `ai.recall: true` (or `{ index }`): each stored turn's text messages (user and assistant, not tool rounds) are
+  upserted into a search index, `ai-conversations` by default, semantic when an `Embedder` is bound, keyed
+  `<conversation>:<position>` with `{ ownerType, ownerId, conversationId, role }` metadata. Unowned conversations
+  are not kept. A failure to index is logged (`ai.recall_failed`), never thrown into the turn. `chat.delete()`
+  removes its entries.
+- `recallTool({ perPage = 5 })`: `{ query }` → `{ results: [{ conversationId, role, text }] }`, searched within the
+  current conversation's owner (from the ambient context `Conversation.send` / `stream` set: `currentConversation()`),
+  the current conversation left out. Outside a stored conversation it answers that there is nothing to search.
+
 ## Embeddings (for @cslug/search)
 
 ```ts

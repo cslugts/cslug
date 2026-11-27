@@ -91,4 +91,5 @@ embeddings: { driver: 'voyage', model: 'voyage-3.5' },      // VOYAGE_API_KEY; o
 
 Tests with `fakes: ['ai']` use a `FakeEmbedder` instead, so they never call the provider.
 
-Coming next: a search tool for agents.
+An agent searches an index with `searchTool(helpIndex)`, and recalls a user's earlier conversations with
+`recallTool()`: see [guide 18](./18-ai.md#searching-from-an-agent).

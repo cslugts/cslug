@@ -12,7 +12,8 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - `SearchProvider` and its migration (`unaccent`, `pg_trgm`, the configurations); `cslug add search`.
 - `searchIndex(name, { languages, documents })`: documents that are not rows, in `cslug_search_documents`
   (`upsert`, `remove`, `clear`, ranked `search` with metadata filters, highlights and typos, as a page);
-  `cslug search:reindex [index]` refills indexes from their source and removes stale documents.
+  `cslug search:reindex [index]` refills indexes from their source and removes stale documents;
+  `removeWhere(metadataFilter)`.
 - Semantic and hybrid search: `searchIndex(name, { semantic: true })` embeds documents on upsert (only when their
   text or the model changed) with the app's `Embedder`, into `cslug_search_embeddings` (pgvector, opt in with
   `search.vectors: true`); `search(term, { mode: 'semantic' | 'hybrid', minSimilarity })`, hybrid by reciprocal
@@ -27,6 +28,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Query: `orderBySql(sql)` and typed computed values with `selectSql(name, sql)`.
 
 ### @cslug/ai
+- Search tools: `searchTool(index, options)` lets an agent search a `@cslug/search` index (plain-text snippets);
+  `ai.recall` keeps stored conversations' messages in an index and `recallTool()` searches the current owner's
+  earlier conversations only. Agents' `tools` accept tool objects.
 - Embeddings: `ai.embeddings` (`voyage` with `input_type` per purpose, or any `openai-compatible` `/embeddings`)
   binds @cslug/search's `Embedder`; calls are charged to the daily budget; `fakes: ['ai']` swaps it for a
   `FakeEmbedder`.
