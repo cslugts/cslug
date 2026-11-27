@@ -1,7 +1,9 @@
 import {
   type AuthUser,
+  Clock,
   currentContext,
   ForbiddenError,
+  parseDuration,
   RateLimiter,
   TooManyRequestsError,
   UnauthorizedError,
@@ -11,15 +13,19 @@ import { type AuthConfig, field, idOf, type UserSource } from './config'
 import type { Hash } from './hash'
 import { type Abilities, type AbilityArgs, checkPolicy, Gate, type PolicyClass } from './policy'
 import { type AccessToken, type Tokens, tokenCan } from './tokens'
+import type { TwoFactor } from './two-factor'
 
 /** The session key holding the signed-in user's id. */
 export const SESSION_KEY = 'auth.id'
+/** The session key of a password login waiting for its second factor: `{ id, until }` (ms). */
+export const PENDING_KEY = 'auth.two_factor'
 
 export type AuthDeps = {
   config: AuthConfig
   users: () => Promise<UserSource>
   hash: () => Hash
   tokens: () => Tokens
+  twoFactor: () => TwoFactor
 }
 
 /**
@@ -103,6 +109,62 @@ export class Auth {
     this.set(user, 'web')
   }
 
+  /**
+   * Sign a user in, unless they turned on two-factor authentication: then the login waits for
+   * `completeTwoFactor(code)` (the session remembers who, for `twoFactor.challengeLifetime`). `'two-factor'` tells the
+   * controller to ask for the code. Use it after any first factor (password, magic link).
+   */
+  async beginLogin(user: AuthUser): Promise<'logged-in' | 'two-factor'> {
+    if (!(await this.deps.twoFactor().enabled(user))) {
+      await this.login(user)
+      return 'logged-in'
+    }
+    if (!this.hasSession) throw new Error('auth.beginLogin() needs the session (web routes)')
+    const lifetime = parseDuration(this.deps.config.twoFactor?.challengeLifetime ?? '10m')
+    this.ctx.session.put(PENDING_KEY, { id: idOf(user), until: this.ctx.resolve(Clock).now().getTime() + lifetime })
+    return 'two-factor'
+  }
+
+  /** True while a password (or magic link) login waits for its code. */
+  get twoFactorPending(): boolean {
+    return this.pending() !== undefined
+  }
+
+  private pending(): string | undefined {
+    if (!this.hasSession) return undefined
+    const p = this.ctx.session.get<{ id: string; until: number }>(PENDING_KEY)
+    if (!p) return undefined
+    if (p.until < this.ctx.resolve(Clock).now().getTime()) {
+      this.ctx.session.forget(PENDING_KEY)
+      return undefined
+    }
+    return p.id
+  }
+
+  /**
+   * Finish a login that `beginLogin` (or `attempt`) left waiting: a code from the authenticator app or a recovery
+   * code. Throttled per user like `attempt` (429). True when the user is now signed in; false for a wrong code or
+   * when no login is waiting (or it expired).
+   */
+  async completeTwoFactor(code: string): Promise<boolean> {
+    const id = this.pending()
+    if (!id) return false
+    const limiter = this.ctx.resolve(RateLimiter)
+    const key = `two-factor:${id}`
+    const hit = await limiter.hit(key, this.deps.config.throttle ?? '5/min')
+    if (!hit.allowed) throw new TooManyRequestsError(hit.retryAfter)
+    if (!(await this.deps.twoFactor().verify(id, code))) {
+      this.ctx.log.warn('auth.two_factor_failed', { userId: id })
+      return false
+    }
+    await limiter.reset(key)
+    const user = await (await this.deps.users()).find(id)
+    this.ctx.session.forget(PENDING_KEY)
+    if (!user) return false
+    await this.login(user as AuthUser)
+    return true
+  }
+
   /** Sign out: the session is emptied and gets a new id. */
   async logout(): Promise<void> {
     if (this.hasSession) this.ctx.session.invalidate()
@@ -111,7 +173,8 @@ export class Auth {
 
   /**
    * Check an email and password and sign in. Throttled per email and IP (429 when exceeded), constant-time
-   * whether or not the email exists, rehashes on login when the hashing parameters changed. Null on failure.
+   * whether or not the email exists, rehashes on login when the hashing parameters changed. Null on failure. A user
+   * with two-factor authentication is not signed in yet: `twoFactorPending` is then true (see `beginLogin`).
    */
   async attempt(email: string, password: string): Promise<AuthUser | null> {
     const { config } = this.deps
@@ -135,7 +198,7 @@ export class Auth {
     if (config.passwords?.rehashOnLogin !== false && hash.needsRehash(stored)) {
       await users.update?.(field(user, 'id'), { [passwordField]: await hash.make(password) })
     }
-    await this.login(user as AuthUser)
+    await this.beginLogin(user as AuthUser)
     return user as AuthUser
   }
 

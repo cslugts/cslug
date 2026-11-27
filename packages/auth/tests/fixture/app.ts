@@ -18,6 +18,7 @@ import {
   MagicLinks,
   Policy,
   Tokens,
+  TwoFactor,
 } from '../../src'
 
 export const users = table('users', {
@@ -63,6 +64,7 @@ class AppAuthProvider extends ServiceProvider {
 
 const Login = v.object({ email: v.string(), password: v.string() })
 
+export { TwoFactor }
 export const routes = (r: Parameters<Router['load']>[0] extends (r: infer R) => void ? R : never) => {
   // what routes/web.ts and routes/api.ts get from HttpProvider + AuthProvider
   r.group({ middleware: [session(), csrf(), authenticate()] }, (r) => {
@@ -73,8 +75,26 @@ export const routes = (r: Parameters<Router['load']>[0] extends (r: infer R) => 
       const { email, password } = await request.validate(Login)
       if (!(await auth.attempt(email, password)))
         throw new AppError('auth.failed', 'These credentials do not match.', { status: 422 })
+      if (auth.twoFactorPending) return redirect().to('/two-factor')
       return redirect().intended('/dashboard')
     })
+    // the second step of a login with two-factor authentication
+    r.post('/two-factor', async ({ request, auth }: HttpContext) => {
+      const { code } = await request.validate(v.object({ code: v.string() }))
+      if (!(await auth.completeTwoFactor(code)))
+        throw new AppError('auth.two_factor_failed', 'This code is not valid.', { status: 422 })
+      return redirect().intended('/dashboard')
+    })
+    // enrolment, for a signed-in user
+    r.post('/settings/two-factor', async ({ auth }: HttpContext) =>
+      resolve(TwoFactor).enable(auth.user(), auth.user().email),
+    ).middleware(auth())
+    r.post('/settings/two-factor/confirm', async ({ request, auth }: HttpContext) => {
+      const { code } = await request.validate(v.object({ code: v.string() }))
+      const recoveryCodes = await resolve(TwoFactor).confirm(auth.user(), code)
+      if (!recoveryCodes) throw new AppError('auth.two_factor_failed', 'This code is not valid.', { status: 422 })
+      return { recoveryCodes }
+    }).middleware(auth())
     r.get('/dashboard', ({ auth }) => ({ hello: auth.user().name })).middleware(auth())
     r.get('/admin', () => 'admin').middleware(auth(), can('admin.access'))
     r.get('/bookings/:id', async ({ auth, params }) => {

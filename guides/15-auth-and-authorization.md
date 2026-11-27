@@ -57,18 +57,60 @@ export class MagicLinkController {
 
   async consume({ params, auth }: HttpContext) {
     const { user, redirectTo } = await this.links.consume(params.token)    // throws if expired or used
-    await auth.login(user)
+    if ((await auth.beginLogin(user)) === 'two-factor') return redirect().to(route('two-factor'))
     return redirect().to(redirectTo)
   }
 }
 ```
 
-**Staff and operators: password.** (TOTP for staff is planned, not in 0.1.)
+**Staff and operators: password**, with a second factor for those who turn it on.
 
 ```ts
 const user = await auth.attempt(email, password)    // throttled, constant-time, logs failures without the password
 if (!user) throw new ValidationError({ email: ['auth.failed'] })
+if (auth.twoFactorPending) return redirect().to(route('two-factor'))   // not signed in until the code
+return redirect().intended('/dashboard')
 ```
+
+## Two-factor authentication (TOTP)
+
+The codes of Google Authenticator, 1Password, Authy… (RFC 6238). `TwoFactor` is injectable:
+
+```ts
+@inject(TwoFactor)
+export class TwoFactorController {
+  constructor(private twoFactor: TwoFactor) {}
+
+  async enable({ auth }: HttpContext) {                                 // settings page, signed in
+    const { secret, uri } = await this.twoFactor.enable(auth.user(), auth.user().email)
+    return view('settings/two-factor', { secret, uri })                 // show `uri` as a QR code, or the secret
+  }
+
+  async confirm({ request, auth }: HttpContext) {
+    const { code } = await request.validate(v.object({ code: v.string() }))
+    const recoveryCodes = await this.twoFactor.confirm(auth.user(), code)   // on from now on
+    if (!recoveryCodes) throw new ValidationError({ code: ['auth.two_factor_failed'] })
+    return view('settings/recovery-codes', { recoveryCodes })           // shown once: ask the user to keep them
+  }
+
+  async challenge({ request, auth }: HttpContext) {                     // POST /two-factor, after the password
+    const { code } = await request.validate(v.object({ code: v.string() }))
+    if (!(await auth.completeTwoFactor(code))) throw new ValidationError({ code: ['auth.two_factor_failed'] })
+    return redirect().intended('/dashboard')
+  }
+}
+```
+
+- After the password (or a magic link, with `auth.beginLogin(user)`), a user with 2FA is **not signed in**: the
+  session remembers who for 10 minutes (`twoFactor.challengeLifetime`), and `auth.completeTwoFactor(code)` signs
+  them in with a new session id. It accepts a code from the app or one of the **recovery codes**.
+- A code is accepted **once** (the last time step used is stored), within ±30 s of clock drift
+  (`twoFactor.window`); a recovery code once. Failed codes are throttled like passwords (`auth.throttle`).
+- The secret is stored encrypted with `APP_KEY` in `cslug_two_factor`; recovery codes as hashes.
+- `twoFactor.enabled(user)`, `regenerateRecoveryCodes(user)`, `remainingRecoveryCodes(user)`, `disable(user)`.
+  Requiring it for staff is a gate: `gate.define('staff.secure', (u) => …)` with `twoFactor.enabled(u)`.
+- cslug gives the `otpauth://` URI, not a QR image: render it in the browser with a QR component, or show the
+  secret to type in.
 
 **API tokens** for operator integrations:
 
