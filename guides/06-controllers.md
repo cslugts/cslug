@@ -53,7 +53,7 @@ async show({ request, params, auth, session, response, locale, signal, log }: Ht
 | `response` | Cookies and headers on the outgoing response (`response.cookie(...)`, `response.header(...)`) |
 | `locale` | Current locale (`'fr' \| 'en' \| 'it'`) |
 | `signal` | `AbortSignal` — aborted on client disconnect or `timeout()` |
-| `log` | Logger bound to this request ID and user |
+| `log` | The logger for this request: its lines carry the request id, the user and the trace |
 
 ## What an action may return
 

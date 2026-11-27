@@ -10,8 +10,9 @@ import mail from './mail'
 import session from './session'
 import auth from './auth'
 import i18n from './i18n'
+import log from './log'
 
-export const configs = { app, http, database, redis, cache, queue, mail, session, auth, i18n }
+export const configs = { app, http, database, redis, cache, queue, mail, session, auth, i18n, log }
 
 declare module '@cslug/core' {
   /** Types `config('...')`. */

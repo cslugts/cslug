@@ -1,4 +1,4 @@
-import { type Application, CslugError, resolve, runInContext } from '@cslug/core'
+import { type Application, CslugError, currentContext, resolve, runInContext } from '@cslug/core'
 import { PendingDispatch } from './dispatch'
 import {
   findJob,
@@ -27,6 +27,21 @@ export type Envelope = {
   chain?: JobSpec[]
   /** The batch this job belongs to (`Queue.batch`). */
   batch?: string
+  /**
+   * Where the job comes from: the request (or schedule, command) that started the work, kept through jobs that
+   * dispatch jobs, and its trace context. Job log lines carry it as `originRequestId`.
+   */
+  origin?: { requestId?: string; traceparent?: string }
+}
+
+/** The origin of work dispatched now: the first request of the chain, and the current trace. */
+function originOf(): Envelope['origin'] {
+  const ctx = currentContext()
+  const requestId = (ctx?.originRequestId ?? ctx?.requestId) as string | undefined
+  const traceparent = ctx?.traceparent as string | undefined
+  return requestId || traceparent
+    ? { ...(requestId ? { requestId } : {}), ...(traceparent ? { traceparent } : {}) }
+    : undefined
 }
 
 /** A job and its payload, not dispatched yet: `SendCheckinJob.with({ bookingId })`. */
@@ -137,8 +152,17 @@ export function envelopeOf(job: JobClass, payload: unknown, queue?: string): Env
     attempt: 0,
     tries: settingsOf(job).tries,
     dispatchedAt: Date.now(),
+    ...((origin) => (origin ? { origin } : {}))(originOf()),
   }
 }
+
+/** The ambient context of a job run: its ids and where the work came from. */
+const jobContext = (envelope: Envelope) => ({
+  jobId: envelope.id,
+  requestId: `job:${envelope.id}`,
+  ...(envelope.origin?.requestId ? { originRequestId: envelope.origin.requestId } : {}),
+  ...(envelope.origin?.traceparent ? { traceparent: envelope.origin.traceparent } : {}),
+})
 
 export class JobNotFoundError extends CslugError {
   constructor(name: string) {
@@ -165,7 +189,7 @@ export async function runJob(app: Application, envelope: Envelope, attempt: numb
   if (!cls) throw new JobNotFoundError(envelope.name)
   const timeout = settingsOf(cls).timeoutMs
   const scope = app.createScope()
-  const context = { app, scope, jobId: envelope.id, attempt, requestId: `job:${envelope.id}` }
+  const context = { app, scope, attempt, ...jobContext(envelope) }
   let timer: Timer | undefined
   try {
     const run = runInContext(context, async () => {
@@ -188,7 +212,7 @@ export async function runFailedHook(app: Application, envelope: Envelope, error:
   if (!cls || typeof (cls.prototype as JobHooks).failed !== 'function') return undefined
   const scope = app.createScope()
   try {
-    await runInContext({ app, scope, jobId: envelope.id, requestId: `job:${envelope.id}` }, async () => {
+    await runInContext({ app, scope, ...jobContext(envelope) }, async () => {
       await (scope.build(cls as never) as JobHooks).failed?.(envelope.payload, error)
     })
     return undefined
