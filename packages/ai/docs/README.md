@@ -31,6 +31,37 @@ driver and `promptCaching` on, a request with more than one message also sets au
 `cache_control`), after the system prompt's breakpoint, so each turn and tool round reads the earlier ones from the
 cache.
 
+## Stored conversations and run records (with @cslug/database)
+
+`AiProvider` registers the `cslug_ai` migration when `Database` is bound:
+
+| Table | Holds |
+|---|---|
+| `cslug_ai_conversations` | `id` (UUIDv7), `agent` (class name), `owner_type` + `owner_id`, `title`, `metadata` (jsonb), `message_count`, timestamps |
+| `cslug_ai_messages` | `conversation_id` + `position` (key), `role`, `content` (the blocks, jsonb), `run_id` |
+| `cslug_ai_runs` | one row per run: agent, model, `conversation_id`, `user_id` (the signed-in user), status (`completed` / `failed`), steps, token counts, `cost_usd` (estimate), error, `started_at` / `finished_at` |
+
+`Conversations` (injectable):
+
+- `start(Agent, { owner?, ownerType?, title?, metadata? })`: the owner is the signed-in user (the ambient context's
+  `userId`, set by @cslug/auth) unless given; `owner: null` for none; `ownerType` defaults to `user`.
+- `find(Agent, id, { owner?, ownerType? })`: the conversation if it was started with that agent and its owner is the
+  signed-in user (or the owner given); an unowned one is open to anyone. Anything else, a malformed id included,
+  is `NotFoundError`.
+- `list({ owner?, ownerType?, agent?, limit = 50 })`: rows, most recent first (`updatedAt`); empty without an owner.
+
+`Conversation`: `id`, `agent`, `title`, `metadata`, `owner`, `createdAt`; `send(input, { context })` →
+`AiResult` (the stored history, then the input; the new messages are appended with the run's id); `stream(input)` →
+`AiStream` (stored once read); `messages()`; `update({ title, metadata })`; `delete()` (messages too; run records
+keep their row, unlinked). A turn is stored only if no other was stored since it read the history, else
+`ConflictError` (`ai.conversation_changed`). Turns in a conversation ask for server-side compaction
+(`compact_20260112`, Anthropic models that support it); `compact = false` on the agent turns it off, `compact = true`
+turns it on for plain runs. Timestamps come from `Clock`.
+
+`Ai` records every run (`ai.result`, `run`, `stream`; in a conversation or not) through `ai.recorder`;
+`ai.runs: false` turns it off, and a failure to record is logged (`ai.run_not_recorded`), never thrown. Without
+@cslug/database nothing is recorded, and `Conversations` throws `ai.no_database`.
+
 ## Providers
 
 | Driver | Config | |

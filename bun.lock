@@ -38,16 +38,19 @@
       "name": "@cslug/ai",
       "version": "0.4.1",
       "devDependencies": {
+        "@cslug/database": "workspace:*",
         "@cslug/http": "workspace:*",
         "@cslug/testing": "workspace:*",
       },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
+        "@cslug/database": "workspace:*",
         "@cslug/http": "workspace:*",
         "@cslug/queue": "workspace:*",
         "@cslug/validation": "workspace:*",
       },
       "optionalPeers": [
+        "@cslug/database",
         "@cslug/http",
         "@cslug/queue",
       ],

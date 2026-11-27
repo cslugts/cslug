@@ -23,6 +23,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Conversations: `run` / `result` / `stream` take `history` (a previous result's `messages`) and results return
   `messages`, tool rounds and provider blocks included. `stream()` returns an `AiStream` whose `result` settles
   once read. The Anthropic driver caches the conversation automatically after the system prompt.
+- Stored conversations with @cslug/database: `Conversations` (`start`, owner-checked `find`, `list`) and
+  `Conversation` (`send`, `stream`, `messages`, `update`, `delete`), with concurrent turns refused (409) and
+  server-side compaction on the models that have it (`compact` agent setting). Every run is recorded in
+  `cslug_ai_runs` (tokens, estimated cost, status; `ai.runs: false` to turn off). `cslug add ai` mentions
+  `cslug migrate`.
 
 ## 0.4.1 (2026-11-27)
 

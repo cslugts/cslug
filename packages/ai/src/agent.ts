@@ -81,6 +81,11 @@ export type AgentSettings = {
   provider?: string
   effort?: Effort
   maxTokens?: number
+  /**
+   * Let the provider summarise a long history server-side (Anthropic compaction, at about 150K input tokens, on the
+   * models that support it). On by default in a `Conversation`; `false` turns it off there.
+   */
+  compact?: boolean
 }
 
 /** What `run()` returns: the `output` schema's type, or the text. */

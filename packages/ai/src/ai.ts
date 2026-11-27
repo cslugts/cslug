@@ -1,4 +1,4 @@
-import { type Application, Cache, Clock, CslugError, type Logger, resolve } from '@cslug/core'
+import { type Application, Cache, Clock, CslugError, currentContext, type Logger, resolve } from '@cslug/core'
 import type { AgentSettings, RunnableTool, RunOptions } from './agent'
 import { AiStream } from './ai-stream'
 import { Budget, type BudgetConfig, costOf, type ModelPrice } from './budget'
@@ -31,10 +31,38 @@ export type AiConfig = {
   budget?: BudgetConfig
   /** USD per million tokens for models the built-in table lacks (or to override it). */
   prices?: Record<string, ModelPrice>
+  /** With @cslug/database, a row per run in `cslug_ai_runs` (default true). */
+  runs?: boolean
+}
+
+/** A finished or failed run, as `cslug_ai_runs` stores it. */
+export type RunRecord = {
+  id: string
+  agent: string
+  model: string
+  conversationId?: string
+  /** The signed-in user (ambient context), if any. */
+  userId?: string
+  status: 'completed' | 'failed'
+  steps: number
+  usage: Required<Usage>
+  costUsd: number | undefined
+  error?: string
+  startedAt: Date
+  finishedAt: Date
+}
+
+/** How a run is called besides its options (set by `Conversation`). */
+export type RunMeta = {
+  conversationId?: string
+  /** Ask the provider to compact a long history server-side (Anthropic: `compact_20260112`). */
+  compact?: boolean
 }
 
 /** A finished run in detail: the value `run()` returns, the model's raw answer (JSON or text), what it cost. */
 export type AiResult<V = unknown> = {
+  /** UUIDv7, the `cslug_ai_runs` row when runs are recorded. */
+  runId: string
   value: V
   /** The answer before validation: parsed JSON with an `output` schema, else the text. Fixtures store this. */
   raw: unknown
@@ -57,6 +85,7 @@ export class AiOutputError extends CslugError {
   }
 }
 
+const NO_USAGE: Required<Usage> = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
 const textOf = (blocks: Block[]) => blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('')
 
 /** Runs agents: renders instructions, calls the provider, runs tools until the model answers, validates the output. */
@@ -64,6 +93,8 @@ export class Ai {
   private readonly providers = new Map<string, Provider>()
   private readonly connections = new Map<string, McpConnection>()
   private budgetTracker?: Budget
+  /** Stores each run (set by `AiProvider` with @cslug/database). */
+  recorder?: (record: RunRecord) => Promise<void>
 
   constructor(
     protected readonly app: Application,
@@ -139,17 +170,58 @@ export class Ai {
   }
 
   /** Like `run()`, with the raw answer, the model, the token usage and the estimated cost (`ai:record`, `ai:eval`). */
-  async result(agent: AgentSettings, options: RunOptions): Promise<AiResult> {
-    for await (const event of this.steps(agent, options, false)) if (event.type === 'result') return event.result
+  async result(agent: AgentSettings, options: RunOptions, meta: RunMeta = {}): Promise<AiResult> {
+    for await (const event of this.recorded(agent, options, false, meta))
+      if (event.type === 'result') return event.result
     throw new CslugError('ai.no_result', 'The agent finished without a result')
   }
 
   /** The text as it arrives; `.result` settles with the finished run once the text has been read. */
-  stream(agent: AgentSettings, options: RunOptions): AiStream {
-    return new AiStream(this.steps(agent, options, true))
+  stream(agent: AgentSettings, options: RunOptions, meta: RunMeta = {}): AiStream {
+    return new AiStream(this.recorded(agent, options, true, meta))
   }
 
-  private async *steps(agent: AgentSettings, { input, context = {}, history = [] }: RunOptions, streaming: boolean) {
+  /** The steps, with the run recorded at the end (completed or failed); a recording failure is only logged. */
+  private async *recorded(agent: AgentSettings, options: RunOptions, streaming: boolean, meta: RunMeta) {
+    const id = Bun.randomUUIDv7()
+    const clock = this.app.resolve(Clock)
+    const startedAt = clock.now()
+    const record = async (rest: Pick<RunRecord, 'status' | 'steps' | 'usage' | 'costUsd' | 'error'>) => {
+      if (!this.recorder) return
+      const userId = currentContext()?.userId
+      await this.recorder({
+        id,
+        agent: agent.constructor.name,
+        model: this.config.models?.[agent.model] ?? agent.model,
+        ...(meta.conversationId ? { conversationId: meta.conversationId } : {}),
+        ...(userId !== undefined ? { userId: String(userId) } : {}),
+        startedAt,
+        finishedAt: clock.now(),
+        ...rest,
+      }).catch((error) => this.log.warn('ai.run_not_recorded', { id, error }))
+    }
+    try {
+      for await (const event of this.steps(agent, options, streaming, meta, id)) {
+        if (event.type === 'result') {
+          const { steps, usage, costUsd } = event.result
+          await record({ status: 'completed', steps, usage: { ...NO_USAGE, ...usage }, costUsd })
+        }
+        yield event
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      await record({ status: 'failed', steps: 0, usage: NO_USAGE, costUsd: undefined, error: message })
+      throw error
+    }
+  }
+
+  private async *steps(
+    agent: AgentSettings,
+    { input, context = {}, history = [] }: RunOptions,
+    streaming: boolean,
+    meta: RunMeta,
+    runId: string,
+  ) {
     const { instructions = '', maxSteps = 8 } = agent
     const tools: RunnableTool[] = []
     for (const t of agent.tools ?? []) tools.push(...(t instanceof McpTools ? await this.remote(t) : [resolve(t)]))
@@ -165,6 +237,7 @@ export class Ai {
       ...(agent.output ? { output: modelSchema(agent.output.toJSONSchema()) } : {}),
       ...(agent.effort ? { effort: agent.effort } : {}),
       ...(agent.maxTokens ? { maxTokens: agent.maxTokens } : {}),
+      ...((agent.compact ?? meta.compact) ? { compact: true } : {}),
     }
     const provider = this.provider(agent.provider)
     const usage: Required<Usage> = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
@@ -189,6 +262,7 @@ export class Ai {
         const text = textOf(response.content)
         const raw = agent.output ? this.json(text) : text
         const result: AiResult = {
+          runId,
           raw,
           value: this.validate(agent, raw, text),
           model: request.model,

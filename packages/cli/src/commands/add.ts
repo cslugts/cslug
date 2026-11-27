@@ -41,7 +41,12 @@ export const ADDITIONS: Record<string, Addition> = {
     config: 'webhooks',
     next: 'cslug migrate (creates cslug_webhook_inbox)',
   },
-  ai: { packages: ['@cslug/ai'], providers: { from: '@cslug/ai', names: ['AiProvider'] }, config: 'ai' },
+  ai: {
+    packages: ['@cslug/ai'],
+    providers: { from: '@cslug/ai', names: ['AiProvider'] },
+    config: 'ai',
+    next: 'with @cslug/database: cslug migrate (creates cslug_ai_conversations, cslug_ai_messages and cslug_ai_runs)',
+  },
   tailwind: {
     packages: ['tailwindcss@^4.0.0', 'bun-plugin-tailwind'],
     dev: true,

@@ -19,6 +19,8 @@ export type ModelRequest = {
   output?: Record<string, unknown>
   maxTokens?: number
   effort?: Effort
+  /** Compact a long history server-side where the provider can (Anthropic `compact_20260112`). */
+  compact?: boolean
 }
 /** Tokens a model call used; cache reads and writes are counted apart from `inputTokens` (Anthropic). */
 export type Usage = { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }

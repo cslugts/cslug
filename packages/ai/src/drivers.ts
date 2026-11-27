@@ -29,6 +29,22 @@ export type AnthropicConfig = {
 const API_VERSION = '2026-10-21'
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01'
 const WITH_FALLBACKS = ['claude-fable-5-2', 'claude-fable-5-1', 'claude-opus-5-5', 'claude-opus-5', 'claude-sonnet-5-5']
+const COMPACTION_BETA = 'compact-2026-01-12'
+/** Models with server-side compaction (`context_management` edit `compact_20260112`). */
+const WITH_COMPACTION = [
+  'claude-fable-5-2',
+  'claude-fable-5-1',
+  'claude-fable-5',
+  'claude-opus-5-5',
+  'claude-opus-5',
+  'claude-opus-4-8',
+  'claude-opus-4-7',
+  'claude-opus-4-6',
+  'claude-sonnet-5-5',
+  'claude-sonnet-5',
+  'claude-sonnet-4-6',
+  'claude-haiku-5-5',
+]
 
 const toAnthropic = (b: Block): unknown =>
   b.type === 'raw'
@@ -51,6 +67,8 @@ export class AnthropicProvider implements Provider {
     const key = this.config.apiKey ?? process.env.ANTHROPIC_API_KEY
     if (!key) throw new CslugError('ai.no_key', 'Set ANTHROPIC_API_KEY (or providers.<name>.apiKey in config/ai.ts)')
     const fallbacks = this.config.fallbacks !== false && WITH_FALLBACKS.includes(r.model)
+    const compact = !!r.compact && WITH_COMPACTION.includes(r.model)
+    const betas = [...(fallbacks ? [FALLBACK_BETA] : []), ...(compact ? [COMPACTION_BETA] : [])]
     const format = r.output ? { format: { type: 'json_schema', schema: r.output } } : {}
     const caching = this.config.promptCaching !== false
     const body: Json = {
@@ -73,13 +91,14 @@ export class AnthropicProvider implements Provider {
         : {}),
       ...(r.output || r.effort ? { output_config: { ...format, ...(r.effort ? { effort: r.effort } : {}) } } : {}),
       ...(caching && r.messages.length > 1 ? { cache_control: { type: 'ephemeral' } } : {}),
+      ...(compact ? { context_management: { edits: [{ type: 'compact_20260112' }] } } : {}),
       ...(fallbacks ? { fallbacks: 'default' } : {}),
       ...(stream ? { stream: true } : {}),
     }
     const headers = {
       'x-api-key': key,
       'anthropic-version': API_VERSION,
-      ...(fallbacks ? { 'anthropic-beta': FALLBACK_BETA } : {}),
+      ...(betas.length ? { 'anthropic-beta': betas.join(',') } : {}),
     }
     return [`${this.config.baseUrl ?? 'https://api.anthropic.com'}/v1/messages`, headers, body]
   }
