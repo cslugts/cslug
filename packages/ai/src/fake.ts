@@ -149,8 +149,17 @@ export class AiFake extends Ai {
   }
 }
 
+let embedderFake: { token: unknown; create: () => unknown } | undefined
+
+/** Set by `AiProvider` when it binds @cslug/search's `Embedder`: what the AI fake swaps it for. */
+export function setFakeEmbedder(token: unknown, create: () => unknown): void {
+  embedderFake = { token, create }
+}
+
+/** `fakes: ['ai']`: `Ai` is an `AiFake`, and a configured `Embedder` a `FakeEmbedder` (no provider is called). */
 export function installAiFake(app: Application): AiFake {
   const fake = new AiFake(app)
   app.swap(Ai, fake)
+  if (embedderFake && app.has(embedderFake.token as never)) app.swap(embedderFake.token as never, embedderFake.create())
   return fake
 }

@@ -83,7 +83,7 @@ export const graph: Record<string, PackageSpec> = {
   ai: {
     description: 'Agents, tools, structured output, conversations and MCP.',
     requires: ['core', 'validation'],
-    optional: ['queue', 'http', 'database'],
+    optional: ['queue', 'http', 'database', 'search'],
   },
   cli: {
     description: 'The cslug command: generators, dev server, start supervisor, REPL, dev MCP server.',

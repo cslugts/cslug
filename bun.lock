@@ -40,6 +40,7 @@
       "devDependencies": {
         "@cslug/database": "workspace:*",
         "@cslug/http": "workspace:*",
+        "@cslug/search": "workspace:*",
         "@cslug/testing": "workspace:*",
       },
       "peerDependencies": {
@@ -47,12 +48,14 @@
         "@cslug/database": "workspace:*",
         "@cslug/http": "workspace:*",
         "@cslug/queue": "workspace:*",
+        "@cslug/search": "workspace:*",
         "@cslug/validation": "workspace:*",
       },
       "optionalPeers": [
         "@cslug/database",
         "@cslug/http",
         "@cslug/queue",
+        "@cslug/search",
       ],
     },
     "packages/auth": {

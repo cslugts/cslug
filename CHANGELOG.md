@@ -27,6 +27,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Query: `orderBySql(sql)` and typed computed values with `selectSql(name, sql)`.
 
 ### @cslug/ai
+- Embeddings: `ai.embeddings` (`voyage` with `input_type` per purpose, or any `openai-compatible` `/embeddings`)
+  binds @cslug/search's `Embedder`; calls are charged to the daily budget; `fakes: ['ai']` swaps it for a
+  `FakeEmbedder`.
 - Prompts: `{{ trip.circuit.name }}` reads nested values, objects and lists are written as JSON, and
   `{{ language | English }}` gives a default; `ai:prompts` marks variables with a default (`language?`).
 - `instructions` can be a function of the run's context (sync or async) returning a string or a `prompt(...)`.

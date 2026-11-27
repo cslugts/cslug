@@ -8,6 +8,7 @@ import {
   type OpenAiCompatibleConfig,
   OpenAiCompatibleProvider,
 } from './drivers'
+import type { EmbeddingsConfig } from './embedders'
 import { McpConnection, type McpServerConfig, McpTools } from './mcp-client'
 import {
   type Block,
@@ -33,6 +34,8 @@ export type AiConfig = {
   prices?: Record<string, ModelPrice>
   /** With @cslug/database, a row per run in `cslug_ai_runs` (default true). */
   runs?: boolean
+  /** The embedding model `@cslug/search` uses for semantic indexes (bound as its `Embedder`). */
+  embeddings?: EmbeddingsConfig
 }
 
 /** A finished or failed run, as `cslug_ai_runs` stores it. */
