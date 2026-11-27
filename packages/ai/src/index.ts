@@ -16,6 +16,7 @@ export {
 export { Ai, type AiConfig, AiOutputError, type AiResult } from './ai'
 export { AiEvalCommand, jsonDiff } from './ai-eval-command'
 export { AiPromptsCommand, AiProvider, AiRecordCommand, McpServeCommand } from './ai-provider'
+export { AiStream } from './ai-stream'
 export {
   AiBudgetAlert,
   AiBudgetError,

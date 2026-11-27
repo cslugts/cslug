@@ -1,5 +1,6 @@
 import { type Application, Cache, Clock, CslugError, type Logger, resolve } from '@cslug/core'
 import type { AgentSettings, RunnableTool, RunOptions } from './agent'
+import { AiStream } from './ai-stream'
 import { Budget, type BudgetConfig, costOf, type ModelPrice } from './budget'
 import {
   type AnthropicConfig,
@@ -8,7 +9,15 @@ import {
   OpenAiCompatibleProvider,
 } from './drivers'
 import { McpConnection, type McpServerConfig, McpTools } from './mcp-client'
-import { type Block, type ModelRequest, type ModelResponse, modelSchema, type Provider, type Usage } from './model'
+import {
+  type Block,
+  type Message,
+  type ModelRequest,
+  type ModelResponse,
+  modelSchema,
+  type Provider,
+  type Usage,
+} from './model'
 
 /** `config/ai.ts`. */
 export type AiConfig = {
@@ -25,8 +34,8 @@ export type AiConfig = {
 }
 
 /** A finished run in detail: the value `run()` returns, the model's raw answer (JSON or text), what it cost. */
-export type AiResult = {
-  value: unknown
+export type AiResult<V = unknown> = {
+  value: V
   /** The answer before validation: parsed JSON with an `output` schema, else the text. Fixtures store this. */
   raw: unknown
   model: string
@@ -34,6 +43,8 @@ export type AiResult = {
   usage: Usage
   /** Estimated from the model's price; `undefined` when it has none. */
   costUsd: number | undefined
+  /** The whole conversation: the `history`, this input, the tool rounds and the answer. Pass it as `history` next. */
+  messages: Message[]
 }
 
 /** The model's final answer did not match the agent's `output` schema (or was not JSON). */
@@ -133,18 +144,19 @@ export class Ai {
     throw new CslugError('ai.no_result', 'The agent finished without a result')
   }
 
-  async *stream(agent: AgentSettings, options: RunOptions): AsyncIterable<string> {
-    for await (const event of this.steps(agent, options, true)) if (event.type === 'text') yield event.text
+  /** The text as it arrives; `.result` settles with the finished run once the text has been read. */
+  stream(agent: AgentSettings, options: RunOptions): AiStream {
+    return new AiStream(this.steps(agent, options, true))
   }
 
-  private async *steps(agent: AgentSettings, { input, context = {} }: RunOptions, streaming: boolean) {
+  private async *steps(agent: AgentSettings, { input, context = {}, history = [] }: RunOptions, streaming: boolean) {
     const { instructions = '', maxSteps = 8 } = agent
     const tools: RunnableTool[] = []
     for (const t of agent.tools ?? []) tools.push(...(t instanceof McpTools ? await this.remote(t) : [resolve(t)]))
     const request: ModelRequest = {
       model: this.config.models?.[agent.model] ?? agent.model,
       system: typeof instructions === 'string' ? instructions : instructions.render(context),
-      messages: [{ role: 'user', content: [{ type: 'text', text: input }] }],
+      messages: [...history, { role: 'user', content: [{ type: 'text', text: input }] }],
       tools: tools.map((t) => ({
         name: t.name,
         description: t.description,
@@ -183,6 +195,7 @@ export class Ai {
           steps: step,
           usage,
           costUsd,
+          messages: [...request.messages],
         }
         yield { type: 'result' as const, result }
         return

@@ -2,9 +2,11 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { type Class, CslugError, currentApp, resolve } from '@cslug/core'
 import type { Schema } from '@cslug/validation'
+import type { AiResult } from './ai'
 import { Ai } from './ai'
+import type { AiStream } from './ai-stream'
 import type { McpTools } from './mcp-client'
-import type { Effort } from './model'
+import type { Effort, Message } from './model'
 
 /** A prompt file, `resources/prompts/<name>.md`, with `{{ variables }}` filled from the run's `context`. */
 export class Prompt {
@@ -51,7 +53,15 @@ export type RunnableTool = {
 }
 export type ToolClass = Class<Tool>
 
-export type RunOptions = { input: string; context?: Record<string, unknown> }
+export type RunOptions = {
+  input: string
+  context?: Record<string, unknown>
+  /**
+   * The conversation so far: a previous result's `messages`, unchanged. The run continues it (append-only, so the
+   * provider's prompt cache keeps the earlier turns).
+   */
+  history?: Message[]
+}
 
 /**
  * What an agent may declare besides `model`. These are deliberately not declared on `Agent` (as for jobs), so apps
@@ -78,7 +88,8 @@ export type AgentOutput<A> = A extends { output: Schema<infer O> } ? O : string
 
 /**
  * An AI task as a class: a model, instructions, optional tools and an optional `output` schema
- * ({@link AgentSettings}). `run()` returns the result; `stream()` yields the text as it arrives.
+ * ({@link AgentSettings}). `run()` returns the result; `stream()` yields the text as it arrives. Pass a previous
+ * result's `messages` as `history` to continue a conversation.
  */
 export abstract class Agent {
   abstract model: string
@@ -87,7 +98,13 @@ export abstract class Agent {
     return resolve(Ai).run(this, options) as Promise<AgentOutput<this>>
   }
 
-  stream(options: RunOptions): AsyncIterable<string> {
-    return resolve(Ai).stream(this, options)
+  /** The run in detail: the value, the raw answer, `messages` (the conversation to pass as `history` next turn), usage, cost. */
+  result(options: RunOptions): Promise<AiResult<AgentOutput<this>>> {
+    return resolve(Ai).result(this, options) as Promise<AiResult<AgentOutput<this>>>
+  }
+
+  /** The text as it arrives; `.result` gives the finished run once it has been read. */
+  stream(options: RunOptions): AiStream<AgentOutput<this>> {
+    return resolve(Ai).stream(this, options) as AiStream<AgentOutput<this>>
   }
 }

@@ -17,7 +17,10 @@ export type AnthropicConfig = {
   /** Default: `ANTHROPIC_API_KEY`. */
   apiKey?: string
   baseUrl?: string
-  /** Cache the system prompt (`cache_control`), on by default. */
+  /**
+   * Prompt caching, on by default: a breakpoint on the system prompt, and automatic caching (top-level
+   * `cache_control`) once there is more than one message, so each turn or tool round reads the earlier ones.
+   */
   promptCaching?: boolean
   /** Server-side refusal fallbacks (`fallbacks: "default"`) on the models that have them; on by default. */
   fallbacks?: boolean
@@ -49,6 +52,7 @@ export class AnthropicProvider implements Provider {
     if (!key) throw new CslugError('ai.no_key', 'Set ANTHROPIC_API_KEY (or providers.<name>.apiKey in config/ai.ts)')
     const fallbacks = this.config.fallbacks !== false && WITH_FALLBACKS.includes(r.model)
     const format = r.output ? { format: { type: 'json_schema', schema: r.output } } : {}
+    const caching = this.config.promptCaching !== false
     const body: Json = {
       model: r.model,
       max_tokens: r.maxTokens ?? (stream ? 64_000 : 16_000),
@@ -59,7 +63,7 @@ export class AnthropicProvider implements Provider {
               {
                 type: 'text',
                 text: r.system,
-                ...(this.config.promptCaching !== false ? { cache_control: { type: 'ephemeral' } } : {}),
+                ...(caching ? { cache_control: { type: 'ephemeral' } } : {}),
               },
             ],
           }
@@ -68,6 +72,7 @@ export class AnthropicProvider implements Provider {
         ? { tools: r.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })) }
         : {}),
       ...(r.output || r.effort ? { output_config: { ...format, ...(r.effort ? { effort: r.effort } : {}) } } : {}),
+      ...(caching && r.messages.length > 1 ? { cache_control: { type: 'ephemeral' } } : {}),
       ...(fallbacks ? { fallbacks: 'default' } : {}),
       ...(stream ? { stream: true } : {}),
     }
