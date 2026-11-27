@@ -172,6 +172,32 @@ the app binds `role` (`CSLUG_ROLE`: `web`, `worker`, `scheduler`) on every line.
 | safe serialisation | bigint → string, Date → ISO, `toJSON()` (Money), errors with `code`/`status`/`cause`/`stack`, cycles cut |
 | `Logger.null()` | Writes nothing |
 
+## Tracing and metrics (`Tracer`, `Metrics`)
+
+Contracts with no-op implementations bound by default; `@cslug/telemetry` binds ones that record and export. http,
+queue, database and ai instrument themselves through them (they never import telemetry). Inject `Tracer` / `Metrics`.
+
+| | |
+|---|---|
+| `tracer.span(name, { kind?, attributes?, parent? }, fn)` | Runs `fn` in a span: the context gains `span`, `traceId`, `spanId`, `traceparent` (so logs and dispatched jobs follow the trace); errors recorded and rethrown; always ended. `parent` is a W3C `traceparent` (default: the current span) |
+| `tracer.current()` | The span the context is in |
+| `tracer.enabled` / `metrics.enabled` | False for the no-op versions: skip building attributes |
+| `span.updateName()`, `setAttributes()`, `recordError()` | |
+| `metrics.increment(name, attributes?, by?)` | Counter |
+| `metrics.record(name, value, attributes?)` | Histogram (durations in seconds) |
+| `metrics.observe(name, read, attributes?)` | Gauge, read when metrics are collected |
+| `BasicTracer` / `BasicMetrics` | In-memory versions (`finished` spans, `collect()`): for tests, and the base of exporters |
+| `parseTraceparent(value)` | `{ traceId, spanId, sampled }`, or undefined when malformed |
+
+What the packages record (OpenTelemetry semantic conventions):
+
+| Package | Spans | Metrics |
+|---|---|---|
+| http | `GET /bookings/:id` (server; continues an incoming `traceparent`; 5xx recorded as errors) | `http.server.request.duration` |
+| queue | `publish <job>` (producer, its `traceparent` saved in the envelope), `process <job>` (consumer, per attempt) | `messaging.process.duration` (by outcome), `cslug.queue.waiting`, `cslug.queue.oldest_age` |
+| database | `SELECT bookings` (client; the operation and first table, never values) | `db.client.operation.duration` |
+| ai | `invoke_agent <Agent>`, `chat <model>` (tokens), `execute_tool <name>` | |
+
 ## i18n
 
 `Translator` is bound from `resources/lang/` and `config('i18n')` (`{ locales, default, fallback }`).

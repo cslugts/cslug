@@ -186,7 +186,9 @@ platform wants an image, write the Dockerfile you need around these commands.
   (`LOG_LEVEL`, `LOG_FORMAT`) and more destinations (stderr, daily files with retention).
 - `/metrics` (behind `auth('token')`): request counts and latencies, jobs by state, queue lag, DB pool usage.
 - Error reporting hook: `this.app.resolve(ExceptionHandler).report((error, ctx) => sentry.captureException(error))`.
-- OpenTelemetry tracing: optional.
+- Tracing and metrics: http, queue, database and ai record spans and durations through core's `Tracer` and
+  `Metrics` (no-op until `@cslug/telemetry` is installed); a request, the jobs it dispatches and their queries
+  share one trace, and log lines carry its `traceId`.
 
 ## Production checklist
 

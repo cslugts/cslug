@@ -1,4 +1,4 @@
-import { type Context, currentContext, Logger, runInContext, type TransactionHooks } from '@cslug/core'
+import { type Context, currentContext, Logger, Metrics, runInContext, Tracer, type TransactionHooks } from '@cslug/core'
 import { SQL } from 'bun'
 import { isRetryable, RowCountError, toQueryError } from './errors'
 import { SqlFragment } from './sql'
@@ -40,6 +40,20 @@ export type TransactionOptions = {
   isolation?: 'read committed' | 'repeatable read' | 'serializable'
   /** Retry the whole transaction this many times on serialization failures and deadlocks. */
   retry?: number
+}
+
+/** `SELECT bookings`, `INSERT cslug_jobs`: the operation and first table, for span names (never values). */
+export function querySummary(text: string): { operation: string; summary: string } {
+  const operation = (/^\s*(\w+)/.exec(text)?.[1] ?? 'QUERY').toUpperCase()
+  const table = /\b(?:from|into|update|join)\s+("?[\w.]+"?)/i.exec(text)?.[1]?.replaceAll('"', '')
+  return { operation, summary: table ? `${operation} ${table}` : operation }
+}
+
+/** The app's tracer and metrics, when the query runs in a context (no-op ones unless @cslug/telemetry is set up). */
+function telemetry(): { tracer: Tracer; metrics: Metrics } | undefined {
+  const app = currentContext()?.app
+  if (!app || typeof app.has !== 'function' || !app.has(Tracer)) return undefined
+  return { tracer: app.resolve(Tracer), metrics: app.resolve(Metrics) }
 }
 
 /** Query methods shared by the database and a transaction handle. */
@@ -88,12 +102,34 @@ export abstract class Queryable {
   protected async run(query: SqlFragment<unknown>): Promise<Record<string, unknown>[] & { count?: number }> {
     const { text, params } = query.compile()
     const started = performance.now()
+    const t = telemetry()
+    const traced = t?.tracer.enabled || t?.metrics.enabled
+    const { operation, summary } = traced ? querySummary(text) : { operation: '', summary: '' }
+    const exec = () => this.driver().unsafe(text, params)
     try {
-      return await this.driver().unsafe(text, params)
+      return await (t?.tracer.enabled
+        ? t.tracer.span(
+            summary,
+            {
+              kind: 'client',
+              attributes: {
+                'db.system.name': 'postgresql',
+                'db.operation.name': operation,
+                'db.query.summary': summary,
+              },
+            },
+            exec,
+          )
+        : exec())
     } catch (error) {
       throw toQueryError(error, text)
     } finally {
       const ms = performance.now() - started
+      if (t?.metrics.enabled)
+        t.metrics.record('db.client.operation.duration', ms / 1000, {
+          'db.system.name': 'postgresql',
+          'db.operation.name': operation,
+        })
       if (ms > this.slowQueryMs) this.log.warn('slow query', { ms: Math.round(ms), sql: text })
     }
   }

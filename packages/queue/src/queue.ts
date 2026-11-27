@@ -1,4 +1,4 @@
-import { type Application, CslugError, currentContext, resolve, runInContext } from '@cslug/core'
+import { type Application, CslugError, currentContext, resolve, runInContext, Tracer } from '@cslug/core'
 import { PendingDispatch } from './dispatch'
 import {
   findJob,
@@ -192,10 +192,29 @@ export async function runJob(app: Application, envelope: Envelope, attempt: numb
   const context = { app, scope, attempt, ...jobContext(envelope) }
   let timer: Timer | undefined
   try {
-    const run = runInContext(context, async () => {
-      const payload = cls.payloadSchema ? cls.payloadSchema.parse(envelope.payload) : envelope.payload
-      await (scope.build(cls as never) as Job<unknown>).handle(payload)
-    })
+    const tracer = app.resolve(Tracer)
+    // a consumer span per attempt, child of the dispatch (the envelope's traceparent is in the context)
+    const run = runInContext(context, () =>
+      tracer.span(
+        `process ${envelope.name}`,
+        {
+          kind: 'consumer',
+          attributes: tracer.enabled
+            ? {
+                'messaging.system': 'cslug',
+                'messaging.operation.type': 'process',
+                'messaging.destination.name': envelope.queue,
+                'messaging.message.id': envelope.id,
+                'cslug.job.attempt': attempt,
+              }
+            : undefined,
+        },
+        async () => {
+          const payload = cls.payloadSchema ? cls.payloadSchema.parse(envelope.payload) : envelope.payload
+          await (scope.build(cls as never) as Job<unknown>).handle(payload)
+        },
+      ),
+    )
     const expire = new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new JobTimeoutError(envelope.name, timeout)), timeout)
     })
