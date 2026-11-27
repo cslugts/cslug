@@ -1,5 +1,5 @@
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { COMMANDS, Command, type CommandClass, flag } from '@cslug/core'
 import type { CslugConfig } from './config'
 
@@ -83,6 +83,11 @@ export class Supervisor {
       /** Prefix child output with its role (default: when stdout is a terminal; plain JSON lines otherwise). */
       prefix?: boolean
       bin?: string
+      /**
+       * Also append every line the children print to this file, as JSON lines `{ t, role, stream, line }`
+       * (`cslug dev` → `.cslug/dev.log`, read by `cslug mcp:dev`).
+       */
+      logFile?: string
     },
   ) {
     this.children = specs.map((spec) => ({ spec, startedAt: 0, restarts: 0 }))
@@ -103,6 +108,7 @@ export class Supervisor {
 
   private spawn(child: Child): void {
     const prefix = this.options.prefix ?? !!process.stdout.isTTY
+    const piped = prefix || !!this.options.logFile
     child.startedAt = Date.now()
     child.exited = undefined
     const proc = Bun.spawn(
@@ -110,22 +116,36 @@ export class Supervisor {
       {
         cwd: this.options.cwd,
         env: { ...process.env, ...this.options.env, CSLUG_ROLE: child.spec.name },
-        stdout: prefix ? 'pipe' : 'inherit',
-        stderr: prefix ? 'pipe' : 'inherit',
+        stdout: piped ? 'pipe' : 'inherit',
+        stderr: piped ? 'pipe' : 'inherit',
         stdin: 'ignore',
       },
     )
     child.proc = proc
-    if (prefix) {
-      this.pipe(proc.stdout as ReadableStream<Uint8Array>, child.spec.name, process.stdout)
-      this.pipe(proc.stderr as ReadableStream<Uint8Array>, child.spec.name, process.stderr)
+    if (piped) {
+      this.pipe(proc.stdout as ReadableStream<Uint8Array>, child.spec.name, process.stdout, prefix)
+      this.pipe(proc.stderr as ReadableStream<Uint8Array>, child.spec.name, process.stderr, prefix)
     }
     this.log(`  ➜ ${child.spec.name.padEnd(10)} pid ${proc.pid}  cslug ${child.spec.argv.join(' ')}`)
     proc.exited.then((code) => this.onExit(child, proc, code))
   }
 
-  private async pipe(stream: ReadableStream<Uint8Array>, name: string, out: NodeJS.WriteStream): Promise<void> {
+  private async pipe(
+    stream: ReadableStream<Uint8Array>,
+    name: string,
+    out: NodeJS.WriteStream,
+    prefix: boolean,
+  ): Promise<void> {
     const decoder = new TextDecoder()
+    const kind = out === process.stderr ? 'stderr' : 'stdout'
+    const emit = (line: string) => {
+      out.write(prefix ? `[${name}] ${line}\n` : `${line}\n`)
+      if (this.options.logFile)
+        appendFileSync(
+          this.options.logFile,
+          `${JSON.stringify({ t: new Date().toISOString(), role: name, stream: kind, line })}\n`,
+        )
+    }
     let buffer = ''
     // a reader, not `for await`: the app's tsconfig may use the DOM lib, whose ReadableStream is not async-iterable
     const reader = stream.getReader()
@@ -133,9 +153,9 @@ export class Supervisor {
       buffer += decoder.decode(r.value, { stream: true })
       const lines = buffer.split('\n')
       buffer = lines.pop() ?? ''
-      for (const line of lines) out.write(`[${name}] ${line}\n`)
+      for (const line of lines) emit(line)
     }
-    if (buffer) out.write(`[${name}] ${buffer}\n`)
+    if (buffer) emit(buffer)
   }
 
   private onExit(child: Child, proc: Bun.Subprocess, code: number | null): void {
@@ -195,6 +215,7 @@ async function supervise(
   bunFlags: string[],
   banner: string,
   env: Record<string, string> = {},
+  logFile?: string,
 ): Promise<number> {
   const config = await loadConfig(cmd.app.rootDir)
   const planned = plannedProcesses(config.processes, flags)
@@ -211,12 +232,17 @@ async function supervise(
     return 1
   }
   cmd.line(`  cslug  ${banner}  (supervisor pid ${process.pid})`)
+  if (logFile) {
+    mkdirSync(dirname(logFile), { recursive: true })
+    writeFileSync(logFile, '') // each `cslug dev` starts a fresh log
+  }
   const supervisor = new Supervisor(specs, {
     cwd: cmd.app.rootDir,
     env,
     bunFlags,
     shutdownTimeout: config.shutdownTimeout,
     log: (l) => cmd.line(l),
+    ...(logFile ? { logFile } : {}),
   }).start()
   const onSignal = (signal: NodeJS.Signals) => {
     cmd.line(`  ${signal}: stopping ${specs.length} process(es)…`)
@@ -240,7 +266,10 @@ export class StartCommand extends Command {
   }
 }
 
-/** `cslug dev`: the same processes, restarted by `bun --watch` when a file changes. */
+/** Where `cslug dev` writes what its processes print (JSON lines), for `cslug mcp:dev`. */
+export const DEV_LOG = '.cslug/dev.log'
+
+/** `cslug dev`: the same processes, restarted by `bun --watch` when a file changes; output also in `.cslug/dev.log`. */
 export class DevCommand extends Command {
   static signature = 'dev'
   static description = 'Development: web, workers and scheduler, restarted when files change'
@@ -249,6 +278,13 @@ export class DevCommand extends Command {
   static args = roleFlags
 
   handle(flags: Command.Args<typeof DevCommand>) {
-    return supervise(this, flags, ['--watch', '--no-clear-screen'], 'dev', { CSLUG_DEV: '1' })
+    return supervise(
+      this,
+      flags,
+      ['--watch', '--no-clear-screen'],
+      'dev',
+      { CSLUG_DEV: '1' },
+      join(this.app.rootDir, DEV_LOG),
+    )
   }
 }

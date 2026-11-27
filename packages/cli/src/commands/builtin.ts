@@ -4,6 +4,7 @@ import { arg, Command, type CommandClass, flag, names } from '@cslug/core'
 import { DevCommand, StartCommand } from '../supervisor'
 import { AddCommand } from './add'
 import { DescribeCommand } from './describe'
+import { McpDevCommand } from './mcp-dev'
 import { ReplCommand } from './repl'
 
 export const STUBS = join(import.meta.dir, '../../stubs')
@@ -171,6 +172,7 @@ export const builtinCommands: CommandClass[] = [
   KeyGenerateCommand,
   AddCommand,
   DescribeCommand,
+  McpDevCommand,
   ReplCommand,
   StartCommand,
   DevCommand,

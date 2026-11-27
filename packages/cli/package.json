@@ -31,11 +31,17 @@
     "cslug": "src/bin.ts"
   },
   "peerDependencies": {
-    "@cslug/core": "workspace:*"
+    "@cslug/core": "workspace:*",
+    "@cslug/database": "workspace:*"
   },
   "devDependencies": {
     "@cslug/database": "workspace:*",
     "@cslug/http": "workspace:*",
     "@cslug/validation": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@cslug/database": {
+      "optional": true
+    }
   }
 }

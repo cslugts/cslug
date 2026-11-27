@@ -8,7 +8,7 @@ Where commands come from:
 
 | Source | How |
 |---|---|
-| built-in | `list`, `about`, `config:show`, `key:generate`, `add`, `describe`, `repl`, `start`, `dev`, `make:command/provider/event/listener/service/test` |
+| built-in | `list`, `about`, `config:show`, `key:generate`, `add`, `describe`, `mcp:dev`, `repl`, `start`, `dev`, `make:command/provider/event/listener/service/test` |
 | packages | their provider calls `this.commands([...])` in `register()`. @cslug/http: `serve`, `routes`, `make:controller/validator/middleware`. @cslug/database: `migrate`, `migrate:status/rollback/fresh`, `db:seed`, `make:migration/table/repository/factory/seeder` |
 | your app | classes exported from `app/commands/**/*-command.ts`, imported only when needed. A file that fails to import is skipped with a warning |
 
@@ -40,6 +40,14 @@ it says what to add by hand. `--no-install` edits the files without running `bun
 `cslug describe [section] [--json]` prints the app as data: a summary of the sections, one section, or everything
 with `--json`. The CLI has `providers` and `config` (keys only); packages add theirs with `this.describe(name, fn)`
 in a provider: `routes` (http), `tables` (database, from `app/tables/`), `jobs` and `schedules` (queue).
+
+`cslug mcp:dev` serves development tools over MCP (stdio) for coding agents: `describe`, `routes`, `tables`,
+`query` (read-only transaction, 5 s statement timeout, rows limited; needs @cslug/database), `logs` and `last_error`
+(from `.cslug/dev.log`), `run_test` (`bun test [path] [-t name]` in the app, 3 min timeout) and `docs_search`
+(sections of `node_modules/@cslug/*/docs`). Logs go to stderr; it refuses to run in production. `devTools(app)`
+returns the tools (`McpTool[]` from @cslug/core). `cslug dev` writes every line its children print to
+`.cslug/dev.log` as JSON lines (`{ t, role, stream, line }`), emptied at each start (`DEV_LOG`; the supervisor's
+`logFile` option).
 
 `cslug repl` boots the app and reads TypeScript lines: top-level `await`, declarations kept between lines, an open
 brace continues on the next line. In scope: `app`, `resolve`, `config` and the exports of `app/tables/` and

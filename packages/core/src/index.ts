@@ -103,6 +103,15 @@ export {
 } from './i18n'
 export { inject, type Lifetime } from './inject'
 export { DEFAULT_REDACT, type LogFields, Logger, type LoggerOptions, type LogLevel } from './logger'
+export {
+  handleMcpMessage,
+  MCP_VERSIONS,
+  type McpMessage,
+  type McpReply,
+  type McpServerInfo,
+  type McpTool,
+  serveMcpStdio,
+} from './mcp'
 export { Money, minorDigits } from './money'
 export { type ProviderClass, type ProviderHooks, ServiceProvider } from './provider'
 export { type Class, InjectionToken, type Resolved, type Token, token } from './token'

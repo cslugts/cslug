@@ -119,3 +119,26 @@ Sections come from the installed packages: a provider adds one with `this.descri
 `register()`.
 
 Designed for scripts and AI coding agents; see [docs/ai-readiness.md](../docs/ai-readiness.md).
+
+## `mcp:dev`
+
+A development MCP server over stdio, for coding agents (Claude Code and others). Every app has it, with or without
+`@cslug/ai`:
+
+```json
+{ "mcpServers": { "cslug": { "command": "bunx", "args": ["cslug", "mcp:dev"] } } }
+```
+
+| Tool | Gives the agent |
+|---|---|
+| `describe` | What `cslug describe` shows: the section sizes, or one section |
+| `routes` | Routes, optionally filtered by path, name or action |
+| `tables` | Tables declared in `app/tables/`, or one of them |
+| `query` | One read-only SQL query on the development database (a read-only transaction, rolled back, 5 s timeout, 50 rows by default) |
+| `logs` | What the app printed under `cslug dev` (its JSON log lines parsed), filtered by role, level or text |
+| `last_error` | The latest error logged or printed, with the lines after it (the stack trace) |
+| `run_test` | `bun test` for a file or folder and a name pattern: passed or not, and the end of the output |
+| `docs_search` | The best matching sections of the installed `@cslug/*` docs, for the installed version |
+
+`cslug dev` writes what its processes print to `.cslug/dev.log` (git-ignored, emptied at each start), which is where
+`logs` and `last_error` read from. `mcp:dev` refuses to run when `app.env` is `production`.

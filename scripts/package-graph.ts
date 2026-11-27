@@ -81,7 +81,11 @@ export const graph: Record<string, PackageSpec> = {
     requires: ['core', 'validation'],
     optional: ['queue', 'http', 'database'],
   },
-  cli: { description: 'The cslug command: generators, dev server, start supervisor, REPL.', requires: ['core'] },
+  cli: {
+    description: 'The cslug command: generators, dev server, start supervisor, REPL, dev MCP server.',
+    requires: ['core'],
+    optional: ['database'],
+  },
   testing: {
     description: 'Test kit: testApp(), HTTP and HTML assertions, database isolation, fakes, time travel.',
     requires: ['core'],
