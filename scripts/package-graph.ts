@@ -76,6 +76,10 @@ export const graph: Record<string, PackageSpec> = {
     description: 'Webhook signature verification and an exactly-once inbox.',
     requires: ['core', 'http', 'database'],
   },
+  search: {
+    description: 'Full-text search over any table on PostgreSQL: weighted, multilingual, accent-insensitive, ranked.',
+    requires: ['core', 'database'],
+  },
   ai: {
     description: 'Agents, tools, structured output, conversations and MCP.',
     requires: ['core', 'validation'],

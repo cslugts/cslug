@@ -184,6 +184,17 @@
         "@cslug/core": "workspace:*",
       },
     },
+    "packages/search": {
+      "name": "@cslug/search",
+      "version": "0.5.0",
+      "devDependencies": {
+        "@cslug/testing": "workspace:*",
+      },
+      "peerDependencies": {
+        "@cslug/core": "workspace:*",
+        "@cslug/database": "workspace:*",
+      },
+    },
     "packages/storage": {
       "name": "@cslug/storage",
       "version": "0.5.0",
@@ -334,6 +345,8 @@
     "@cslug/queue": ["@cslug/queue@workspace:packages/queue"],
 
     "@cslug/redis": ["@cslug/redis@workspace:packages/redis"],
+
+    "@cslug/search": ["@cslug/search@workspace:packages/search"],
 
     "@cslug/storage": ["@cslug/storage@workspace:packages/storage"],
 
