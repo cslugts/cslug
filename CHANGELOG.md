@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.7.0 (2026-11-27)
+
+Forms without page reloads in `@cslug/vue`: `useForm` callbacks and progressive enhancement, an `http` client, live
+validation (in the browser and against the route), and API routes callable from the app's own pages with the session.
+
 ### @cslug/vue
 - `useForm(initial, callbacks)`: Inertia-style callbacks (`onBefore`, `onStart`, `onProgress`, `onSuccess`,
   `onError`, `onCancel`, `onFinish`, on the form and per call); `form.submit(event)` reads the `<form>`'s action and
