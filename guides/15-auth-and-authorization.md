@@ -119,6 +119,10 @@ const { plainText } = await tokens.create(user, { name: 'quote-bot', abilities: 
 // requests: Authorization: Bearer <plainText>   routes: .middleware(auth('token'), ability('quotes:write'))
 ```
 
+The app's own pages can call the same API routes with the session instead of a token: `http.api.stateful: true`
+gives `routes/api.ts` the session and CSRF for requests from `app.url`'s origin (see [guide 08](./08-views-vue-scss.md#requests-that-are-not-forms)).
+`auth()` then accepts either; `auth('token')` still requires a token.
+
 In handlers: `auth.user()` (throws `UnauthorizedError` if not logged in), `auth.userOrNull()`, `auth.check()`,
 `auth.login(user)` (new session id and CSRF token), `auth.logout()`. `ctx.user` is the user or null, and views
 get it from `useRequest().user`.
