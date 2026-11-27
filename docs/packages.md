@@ -20,7 +20,8 @@ installs `@cslug/ai`.
 | `@cslug/notification` | `Notifier`, `Notification`, channels: mail, database, whatsapp, sms; delivery records | core · optional: mail, queue, database | — |
 | `@cslug/storage` | `Storage` disks (local, s3, memory), signed URLs, direct uploads, upload type sniffing | core · optional: http (serves local signed URLs) | `Bun.file`, `Bun.s3` |
 | `@cslug/webhook` | `verifySignature()`, `WebhookInbox` (exactly-once receipt), replay command | http, database | Web Crypto |
-| `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake) | core, validation · optional: queue | `fetch` |
+| `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake); conversations and run records (planned, M9g); embedding drivers for search (planned) | core, validation · optional: queue, database (conversations), search (retrieval, recall) | `fetch` |
+| `@cslug/search` *(planned, M10)* | Full-text search over tables (`tsvector`, ranking, highlights, trigram), `SearchIndex` for other documents, semantic search (pgvector) through an `Embedder` contract, hybrid ranking, `search:reindex` | core, database · optional: queue | PostgreSQL full text, `pg_trgm`, `pgvector` |
 | `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `dev`, `start` supervisor | core | `Bun.spawn` |
 | `@cslug/testing` | `testApp()`, HTTP/HTML assertions, DB isolation, fakes, time travel | peers: every package it fakes | `bun test` |
 | `create-cslug` | `bun create cslug` scaffolder: presets `--api`, `--web`, `--full`, `--tailwind` (literal template files) | — | — |
@@ -44,6 +45,7 @@ No package has a runtime dependency outside `@cslug/*`. The only third-party pac
 
   @cslug/mail ··► vue, queue (optional)        @cslug/notification ··► mail, queue, database (optional)
   @cslug/storage ··► http (optional)
+  @cslug/search (planned) ─► database, ··► queue        @cslug/ai ··► database, search (planned)
   ─► required     ··► optional peer
 ```
 
@@ -111,6 +113,7 @@ feature needs it. Report the size in the PR; a package far over its budget is a 
 | mail + notification | 1,200 |
 | storage, webhook | 600 |
 | ai | 1,500 |
+| search (planned) | 1,000 |
 | cli + testing | 1,800 |
 | create-cslug (templates not counted) | 200 |
-| **Total** | **~18,000** |
+| **Total** | **~19,000** |

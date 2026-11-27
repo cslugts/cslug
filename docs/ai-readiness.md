@@ -48,8 +48,12 @@ hard-codes a model ID.
 
 ### What is deferred
 
-RAG / pgvector, multi-step workflows and durable agent runs. The seams exist (Postgres, queue, `Tool`),
-but none of it ships until the product needs it.
+Multi-step workflows and durable agent runs (a run that waits for a human and resumes). The seams exist (Postgres,
+queue, `Tool`), but none of it ships until the product needs it.
+
+Planned ([implementation plan](./implementation-plan.md)): conversations (history in and out, then stored
+conversations and run records, M9g), and retrieval with pgvector through `@cslug/search` (M10), which also serves
+search outside AI.
 
 ## 2. AI on the codebase
 
