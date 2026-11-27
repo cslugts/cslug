@@ -7,6 +7,8 @@
 | `AiStream` | Async iterable of text; `result: Promise<AiResult>`, settled once the text is read |
 | `Tool` | Abstract `name`, `description`, `input` (a `v` schema), `handle(input)` |
 | `prompt(name)` / `Prompt` | `resources/prompts/<name>.md`; `render(vars)`, `ai.prompt_variables` when one is missing |
+| `fillPrompt(template, vars, name?)` | `{{ path }}` (nested, objects as JSON), `{{ path \| default }}`; `PROMPT_VARIABLE` |
+| `Instructions`, `renderInstructions(instructions, context)` | `string \| Prompt \| (context) => string \| Prompt` (or a promise of one); the system prompt for a run |
 | `Ai` | Injectable runtime: `run(agent, options)`, `result(agent, options, meta?)` → `AiResult`, `stream(agent, options, meta?)`, `provider(name?)`, `extend(name, provider)`, `budget`, `recorder` |
 | `AiResult` | `{ runId, value, raw, model, steps, usage, costUsd, messages }` |
 | `Conversations` | `start(Agent, options)`, `find(Agent, id, options)`, `list(options)`; `store` (set with @cslug/database) |

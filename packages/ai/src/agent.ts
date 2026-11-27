@@ -8,6 +8,44 @@ import type { AiStream } from './ai-stream'
 import type { McpTools } from './mcp-client'
 import type { Effort, Message } from './model'
 
+/** `{{ path }}` or `{{ path | default }}`: a dotted path into the context, and an optional fallback text. */
+export const PROMPT_VARIABLE = /\{\{\s*([\w]+(?:\.[\w]+)*)\s*(?:\|\s*([^}]*?)\s*)?\}\}/g
+
+const lookup = (vars: Record<string, unknown>, path: string): { found: boolean; value: unknown } => {
+  let value: unknown = vars
+  for (const key of path.split('.')) {
+    if (value === null || typeof value !== 'object' || !(key in value)) return { found: false, value: undefined }
+    value = (value as Record<string, unknown>)[key]
+  }
+  return { found: true, value }
+}
+
+const asText = (value: unknown): string =>
+  typeof value === 'string'
+    ? value
+    : value !== null && typeof value === 'object' && !(value instanceof Date)
+      ? JSON.stringify(value, (_k, x) => (typeof x === 'bigint' ? x.toString() : x), 2)
+      : String(value instanceof Date ? value.toISOString() : value)
+
+/**
+ * Fill a prompt template: `{{ trip.circuit }}` reads a nested value, an object or a list is written as JSON,
+ * `{{ language | English }}` falls back when the value is missing or null. A missing value without a default is
+ * an `ai.prompt_variables` error naming every one.
+ */
+export function fillPrompt(template: string, vars: Record<string, unknown>, name = 'prompt'): string {
+  const missing = new Set<string>()
+  const text = template.replace(PROMPT_VARIABLE, (_m, path: string, fallback: string | undefined) => {
+    const { found, value } = lookup(vars, path)
+    if (found && value !== null && value !== undefined) return asText(value)
+    if (fallback !== undefined) return fallback
+    if (!found) missing.add(path)
+    return ''
+  })
+  if (missing.size)
+    throw new CslugError('ai.prompt_variables', `Prompt ${name} needs ${[...missing].join(', ')} in context`)
+  return text
+}
+
 /** A prompt file, `resources/prompts/<name>.md`, with `{{ variables }}` filled from the run's `context`. */
 export class Prompt {
   constructor(readonly name: string) {}
@@ -18,15 +56,23 @@ export class Prompt {
 
   render(vars: Record<string, unknown> = {}): string {
     if (!existsSync(this.path)) throw new CslugError('ai.no_prompt', `No prompt file resources/prompts/${this.name}.md`)
-    const missing = new Set<string>()
-    const text = readFileSync(this.path, 'utf8').replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, key: string) => {
-      if (!(key in vars)) missing.add(key)
-      return String(vars[key] ?? '')
-    })
-    if (missing.size)
-      throw new CslugError('ai.prompt_variables', `Prompt ${this.name} needs ${[...missing].join(', ')} in context`)
-    return text
+    return fillPrompt(readFileSync(this.path, 'utf8'), vars, this.name)
   }
+}
+
+/** What an agent's `instructions` may be. */
+export type Instructions =
+  | string
+  | Prompt
+  | ((context: Record<string, unknown>) => string | Prompt | Promise<string | Prompt>)
+
+/** The system prompt for a run: a function is called with the context, a `Prompt` is filled from it. */
+export async function renderInstructions(
+  instructions: Instructions | undefined,
+  context: Record<string, unknown>,
+): Promise<string> {
+  const value = typeof instructions === 'function' ? await instructions(context) : (instructions ?? '')
+  return typeof value === 'string' ? value : value.render(context)
 }
 
 /** `instructions = prompt('proposals/extract-offer')` → `resources/prompts/proposals/extract-offer.md`. */
@@ -70,7 +116,11 @@ export type RunOptions = {
 export type AgentSettings = {
   /** A model ID (`claude-opus-5-5`), or a role from config `ai.models` (`fast`, `smart`). */
   model: string
-  instructions?: string | Prompt
+  /**
+   * A string, `prompt('name')` (a file with `{{ variables }}`), or a function of the run's `context` returning
+   * either (it may be async), for instructions built in code.
+   */
+  instructions?: Instructions
   /** Structured output: the answer is parsed and validated (`AiOutputError` otherwise). */
   output?: Schema<unknown>
   /** Tool classes, and MCP servers' tools: `tools = [FindOperatorsTool, ...mcp('maps').tools(['route_duration'])]`. */

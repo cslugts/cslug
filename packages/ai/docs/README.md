@@ -6,13 +6,13 @@ List `AiProvider` in `bootstrap/providers.ts` (`cslug add ai` does it and writes
 ## Agents
 
 An agent is an `@inject()` class with a `model` (a model ID, or a role from `ai.models`) and, optionally,
-`instructions` (a string or `prompt('name')`), `output` (a `v` schema), `tools`, `maxSteps` (8), `provider`,
+`instructions` (a string, `prompt('name')`, or a function of the context), `output` (a `v` schema), `tools`, `maxSteps` (8), `provider`,
 `effort` and `maxTokens`. These settings are not declared on `Agent`, as for jobs, so apps compiled with
 `noImplicitOverride` don't write `override`.
 
 `run({ input, context })`:
 
-1. renders the instructions (`{{ variables }}` from `context`),
+1. renders the instructions: a function is called with `context` (and awaited); a prompt file is filled from it,
 2. calls the provider with the tools and, with `output`, the schema as structured output (the JSON Schema without
    the constraints the API rejects: numeric and length limits, patterns, array sizes),
 3. while the model calls tools: validates each input with the tool's schema, runs the calls of the turn together and
@@ -61,6 +61,21 @@ turns it on for plain runs. Timestamps come from `Clock`.
 `Ai` records every run (`ai.result`, `run`, `stream`; in a conversation or not) through `ai.recorder`;
 `ai.runs: false` turns it off, and a failure to record is logged (`ai.run_not_recorded`), never thrown. Without
 @cslug/database nothing is recorded, and `Conversations` throws `ai.no_database`.
+
+## Prompts
+
+`prompt('trips/brief')` reads `resources/prompts/trips/brief.md` on every run and fills it with `fillPrompt`:
+
+| In the file | Gives |
+|---|---|
+| `{{ name }}` | `context.name`: a string as is, a number or boolean as text, a `Date` as ISO, an object or a list as indented JSON (bigint as text) |
+| `{{ trip.circuit.name }}` | A nested value (each step must be an object) |
+| `{{ language \| English }}` | The value, or `English` when it is missing or null (`{{ note \| }}`: empty) |
+
+A missing value without a default throws `ai.prompt_variables` listing every one; a present `null` without a
+default renders empty. `cslug ai:prompts` lists each file and its variables, with `?` after those that have a
+default. `PROMPT_VARIABLE` is the pattern (path, default); `renderInstructions(instructions, context)` gives the
+system prompt for any `Instructions`.
 
 ## Providers
 

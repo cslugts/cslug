@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { arg, Command, flag, Logger, resolve, ServiceProvider, serveMcpStdio } from '@cslug/core'
 import type { HttpContext } from '@cslug/http'
+import { PROMPT_VARIABLE } from './agent'
 import { Ai, type AiConfig } from './ai'
 import { AiEvalCommand } from './ai-eval-command'
 import { databaseStore } from './conversation-store'
@@ -40,7 +41,11 @@ export class AiPromptsCommand extends Command {
           .map((f) => ({
             prompt: f.replace(/\.md$/, ''),
             variables: [
-              ...new Set([...readFileSync(join(dir, f), 'utf8').matchAll(/\{\{\s*([\w.]+)\s*\}\}/g)].map((m) => m[1])),
+              ...new Set(
+                [...readFileSync(join(dir, f), 'utf8').matchAll(PROMPT_VARIABLE)].map((m) =>
+                  m[2] === undefined ? m[1] : `${m[1]}?`,
+                ),
+              ),
             ].join(', '),
           }))
       : []
