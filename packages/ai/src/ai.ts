@@ -1,5 +1,5 @@
 import { type Application, Cache, Clock, CslugError, currentContext, type Logger, resolve } from '@cslug/core'
-import type { AgentSettings, RunnableTool, RunOptions } from './agent'
+import { type AgentSettings, type RunnableTool, type RunOptions, renderInstructions } from './agent'
 import { AiStream } from './ai-stream'
 import { Budget, type BudgetConfig, costOf, type ModelPrice } from './budget'
 import {
@@ -222,12 +222,12 @@ export class Ai {
     meta: RunMeta,
     runId: string,
   ) {
-    const { instructions = '', maxSteps = 8 } = agent
+    const { maxSteps = 8 } = agent
     const tools: RunnableTool[] = []
     for (const t of agent.tools ?? []) tools.push(...(t instanceof McpTools ? await this.remote(t) : [resolve(t)]))
     const request: ModelRequest = {
       model: this.config.models?.[agent.model] ?? agent.model,
-      system: typeof instructions === 'string' ? instructions : instructions.render(context),
+      system: await renderInstructions(agent.instructions, context),
       messages: [...history, { role: 'user', content: [{ type: 'text', text: input }] }],
       tools: tools.map((t) => ({
         name: t.name,

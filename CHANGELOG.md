@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/ai
+- Prompts: `{{ trip.circuit.name }}` reads nested values, objects and lists are written as JSON, and
+  `{{ language | English }}` gives a default; `ai:prompts` marks variables with a default (`language?`).
+- `instructions` can be a function of the run's context (sync or async) returning a string or a `prompt(...)`.
+
 ## 0.5.0 (2026-11-27)
 
 `@cslug/ai`: agents, tools, MCP, conversations, fixtures and evals, a daily budget; and two tools for coding agents
