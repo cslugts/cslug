@@ -1,5 +1,6 @@
 import {
   type Application,
+  BadRequestError,
   currentContext,
   HEALTH_CHECKS,
   type HealthCheck,
@@ -7,6 +8,7 @@ import {
   NotFoundError,
   runInContext,
   type Token,
+  ValidationError,
 } from '@cslug/core'
 import { type HttpContext, HttpRequest, ResponseBuilder } from './context'
 import type { ExceptionHandler } from './errors'
@@ -219,6 +221,8 @@ export class HttpKernel {
   }
 
   private async callAction(ctx: HttpContext, route: RouteDef): Promise<Response> {
+    const fields = ctx.request.header('x-cslug-validate')
+    if (fields !== undefined) return this.validateOnly(ctx, route, fields)
     const action = route.action
     let result: unknown
     if (Array.isArray(action)) {
@@ -233,6 +237,34 @@ export class HttpKernel {
       result = await controller.handle(ctx)
     } else result = await (action as (c: HttpContext) => unknown)(ctx)
     return toResponse(result, ctx)
+  }
+
+  /**
+   * Live validation (`X-Cslug-Validate: email,name` or `*`): the route's declared schema checks the input; only the
+   * named fields' errors are reported (422), else 204. The handler never runs.
+   */
+  private async validateOnly(ctx: HttpContext, route: RouteDef, header: string): Promise<Response> {
+    if (!route.validates)
+      throw new BadRequestError(
+        'http.no_live_validation',
+        `${route.method} ${route.path} does not support live validation: declare .validates(schema) on the route`,
+      )
+    const wanted = header
+      .split(',')
+      .map((f) => f.trim())
+      .filter(Boolean)
+    try {
+      await ctx.request.validate(route.validates)
+    } catch (error) {
+      if (!(error instanceof ValidationError)) throw error
+      const all = wanted.includes('*') || !wanted.length
+      const issues = error.issues.filter((i) => {
+        const path = i.path.join('.')
+        return all || wanted.some((f) => path === f || path.startsWith(`${f}.`))
+      })
+      if (issues.length) throw new ValidationError(issues)
+    }
+    return new Response(null, { status: 204, headers: { 'x-cslug-validated': '1' } })
   }
 
   private clientIp(request: Request, socketIp: string | undefined): string | undefined {

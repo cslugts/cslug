@@ -11,10 +11,15 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
   `hasErrors`, `wasSuccessful`, `recentlySuccessful`, `progress`, `transform`, `setError`, `reset(...fields)`,
   `defaults()`; `File` values are sent as multipart with upload progress.
 - `http.get/post/put/patch/delete`: requests that are not forms, with the same CSRF, JSON and error handling.
+- Live validation: `form.validate(field, $event?)` checks fields in the browser with the server's `v` schema
+  (`schema`), on the server with a validate-only request (`validate: 'server'`, debounced, files left out), or both;
+  `validating`, `touched`, `touch`, `valid`, `invalid`.
 
 ### @cslug/http
 - `redirect()` answers `204` + `X-Cslug-Redirect` to requests from `useForm` / `http` (`X-Cslug-Request: 1`), so
   one controller serves plain forms and islands.
+- `.validates(schema)` on a route: validate-only requests (`X-Cslug-Validate`) run its middleware and that schema,
+  answer 204 or 422 for the asked fields, and never call the handler.
 
 ## 0.6.1 (2026-11-27)
 

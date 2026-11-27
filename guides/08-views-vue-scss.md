@@ -356,6 +356,40 @@ Requests are sent as JSON (multipart when the data holds a `File`: nested object
 keep lists of objects out of requests with files) with `Accept: application/json` and the **CSRF token**: `<Assets>`
 renders `<meta name="csrf-token">` in the page, and `useForm()` reads it and sends `X-CSRF-Token`.
 
+### Live validation
+
+Check a field when the user leaves it, with the same rules as the server:
+
+```vue
+<script setup lang="ts">
+import { useForm } from '@cslug/vue'
+import { RegisterSchema } from '#app/validators/register-schema'   // a plain `v` schema, shared with the server
+
+const form = useForm({ name: '', email: '', password: '' }, { schema: RegisterSchema, validate: 'both' })
+</script>
+
+<template>
+  <form :action="route('register.store')" method="post" @submit.prevent="form.submit">
+    <input name="email" v-model="form.data.email" @blur="form.validate('email', $event)" :aria-invalid="form.invalid('email')" />
+    <p v-if="form.errors.email" class="error">{{ form.errors.email }}</p>
+    <span v-if="form.valid('email')">✓</span>
+    …
+  </form>
+</template>
+```
+
+- `form.validate(field, $event?)` marks the field touched and checks it; without a field, the touched ones. It sets or
+  clears only those fields' errors, and resolves to true when they are valid.
+- `schema` must be a plain `v` schema (a file that imports only `@cslug/validation`), not a `Validator` class, whose
+  dependencies are server-side; the route can declare the same schema, or a `Validator` that adds server checks.
+- `schema` checks in the browser, instantly, with the server's messages (the `validation` namespace when the island
+  loads it, else English). `validate: 'server'` (the default without a schema) asks the route instead: a
+  validate-only request that runs its middleware and `.validates(schema)` but never the controller (see
+  [guide 07](./07-validation.md#live-validation)); requests are debounced (`validationTimeout`, 300 ms) and leave
+  files out. `'both'` asks the server once the browser check passes (for a unique email).
+- The route comes from `$event` (the input's `<form>`), `useForm(data, { action, method })`, or the last submit.
+- `form.validating`, `form.touched(field?)`, `form.touch(...fields)`, `form.valid(field)`, `form.invalid(field)`.
+
 ### Requests that are not forms
 
 ```ts
