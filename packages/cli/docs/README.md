@@ -8,7 +8,7 @@ Where commands come from:
 
 | Source | How |
 |---|---|
-| built-in | `list`, `about`, `config:show`, `key:generate`, `add`, `describe`, `mcp:dev`, `repl`, `start`, `dev`, `make:command/provider/event/listener/service/test` |
+| built-in | `list`, `about`, `config:show`, `key:generate`, `add`, `describe`, `mcp:dev`, `agents:sync`, `repl`, `start`, `dev`, `make:command/provider/event/listener/service/test` |
 | packages | their provider calls `this.commands([...])` in `register()`. @cslug/http: `serve`, `routes`, `make:controller/validator/middleware`. @cslug/database: `migrate`, `migrate:status/rollback/fresh`, `db:seed`, `make:migration/table/repository/factory/seeder` |
 | your app | classes exported from `app/commands/**/*-command.ts`, imported only when needed. A file that fails to import is skipped with a warning |
 
@@ -48,6 +48,13 @@ in a provider: `routes` (http), `tables` (database, from `app/tables/`), `jobs` 
 returns the tools (`McpTool[]` from @cslug/core). `cslug dev` writes every line its children print to
 `.cslug/dev.log` as JSON lines (`{ t, role, stream, line }`), emptied at each start (`DEV_LOG`; the supervisor's
 `logFile` option).
+
+`cslug agents:sync [--check] [--file=AGENTS.md]` writes the generated sections of `AGENTS.md` between
+`<!-- cslug:begin name -->` and `<!-- cslug:end name -->` markers: `stack`, `rules`, `layout`, `commands`, `app`
+(routes, tables, jobs, schedules from the describe sections) and `tools`. Text outside the markers is kept as is; a
+missing section is appended unless `<!-- cslug:off name -->` is in the file; a new file starts with a header for
+hand-written notes. The output is deterministic, so `--check` (exit 1 when out of date, no write) suits CI.
+`mergeAgents(existing, sections, title?)` and `agentsSections(app, commands)` are exported.
 
 `cslug repl` boots the app and reads TypeScript lines: top-level `await`, declarations kept between lines, an open
 brace continues on the next line. In scope: `app`, `resolve`, `config` and the exports of `app/tables/` and

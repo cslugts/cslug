@@ -142,3 +142,32 @@ A development MCP server over stdio, for coding agents (Claude Code and others).
 
 `cslug dev` writes what its processes print to `.cslug/dev.log` (git-ignored, emptied at each start), which is where
 `logs` and `last_error` read from. `mcp:dev` refuses to run when `app.env` is `production`.
+
+## `agents:sync`
+
+`AGENTS.md` tells coding agents how this app works. `cslug agents:sync` writes its generated sections and keeps
+everything else as you wrote it:
+
+```md
+# AGENTS.md — Albastr
+
+Glossary: a *circuit* is a multi-day route; an *operator* runs it.     ← yours, never touched
+
+<!-- cslug:begin app -->
+## This app
+Routes (42, besides /health/*): …                                     ← rewritten by agents:sync
+<!-- cslug:end app -->
+```
+
+| Section | Holds |
+|---|---|
+| `stack` | The installed `@cslug/*` packages, their versions and where their docs are |
+| `rules` | The conventions, plus those of the installed packages (validation, authorization, islands, jobs, agents) |
+| `layout` | The app's folders and what goes in each |
+| `commands` | The `package.json` scripts and every `cslug` command, grouped |
+| `app` | Routes, tables (columns, references), jobs and schedules, from `cslug describe` |
+| `tools` | What to run before finishing, the `mcp:dev` configuration, the generators |
+
+A new file gets a short header for your notes first. A section missing from the file is appended (so new ones
+arrive with upgrades); `<!-- cslug:off routes -->` keeps one out. The output has no dates, so `cslug agents:sync
+--check` can run in CI: it exits 1 when the file is out of date, and writes nothing.

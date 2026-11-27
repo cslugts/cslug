@@ -43,6 +43,8 @@ plus `app`, `clock`, `log`, `io`. When the session is not interactive, prompts r
 | `AddCommand`, `ADDITIONS` | `cslug add <names>` and what each name installs and wires |
 | `DescribeCommand` | `cslug describe [section] [--json]`; `describeSections(app)` |
 | `McpDevCommand`, `devTools(app)` | `cslug mcp:dev`; the tools it serves (`McpTool[]`) |
+| `AgentsSyncCommand` | `cslug agents:sync [--check] [--file]` |
+| `mergeAgents(existing, sections, title?)`, `agentsSections(app, commands)`, `AgentsSection` | Merge generated sections into an AGENTS.md (text outside the markers kept); build this app's sections |
 | `ReplCommand`, `evaluate(code, scope)`, `replScope(app)` | `cslug repl` and its evaluator |
 | `BufferedIO(answers?)` | capture output in tests: `app.instance(ConsoleIO, io)` |
 | `defineCslugConfig()` | `cslug.config.ts`: `processes` (`web.instances`, `worker[]`, `scheduler`), `shutdownTimeout`, `assets` |
