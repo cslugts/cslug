@@ -7,6 +7,8 @@ server, no sync job: PostgreSQL keeps the search column up to date on every writ
 cslug add search && cslug migrate
 ```
 
+Searching a table needs nothing else; documents that are not rows go in an [index](#indexes-for-anything-else).
+
 ## Making a table searchable
 
 ```ts
@@ -45,5 +47,27 @@ async index({ request }: HttpContext) {
 - `typos: ['title']` finds `Isalo` for `isallo` (ranked lower than exact matches).
 - It is a query: add `where`, `orderBy` (after the rank), `paginate`.
 
-Coming next: an index for documents that are not table rows, semantic search (by meaning, with pgvector), and a
-search tool for agents.
+## Indexes for anything else
+
+Help pages from a CMS, PDFs, WhatsApp transcripts: what is not a table row goes in an index.
+
+```ts
+// app/search/help-search-index.ts
+export const helpIndex = searchIndex<{ url: string }>('help', {
+  languages: ['french', 'english'],
+  documents: async function* () {
+    for (const page of await resolve(HelpCenter).pages())
+      yield { key: page.slug, title: page.title, body: page.text, language: page.lang, metadata: { url: page.url } }
+  },
+})
+```
+
+```ts
+await helpIndex.upsert({ key: 'visa', title: 'Visa à l’arrivée', body: text, metadata: { url: '/help/visa' } })
+const results = await helpIndex.search('visa arrivée', { highlight: true })   // { data, meta }, like paginate()
+```
+
+Keep it current where the data changes (`upsert` / `remove`), and refill it from its source with
+`cslug search:reindex help`: documents the source no longer yields are removed.
+
+Coming next: semantic search (by meaning, with pgvector) and a search tool for agents.

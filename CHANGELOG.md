@@ -10,6 +10,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - `search(repoOrQuery, term, options)`: ranked web-search queries (phrases, `-without`, `or`), HTML-safe highlights,
   typo tolerance (pg_trgm), per-language queries; composes with `where` and `paginate`.
 - `SearchProvider` and its migration (`unaccent`, `pg_trgm`, the configurations); `cslug add search`.
+- `searchIndex(name, { languages, documents })`: documents that are not rows, in `cslug_search_documents`
+  (`upsert`, `remove`, `clear`, ranked `search` with metadata filters, highlights and typos, as a page);
+  `cslug search:reindex [index]` refills indexes from their source and removes stale documents.
 
 ### @cslug/database
 - Generated columns: `.generatedAs((c) => sql)` (`generated always as (…) stored`), never written by inserts or
