@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/database
+- The table differ: `cslug make:migration --from-tables` writes the SQL that brings the database to `app/tables/`
+  (up and down; renames asked; data-losing changes flagged with `-- review:`), `cslug db:diff` shows it.
+  `loadTables`, `tableSpec`, `introspect`, `diffSchemas`, `renameCandidates`, `migrationSql`.
+
 ### @cslug/cli
 - `cslug describe [section] [--json]`: routes, tables, jobs, schedules, providers, config keys; providers contribute
   sections with `this.describe(name, fn)` (core: `DESCRIBE`, `DescribeSection`, `app.providers`).

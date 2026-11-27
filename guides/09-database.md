@@ -243,7 +243,7 @@ const transfer = await this.db.idempotent(`release:${bookingId}:1`, () => this.g
 Plain SQL with `-- up` / `-- down`, so reviewers read exactly what runs.
 
 ```bash
-cslug make:migration --from-tables     # diff app/**/*.table.ts against the database → SQL file
+cslug make:migration --from-tables     # diff app/tables/ against the database → SQL file
 cslug make:migration add_claims_index  # empty file for hand-written SQL
 cslug migrate                          # pending migrations; advisory-locked (concurrent runs execute once)
 cslug migrate:status
@@ -254,28 +254,33 @@ cslug db:diff                          # show drift between tables and the datab
 
 ```
 $ cslug make:migration --from-tables
-  operators
-    + column  max_seats integer not null default 4
-    ~ column  rating_avg  numeric(3,2)  (was numeric(2,1))
-    ? column  phone_number → phone   rename or drop+add? › rename
-  ✔ database/migrations/20261126_143000_update_operators.sql
+  1. rename
+  2. drop+add
+operators.phone_number → phone: rename or drop+add?: 1
+  ~ column  operators.phone_number → phone
+  + column  operators.max_seats integer
+  ~ column  operators.rating_avg numeric(3,2) (was numeric(2,1))
+! operators.rating_avg: a type change may need `using rating_avg::numeric(3,2)`
+✓ database/migrations/20261126_143000_update_operators.sql
 ```
 
 ```sql
 -- database/migrations/20261126_143000_update_operators.sql
+-- review: operators.rating_avg: a type change may need `using rating_avg::numeric(3,2)`
 -- up
+alter table operators rename column phone_number to phone;
 alter table operators add column max_seats integer not null default 4;
 alter table operators alter column rating_avg type numeric(3,2);
-alter table operators rename column phone_number to phone;
 
 -- down
-alter table operators rename column phone to phone_number;
 alter table operators alter column rating_avg type numeric(2,1);
 alter table operators drop column max_seats;
+alter table operators rename column phone to phone_number;
 ```
 
 The differ covers tables, columns (type, nullability, default), unique/check constraints, indexes and foreign
-keys. Anything else (views, triggers, data migrations) is hand-written SQL. Each migration runs in its own
+keys; it reads the tables in `app/tables/` and skips the packages' `cslug_*` tables. Without a terminal (CI), a
+possible rename is taken as a rename, which keeps the data; review the file either way. Anything else (views, triggers, data migrations) is hand-written SQL. Each migration runs in its own
 transaction unless it starts with `-- cslug:no-transaction` (for `create index concurrently`).
 
 ## Factories and seeders

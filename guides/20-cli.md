@@ -8,7 +8,7 @@ installed packages: `migrate` exists only with `@cslug/database`, `queue:work` o
 | Group | Commands |
 |---|---|
 | Run | `dev`, `serve`, `start` (supervisor: web + worker + scheduler), `build`, `typecheck`, `repl` |
-| Database | `migrate`, `migrate:status`, `migrate:rollback`, `migrate:fresh`, `db:seed`, `db:shell` |
+| Database | `migrate`, `migrate:status`, `migrate:rollback`, `migrate:fresh`, `db:seed`, `db:diff`, `db:shell` |
 | Queue | `queue:work`, `queue:health`, `queue:failed`, `queue:retry`, `queue:forget`, `queue:clear`, `queue:stats` |
 | Schedule | `schedule:work`, `schedule:run`, `schedule:list`, `schedule:history`, `schedule:test` |
 | Inspect | `routes`, `events`, `config:show`, `describe`, `about` |

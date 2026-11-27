@@ -1,7 +1,17 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { arg, Command, flag, names } from '@cslug/core'
 import { Database } from './database'
+import {
+  type Change,
+  diffSchemas,
+  introspect,
+  loadTables,
+  migrationSql,
+  type RenameCandidate,
+  renameCandidates,
+  tableSpec,
+} from './differ'
 import { isSeeder } from './factory'
 import { Migrator } from './migrator'
 
@@ -25,6 +35,22 @@ abstract class DatabaseCommand extends Command {
       return false
     }
     return true
+  }
+  /** Diff `app/tables/` against the database, asking about possible renames; prints each change. */
+  protected async schemaChanges(): Promise<Change[]> {
+    const desired = (await loadTables(this.app.rootDir)).map(tableSpec)
+    const actual = await introspect(this.app.resolve(Database))
+    const renames: RenameCandidate[] = []
+    for (const c of renameCandidates(desired, actual)) {
+      const answer = await this.choose(`${c.table}.${c.from} → ${c.to}: rename or drop+add?`, ['rename', 'drop+add'])
+      if (answer === 'rename') renames.push(c)
+    }
+    const changes = diffSchemas(desired, actual, renames)
+    for (const change of changes) {
+      this.line(`  ${change.label}`)
+      if (change.warning) this.warn(change.warning)
+    }
+    return changes
   }
   protected async seed(only?: string): Promise<number> {
     const dir = join(this.app.rootDir, 'database/seeders')
@@ -125,27 +151,64 @@ export class DbSeedCommand extends DatabaseCommand {
   }
 }
 
-/** `cslug make:migration add_claims_index` → database/migrations/20261126_101500_add_claims_index.sql. */
-export class MakeMigrationCommand extends Command {
-  static signature = 'make:migration'
-  static description = 'Create an empty SQL migration'
-  static boot = false
-  static args = { name: arg.string().describe('snake_case, e.g. create_claims') }
+const stamp = (now: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}_${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`
+}
 
-  handle({ name }: Command.Args<typeof MakeMigrationCommand>) {
-    const now = this.clock.now()
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}_${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`
-    const snakeName = names(name).snake
-    const table = /^create_(\w+)$/.exec(snakeName)?.[1]
-    return this.generate(
-      STUBS,
-      table ? 'migration.create.stub' : 'migration.stub',
-      `database/migrations/${stamp}_${snakeName}.sql`,
-      { table: table ?? '' },
-    )
-      ? 0
-      : 1
+/**
+ * `cslug make:migration add_claims_index` → an empty `database/migrations/<stamp>_add_claims_index.sql`;
+ * `cslug make:migration --from-tables` → the SQL that brings the database to `app/tables/` (renames are asked).
+ */
+export class MakeMigrationCommand extends DatabaseCommand {
+  static signature = 'make:migration'
+  static description = 'Create a SQL migration: empty, or --from-tables (diff app/tables against the database)'
+  static boot = false
+  static args = {
+    name: arg.string().optional().describe('snake_case, e.g. create_claims'),
+    fromTables: flag.boolean().describe('Write the SQL for what app/tables changed'),
+  }
+
+  async handle({ name, fromTables }: Command.Args<typeof MakeMigrationCommand>) {
+    if (!fromTables) {
+      if (!name) {
+        this.error('A name, or --from-tables')
+        return 2
+      }
+      const snakeName = names(name).snake
+      const table = /^create_(\w+)$/.exec(snakeName)?.[1]
+      const target = `database/migrations/${stamp(this.clock.now())}_${snakeName}.sql`
+      const stub = table ? 'migration.create.stub' : 'migration.stub'
+      return this.generate(STUBS, stub, target, { table: table ?? '' }) ? 0 : 1
+    }
+    await this.app.start()
+    const changes = await this.schemaChanges()
+    if (!changes.length) {
+      this.info('Nothing to migrate: the database matches app/tables')
+      return 0
+    }
+    const tables = [...new Set(changes.map((c) => c.table))]
+    const created = changes.every((c) => c.label.startsWith('+ table'))
+    const fallback = tables.length === 1 ? `${created ? 'create' : 'update'}_${tables[0]}` : 'update_schema'
+    const file = `database/migrations/${stamp(this.clock.now())}_${names(name ?? fallback).snake}.sql`
+    const review = changes.filter((c) => c.warning).map((c) => `-- review: ${c.warning}\n`)
+    mkdirSync(join(this.app.rootDir, 'database/migrations'), { recursive: true })
+    writeFileSync(join(this.app.rootDir, file), `${review.join('')}${migrationSql(changes)}`)
+    this.success(file)
+    return 0
+  }
+}
+
+/** `cslug db:diff`: what `make:migration --from-tables` would write, without writing it. */
+export class DbDiffCommand extends DatabaseCommand {
+  static signature = 'db:diff'
+  static description = 'Show the drift between app/tables and the database (writes nothing)'
+  static args = { sql: flag.boolean().describe('Print the SQL too') }
+
+  async handle({ sql }: Command.Args<typeof DbDiffCommand>) {
+    const changes = await this.schemaChanges()
+    if (!changes.length) this.info('No drift: the database matches app/tables')
+    else if (sql) this.line(`\n${migrationSql(changes)}`)
   }
 }
 
@@ -179,6 +242,7 @@ export const databaseCommands = [
   MigrateFreshCommand,
   DbSeedCommand,
   MakeMigrationCommand,
+  DbDiffCommand,
   make('table', 'app/tables'),
   make('repository', 'app/repositories'),
   make('factory', 'database/factories'),
