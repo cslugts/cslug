@@ -16,7 +16,8 @@ import {
   SessionStore,
   type Token,
 } from '@cslug/core'
-import { loadFake, type TestFakes } from './fakes'
+import { importOptional, loadFake, type TestFakes } from './fakes'
+import type { DatabaseModule, HttpModule, QueueModule, ScheduleRun } from './peers'
 import { CookieJar, type Handler, PendingRequest, readSession, testSession } from './request'
 
 type Db = {
@@ -26,7 +27,6 @@ type Db = {
   pin(): Promise<{ release(): Promise<void> }>
   pool: { unsafe(text: string): Promise<unknown> }
 }
-type DatabaseModule = typeof import('@cslug/database')
 
 export type TestAppOptions = {
   /** Build the app; default: `createApp()` from `<cwd>/bootstrap/app.ts`. */
@@ -79,7 +79,7 @@ export type TestApp = {
   }
   /** The scheduler (needs @cslug/queue's ScheduleProvider): `runDue()` runs what is due at the fake clock's time. */
   readonly schedule: {
-    runDue(): Promise<import('@cslug/queue').ScheduleRun[]>
+    runDue(): Promise<ScheduleRun[]>
   }
   assertDatabaseHas(table: string, where: Record<string, unknown>): Promise<void>
   assertDatabaseMissing(table: string, where: Record<string, unknown>): Promise<void>
@@ -132,7 +132,7 @@ export function testApp<const F extends readonly string[] = []>(
     for (const [path, value] of Object.entries(options.config ?? {})) app.setConfig(path, value)
     await app.start()
     try {
-      dbModule = await import('@cslug/database')
+      dbModule = await importOptional<DatabaseModule>('@cslug/database')
       if (app.has(dbModule.Database) && app.config('database.url')) db = app.resolve(dbModule.Database) as unknown as Db
     } catch {
       // @cslug/database not installed
@@ -144,7 +144,7 @@ export function testApp<const F extends readonly string[] = []>(
       }).migrate()
     }
     try {
-      const http = await import('@cslug/http')
+      const http = await importOptional<HttpModule>('@cslug/http')
       if (app.has(http.HttpKernel)) {
         const kernel = app.resolve(http.HttpKernel)
         handle = (req) => kernel.handle(req, { ip: '127.0.0.1' })
@@ -260,10 +260,10 @@ export function testApp<const F extends readonly string[] = []>(
     schedule: {
       async runDue() {
         const a = need()
-        const { Scheduler } = await import('@cslug/queue')
+        const { Scheduler } = await importOptional<QueueModule>('@cslug/queue')
         if (!a.has(Scheduler)) throw new Error('testApp(): t.schedule needs ScheduleProvider (@cslug/queue)')
         // no once-per-tick lock: tests replay the same tick
-        return a.resolve(Scheduler).runDue(clock.now(), { exclusive: false })
+        return a.resolve<InstanceType<QueueModule['Scheduler']>>(Scheduler).runDue(clock.now(), { exclusive: false })
       },
     },
     db: {
@@ -331,10 +331,9 @@ type AuthModule = {
     ): Promise<{ plainText: string }>
   }>
 }
-const AUTH_PACKAGE: string = '@cslug/auth'
 const authModule = async (): Promise<AuthModule> => {
   try {
-    return (await import(AUTH_PACKAGE)) as AuthModule
+    return await importOptional<AuthModule>('@cslug/auth')
   } catch {
     throw new Error('testApp(): t.auth and t.tokens need @cslug/auth')
   }

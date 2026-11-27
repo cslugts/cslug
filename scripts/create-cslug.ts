@@ -1,10 +1,10 @@
 /**
- * Check `bun create cslug` end to end: scaffold each preset into a temporary folder, link its node_modules to this
- * repository's packages (and the starter kit's vue, sass and compilers, so one copy of each is loaded), then
+ * Check `bun create cslug` end to end: scaffold each preset into a temporary folder, install this repository's
+ * packages into its node_modules as npm would (and link the starter kit's vue, sass and compilers), then
  * typecheck it, build its assets (web, full) and run its own tests on a fresh database. A last web app gets the
  * other packages with `cslug add`, which must leave it compiling and passing.
  */
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { RedisClient, SQL } from 'bun'
@@ -35,6 +35,15 @@ const link = (app: string, name: string, target: string) => {
   mkdirSync(dirname(path), { recursive: true })
   symlinkSync(realpathSync(target), path, 'dir')
 }
+/**
+ * A @cslug package as npm installs it: copied without its node_modules, so it resolves only what the app installed
+ * (a symlink would also see the repository's dev dependencies and hide a missing optional package).
+ */
+const install = (app: string, name: string, source: string) =>
+  cpSync(source, join(app, 'node_modules', name), {
+    recursive: true,
+    filter: (from) => !/\/(node_modules|tests)(\/|$)/.test(from.slice(source.length)),
+  })
 
 const step = async (name: string, label: string, cmd: string[], cwd: string, env: Record<string, string> = {}) => {
   console.log(`create-cslug ${name}: ${label}`)
@@ -56,12 +65,12 @@ try {
   for (const [label, preset, add] of cases) {
     const app = join(work, `${label.replace('+', '-')}-app`)
     await scaffold({ dir: app, preset })
-    const cli = join(root, 'packages/cli/src/bin.ts')
+    const cli = join(app, 'node_modules/@cslug/cli/src/bin.ts') // the app's own, as `bunx cslug` runs it
     const linkAll = async () => {
       const pkg = (await Bun.file(join(app, 'package.json')).json()) as Record<string, Record<string, string>>
       for (const dep of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
         if (existsSync(join(app, 'node_modules', dep))) continue
-        if (dep.startsWith('@cslug/')) link(app, dep, join(root, 'packages', dep.slice(7)))
+        if (dep.startsWith('@cslug/')) install(app, dep, join(root, 'packages', dep.slice(7)))
         else if (existsSync(join(thirdParty, dep))) link(app, dep, join(thirdParty, dep))
       }
     }

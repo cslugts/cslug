@@ -1,5 +1,21 @@
 import { expect } from 'bun:test'
 import { type AnyEventClass, type Application, EventBus, type EventClass, Logger } from '@cslug/core'
+import type {
+  MailFake,
+  MailModule,
+  NotificationFake,
+  NotificationModule,
+  QueueFake,
+  QueueModule,
+  StorageFake,
+  StorageModule,
+} from './peers'
+
+/**
+ * Import an optional package by name. The specifier is a variable, so an app that does not install the package
+ * still type-checks; the types come from `peers.d.ts`.
+ */
+export const importOptional = <M>(name: string): Promise<M> => import(name)
 
 /** Fakes available as `t.<name>`; packages add theirs with module augmentation and `registerFake`. */
 // biome-ignore lint/suspicious/noEmptyInterface: augmented by packages
@@ -16,10 +32,10 @@ export const fakeInstaller = (name: string) => installers.get(name)
 
 /** Fakes of optional packages, loaded on first use (the package may not be installed). */
 const lazy: Record<string, () => Promise<FakeInstaller>> = {
-  queue: async () => (await import('@cslug/queue')).installQueueFake,
-  mail: async () => (await import('@cslug/mail')).installMailFake,
-  storage: async () => (await import('@cslug/storage')).installStorageFake,
-  notify: async () => (await import('@cslug/notification')).installNotificationFake,
+  queue: async () => (await importOptional<QueueModule>('@cslug/queue')).installQueueFake,
+  mail: async () => (await importOptional<MailModule>('@cslug/mail')).installMailFake,
+  storage: async () => (await importOptional<StorageModule>('@cslug/storage')).installStorageFake,
+  notify: async () => (await importOptional<NotificationModule>('@cslug/notification')).installNotificationFake,
 }
 
 /** The installer for `name`: registered, or loaded from its package. Undefined if neither. */
@@ -80,9 +96,9 @@ registerFake('events', (app) => {
 declare module './fakes' {
   interface TestFakes {
     events: EventFake
-    queue: import('@cslug/queue').QueueFake
-    mail: import('@cslug/mail').MailFake
-    storage: import('@cslug/storage').StorageFake
-    notify: import('@cslug/notification').NotificationFake
+    queue: QueueFake
+    mail: MailFake
+    storage: StorageFake
+    notify: NotificationFake
   }
 }
