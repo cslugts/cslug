@@ -32,11 +32,42 @@ An agent is an `@inject()` class with a `model` (a model ID, or a role from `ai.
 Without `config/ai.ts`, the default provider is `anthropic`. `ai.extend(name, provider)` adds one (any object with
 `complete` and `stream`).
 
+`ai.result(agent, { input, context })` is `run()` in detail: `{ value, raw, model, steps, usage, costUsd }` (`raw` is
+the answer before validation: the parsed JSON, or the text).
+
+## Daily budget
+
+```ts
+budget: { perDay: { usd: 10 }, alertAt: 0.8 },     // config/ai.ts
+prices: { 'llama3.3': { input: 0, output: 0 } },    // USD per million tokens, for models the built-in table lacks
+```
+
+Each model call is charged after it answers, at the model's price (`MODEL_PRICES`: Anthropic's first-party prices;
+cache reads at 0.1× and cache writes at 1.25× the input price). Before each call, a spend at or above the limit is
+`AiBudgetError`: nothing is called until the next day in the app's time zone. When the spend crosses `alertAt` (0.8)
+of the limit, `AiBudgetAlert` (`ai.budget_alert`: `{ day, spentUsd, limitUsd }`) is emitted once and logged. The spend
+is kept in the app's `Cache` (`ai:spend:<day>`), so with @cslug/redis every process shares it; with the in-memory
+cache each process counts its own. A model without a price costs nothing and is logged once (`ai.budget_unpriced`).
+The figures are estimates from the token counts, not the provider's bill.
+
 ## Tests
 
 `testApp({ fakes: ['ai'] })` → `t.ai`: no provider is called. `respond(Agent, output | (run) => output)` gives an
 agent its answer (checked against its `output` schema); `assertRan(Agent, where?)`, `assertNotRan(Agent)`,
 `ran(Agent)`, `runs`.
+
+**Recorded fixtures.** `t.ai.fixture(Agent, 'proposals/isalo')` answers with `tests/fixtures/ai/proposals/isalo.json`
+(validated like `respond`). A missing file is an error that names the command to run:
+
+- `cslug ai:record [path]` runs `bun test [path]` with `CSLUG_AI_RECORD=missing`: a `fixture()` whose file is
+  missing calls the real provider (config `ai`) and writes `{ agent, input, context, output, model, recordedAt }`,
+  `output` being the raw answer. `--all` re-records every fixture the tests reach. Commit the files.
+- `cslug ai:eval [folder]` runs every fixture under `tests/fixtures/ai/[folder]` through the real model, with the
+  agent class found by name in `app/agents/`: `same`, `diff` (the changed paths), `schema` (an `AiOutputError`) or
+  `error`, plus the estimated cost. Schema failures and errors exit 1; diffs only with `--strict`. `--json` prints
+  the rows.
+
+Both call the provider and cost money (and count against the daily budget).
 
 ## MCP
 
@@ -58,7 +89,3 @@ plain-object result is also `structuredContent`; an error is `isError: true`), `
 use, stopped at shutdown). In an agent: `tools = [...mcp('maps').tools(['route_duration'])]` (all tools without a
 list). The client tries `server/discover` (2026-07-28), else `initialize` (2025-11-25), keeps `Mcp-Session-Id` for
 older HTTP servers, reads JSON or SSE responses. A tool error comes back to the model as an error result.
-
-## Not yet
-
-`ai:record` / `ai:eval` and the daily budget come next.

@@ -14,6 +14,12 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Providers over `fetch`: Anthropic Messages API (prompt caching, structured output, server-side refusal
   fallbacks, streaming with tool use) and OpenAI-compatible chat completions.
 - `fakes: ['ai']` → `t.ai` (`respond`, `assertRan`); `cslug add ai`; `cslug ai:prompts`.
+- Recorded fixtures: `t.ai.fixture(Agent, 'name')` replays `tests/fixtures/ai/name.json`; `cslug ai:record` runs
+  tests against the real provider and writes the missing ones (`--all` re-records); `cslug ai:eval [folder]` runs them
+  through the real model and reports schema failures and diffs.
+- Daily budget: `ai.budget: { perDay: { usd }, alertAt }`, each call charged at the model's estimated price (cache
+  reads and writes included), kept in the cache; `AiBudgetError` once spent, `AiBudgetAlert` event at `alertAt`.
+  `ai.result()` gives a run's raw answer, usage and cost.
 
 ## 0.4.1 (2026-11-27)
 

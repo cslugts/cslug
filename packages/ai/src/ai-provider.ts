@@ -1,8 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { Command, flag, Logger, resolve, ServiceProvider } from '@cslug/core'
+import { arg, Command, flag, Logger, resolve, ServiceProvider } from '@cslug/core'
 import type { HttpContext } from '@cslug/http'
 import { Ai, type AiConfig } from './ai'
+import { AiEvalCommand } from './ai-eval-command'
 import { discoverTools, handleMcp, type McpCaller, type McpReply, mcpTools } from './mcp'
 
 /**
@@ -57,13 +58,38 @@ export class AiPromptsCommand extends Command {
 }
 
 /**
- * Binds `Ai` from `config/ai.ts` (`default`, `providers`, `models`, `mcp`); contributes `ai:prompts` and `mcp:serve`.
+ * `cslug ai:record [path]`: `bun test` with `t.ai.fixture()` answered by the real provider; missing fixtures are
+ * written (`--all`: every one, re-recorded). Each recorded call costs what the model charges.
+ */
+export class AiRecordCommand extends Command {
+  static signature = 'ai:record'
+  static description = 'Run tests against the real AI provider and write their missing fixtures (calls the API)'
+  static boot = false
+  static args = {
+    path: arg.string().optional().describe('A test file or folder (bun test filter)'),
+    all: flag.boolean().describe('Re-record every fixture the tests use'),
+  }
+
+  async handle({ path, all }: Command.Args<typeof AiRecordCommand>) {
+    this.warn(`Recording AI fixtures (${all ? 'all' : 'missing'}): the real provider is called`)
+    const child = Bun.spawn(['bun', 'test', ...(path ? [path] : [])], {
+      cwd: this.app.rootDir,
+      env: { ...process.env, CSLUG_AI_RECORD: all ? 'all' : 'missing' },
+      stdio: ['inherit', 'inherit', 'inherit'],
+    })
+    return await child.exited
+  }
+}
+
+/**
+ * Binds `Ai` from `config/ai.ts` (`default`, `providers`, `models`, `mcp`, `budget`, `prices`); contributes
+ * `ai:prompts`, `ai:record`, `ai:eval` and `mcp:serve`.
  * With `@mcp()` tools in `app/tools/` and @cslug/http installed: `POST /mcp` (streamable HTTP, in the api group's
  * middleware, so API tokens authenticate callers).
  */
 export class AiProvider extends ServiceProvider {
   register() {
-    this.commands([AiPromptsCommand, McpServeCommand])
+    this.commands([AiPromptsCommand, AiRecordCommand, AiEvalCommand, McpServeCommand])
     this.app.singleton(
       Ai,
       (c) => new Ai(this.app, this.app.config<AiConfig | undefined>('ai') ?? {}, c.resolve(Logger)),

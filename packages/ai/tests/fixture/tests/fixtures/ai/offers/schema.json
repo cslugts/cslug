@@ -1,0 +1,8 @@
+{
+  "agent": "QuoteAgent",
+  "input": "Prix: 2100 EUR (schema)",
+  "context": {},
+  "output": { "price": 2100, "currency": "EUR" },
+  "model": "claude-haiku-5-5",
+  "recordedAt": "2026-11-27T00:00:00.000Z"
+}

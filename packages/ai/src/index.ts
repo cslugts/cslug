@@ -13,15 +13,25 @@ export {
   Tool,
   type ToolClass,
 } from './agent'
-export { Ai, type AiConfig, AiOutputError } from './ai'
-export { AiPromptsCommand, AiProvider, McpServeCommand } from './ai-provider'
+export { Ai, type AiConfig, AiOutputError, type AiResult } from './ai'
+export { AiEvalCommand, jsonDiff } from './ai-eval-command'
+export { AiPromptsCommand, AiProvider, AiRecordCommand, McpServeCommand } from './ai-provider'
+export {
+  AiBudgetAlert,
+  AiBudgetError,
+  Budget,
+  type BudgetConfig,
+  costOf,
+  MODEL_PRICES,
+  type ModelPrice,
+} from './budget'
 export {
   type AnthropicConfig,
   AnthropicProvider,
   type OpenAiCompatibleConfig,
   OpenAiCompatibleProvider,
 } from './drivers'
-export { AiFake, type AiRun, installAiFake } from './fake'
+export { AiFake, type AiFixture, type AiRun, FIXTURES_DIR, installAiFake } from './fake'
 export {
   discoverTools,
   handleMcp,

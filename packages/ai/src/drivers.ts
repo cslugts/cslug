@@ -86,7 +86,12 @@ export class AnthropicProvider implements Provider {
     return {
       content: ((message.content ?? []) as Json[]).map(fromAnthropic),
       stopReason: String(message.stop_reason),
-      usage: { inputTokens: Number(usage.input_tokens ?? 0), outputTokens: Number(usage.output_tokens ?? 0) },
+      usage: {
+        inputTokens: Number(usage.input_tokens ?? 0),
+        outputTokens: Number(usage.output_tokens ?? 0),
+        cacheReadTokens: Number(usage.cache_read_input_tokens ?? 0),
+        cacheWriteTokens: Number(usage.cache_creation_input_tokens ?? 0),
+      },
     }
   }
 

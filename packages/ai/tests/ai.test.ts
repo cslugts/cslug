@@ -224,7 +224,7 @@ describe('AnthropicProvider (Messages API over fetch)', () => {
           { type: 'text', text: '{"ok":true}' },
         ],
         stop_reason: 'end_turn',
-        usage: { input_tokens: 12, output_tokens: 3 },
+        usage: { input_tokens: 12, output_tokens: 3, cache_read_input_tokens: 400, cache_creation_input_tokens: 50 },
       })
     const out = await claude().complete({
       ...base,
@@ -253,7 +253,7 @@ describe('AnthropicProvider (Messages API over fetch)', () => {
         { type: 'text', text: '{"ok":true}' },
       ],
       stopReason: 'end_turn',
-      usage: { inputTokens: 12, outputTokens: 3 },
+      usage: { inputTokens: 12, outputTokens: 3, cacheReadTokens: 400, cacheWriteTokens: 50 },
     })
   })
 
@@ -359,7 +359,7 @@ describe('AnthropicProvider (Messages API over fetch)', () => {
           { type: 'tool_use', id: 'tu', name: 'find', input: { circuit: 'isalo' } },
         ],
         stopReason: 'tool_use',
-        usage: { inputTokens: 9, outputTokens: 20 },
+        usage: { inputTokens: 9, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0 },
       },
     })
   })
