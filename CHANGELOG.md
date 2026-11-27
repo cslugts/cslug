@@ -8,6 +8,8 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - `cslug mcp:dev`: a development MCP server (stdio) for coding agents, in every app: `describe`, `routes`,
   `tables`, `query` (read-only), `logs`, `last_error`, `run_test`, `docs_search`. Refused in production.
 - `cslug dev` also writes what its processes print to `.cslug/dev.log` (JSON lines), which `mcp:dev` reads.
+- `cslug agents:sync`: writes the generated sections of AGENTS.md (packages and docs, rules, folders, commands,
+  routes and tables, tools) between markers, keeping the hand-written text; `--check` for CI.
 
 ### @cslug/core
 - The MCP server protocol moves here (`handleMcpMessage`, `serveMcpStdio`, `McpTool`, `MCP_VERSIONS`), shared by
