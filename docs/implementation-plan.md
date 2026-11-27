@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M10 are done; 0.7.1 released (0.6.0: `@cslug/search`, embedding drivers and search tools; 0.6.1: TOTP; 0.7.0: AJAX forms in `@cslug/vue`; 0.7.1: two-factor logins in scaffolded apps). Next: M12–M15 (telemetry, security, state machine, workflows; M11 logger done), planned below.
+> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M12 are done; 0.8.0 released (0.7.x: AJAX forms, two-factor logins in scaffolded apps; 0.8.0: logger targets and request → job origin, `Tracer` / `Metrics` in core, `@cslug/telemetry`). Next: M13–M15 (security, state machine, workflows), planned below.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status

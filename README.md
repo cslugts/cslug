@@ -34,8 +34,9 @@ export class BookingController {
 
 ## Status
 
-Version **0.7.1** is on npm: HTTP, validation, database, Vue pages, auth, Redis, queue and scheduler, mail,
-webhooks, notifications, storage, two-factor authentication, AI (agents, tools, MCP, conversations) and search (full text, semantic, hybrid),
+Version **0.8.0** is on npm: HTTP, validation, database, Vue pages, auth, Redis, queue and scheduler, mail,
+webhooks, notifications, storage, two-factor authentication, AI (agents, tools, MCP, conversations), search (full text, semantic, hybrid)
+and observability (log targets, OpenTelemetry traces and metrics, `/metrics`),
 plus `cslug mcp:dev` and `cslug agents:sync` for coding agents. Start an app with `bun create cslug my-app`. See the
 [implementation plan](./docs/implementation-plan.md) for the roadmap.
 
