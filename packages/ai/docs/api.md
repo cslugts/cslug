@@ -35,6 +35,9 @@
 | `handleMcp(message, tools, caller)` | One MCP message → its reply, over the `@mcp()` tools `caller` may use (core's `handleMcpMessage`); `asMcpTools(tools, caller)`, `MCP_VERSIONS`, `discoverTools(app)`, `mcpTools()` |
 | `McpServeCommand` | `cslug mcp:serve` (stdio) |
 | `AiFake`, `installAiFake(app)` | `fakes: ['ai']`: `respond`, `fixture(Agent, name)`, `assertRan`, `assertNotRan`, `ran`, `runs` |
+| `searchTool(index, options?)`, `SearchToolOptions`, `SearchableIndex` | A tool object searching a `@cslug/search` index |
+| `recallTool(options?)` | Search the current conversation owner's earlier conversations (`ai.recall`) |
+| `currentConversation()`, `CONVERSATION_KEY`, `ConversationScope` | The conversation a run belongs to (`{ id, owner }`), in the ambient context |
 | `EmbeddingsConfig`, `embedderFor(config, budget?)` | `config/ai.ts` → `embeddings`: `{ driver: 'voyage' \| 'openai-compatible', model, dimensions?, apiKey?, baseUrl? }`; the embedder for it |
 | `VoyageEmbedder`, `OpenAiCompatibleEmbedder`, `TextEmbedder` | The drivers (`model`, `embed(texts, purpose)`), charged to the budget |
 | `setFakeEmbedder(token, create)` | Set by `AiProvider`: what `installAiFake` swaps the bound `Embedder` for |
