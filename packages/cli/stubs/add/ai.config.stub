@@ -1,0 +1,10 @@
+import { defineConfig } from '@cslug/core'
+
+export default defineConfig({
+  default: 'anthropic', // the key is read from ANTHROPIC_API_KEY
+  providers: {
+    anthropic: { driver: 'anthropic' },
+    // local: { driver: 'openai-compatible', baseUrl: 'http://localhost:11434/v1' },
+  },
+  models: { fast: 'claude-haiku-5-5', smart: 'claude-opus-5-5' }, // code refers to roles, not model IDs
+})

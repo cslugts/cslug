@@ -4,6 +4,14 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/ai
+- `Agent` (`model` or a role, `instructions`, `output`, `tools`, `maxSteps`, `effort`): `run()` with structured output
+  parsed and validated by the `v` schema, a tool loop (inputs validated, errors returned to the model), `stream()`.
+- `Tool`, `prompt()` (Markdown files with `{{ variables }}`), `sse()` for streaming to the browser.
+- Providers over `fetch`: Anthropic Messages API (prompt caching, structured output, server-side refusal
+  fallbacks, streaming with tool use) and OpenAI-compatible chat completions.
+- `fakes: ['ai']` → `t.ai` (`respond`, `assertRan`); `cslug add ai`; `cslug ai:prompts`.
+
 ## 0.4.1 (2026-11-27)
 
 Apps created with `bun create cslug` type-check out of the box.

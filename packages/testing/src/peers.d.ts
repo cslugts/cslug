@@ -14,3 +14,5 @@ export type ScheduleRun = import('@cslug/queue').ScheduleRun
 export type MailFake = import('@cslug/mail').MailFake
 export type StorageFake = import('@cslug/storage').StorageFake
 export type NotificationFake = import('@cslug/notification').NotificationFake
+export type AiModule = typeof import('@cslug/ai')
+export type AiFake = import('@cslug/ai').AiFake

@@ -1,7 +1,7 @@
 {
   "name": "@cslug/ai",
   "version": "0.4.1",
-  "description": "Agents, tools, structured output and MCP.",
+  "description": "Agents and tools, structured output, prompts, streaming; Anthropic and OpenAI-compatible providers.",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -36,5 +36,9 @@
     "@cslug/queue": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@cslug/testing": "workspace:*",
+    "@cslug/http": "workspace:*"
   }
 }

@@ -37,6 +37,10 @@
     "packages/ai": {
       "name": "@cslug/ai",
       "version": "0.4.1",
+      "devDependencies": {
+        "@cslug/http": "workspace:*",
+        "@cslug/testing": "workspace:*",
+      },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/queue": "workspace:*",

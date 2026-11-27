@@ -1,6 +1,8 @@
 import { expect } from 'bun:test'
 import { type AnyEventClass, type Application, EventBus, type EventClass, Logger } from '@cslug/core'
 import type {
+  AiFake,
+  AiModule,
   MailFake,
   MailModule,
   NotificationFake,
@@ -36,6 +38,7 @@ const lazy: Record<string, () => Promise<FakeInstaller>> = {
   mail: async () => (await importOptional<MailModule>('@cslug/mail')).installMailFake,
   storage: async () => (await importOptional<StorageModule>('@cslug/storage')).installStorageFake,
   notify: async () => (await importOptional<NotificationModule>('@cslug/notification')).installNotificationFake,
+  ai: async () => (await importOptional<AiModule>('@cslug/ai')).installAiFake,
 }
 
 /** The installer for `name`: registered, or loaded from its package. Undefined if neither. */
@@ -100,5 +103,6 @@ declare module './fakes' {
     mail: MailFake
     storage: StorageFake
     notify: NotificationFake
+    ai: AiFake
   }
 }

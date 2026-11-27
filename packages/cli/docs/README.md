@@ -27,6 +27,7 @@ under `bun --watch`. Roles whose command is not installed are skipped with a war
 | `storage` | `@cslug/storage` | `StorageProvider`; `config/storage.ts` |
 | `notification` | `@cslug/notification` | `NotificationProvider`; `config/notification.ts`; then `cslug migrate` |
 | `webhook` | `@cslug/webhook` | `WebhookProvider`; `config/webhooks.ts`; then `cslug migrate` |
+| `ai` | `@cslug/ai` | `AiProvider`; `config/ai.ts` (Anthropic, roles `fast` and `smart`) |
 | `tailwind` | `tailwindcss`, `bun-plugin-tailwind` (dev) | `resources/styles/tailwind.css`, its import in `resources/client.ts`, `assets.tailwind: true` |
 
 `@cslug/*` packages are installed at the CLI's own version (every package of a release shares it). Providers go into

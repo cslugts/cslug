@@ -60,7 +60,7 @@ try {
     ['api', 'api'],
     ['web', 'web'],
     ['full', 'full'],
-    ['web+add', 'web', 'queue,mail,storage,notification,webhook'],
+    ['web+add', 'web', 'queue,mail,storage,notification,webhook,ai'],
   ]
   for (const [label, preset, add] of cases) {
     const app = join(work, `${label.replace('+', '-')}-app`)
