@@ -2,7 +2,7 @@
 
 "AI-ready" covers two separate things, and cslug addresses both:
 
-1. **AI in the product.** Albastr will eventually want AI (the MVP excludes an AI trip planner, but turning
+1. **AI in the product.** The pilot app will eventually want AI (the MVP excludes an AI trip planner, but turning
    free-text operator replies into a comparable proposal (#3) or triaging WhatsApp check-in replies (#7) are
    obvious next steps). cslug should make those features ordinary code, not a separate stack.
 2. **AI on the codebase.** Coding agents (Claude Code and others) will write a large share of the app. cslug

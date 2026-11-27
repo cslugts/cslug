@@ -67,9 +67,9 @@ describe('start / shutdown', () => {
     class NeedsApp {
       constructor(readonly app: Application) {}
     }
-    const app = await new Application({ root: '/srv/albastr' }).start()
+    const app = await new Application({ root: '/srv/demo' }).start()
     expect(app.resolve(NeedsApp).app).toBe(app)
-    expect(resolve(NeedsApp).app.rootDir).toBe('/srv/albastr')
+    expect(resolve(NeedsApp).app.rootDir).toBe('/srv/demo')
     await app.shutdown()
   })
 

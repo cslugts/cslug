@@ -19,7 +19,7 @@ export default defineSchedule((s) => {
   s.job(RecheckVisaPageJob).monthlyOn(1, '09:00').timezone('Europe/Paris')
 
   // MVP #16: weekly pilot metrics for the team
-  s.job(PilotMetricsReportJob, { recipients: ['team@albastr.com'] }).weeklyOn('monday', '07:00')
+  s.job(PilotMetricsReportJob, { recipients: ['team@example.com'] }).weeklyOn('monday', '07:00')
 
   s.job(ExpireStaleProposalsJob).everyFifteenMinutes()
 

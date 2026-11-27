@@ -119,7 +119,7 @@ async function storageApp(http = true, start = true) {
   const app = new Application({
     root,
     configs: {
-      app: { url: 'https://albastr.test', key: 'k'.repeat(32), env: 'test' },
+      app: { url: 'https://example.test', key: 'k'.repeat(32), env: 'test' },
       storage: {
         default: 'local',
         disks: { local: { driver: 'local', root: 'files' }, scratch: { driver: 'memory' } },
@@ -148,7 +148,7 @@ describe('StorageProvider and local signed URLs (guide 17)', async () => {
   test('a signed download is served; a changed or unsigned link is 403', async () => {
     const key = await storage.putFile('operators/7/licence', new File([PDF], 'licence.pdf'))
     const url = await storage.signedUrl(key, { expiresIn: '5m', download: 'Licence "7".pdf' })
-    expect(url).toStartWith('https://albastr.test/_storage/local?')
+    expect(url).toStartWith('https://example.test/_storage/local?')
     const res = await call(url)
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toBe('application/pdf')

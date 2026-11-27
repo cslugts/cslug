@@ -9,7 +9,7 @@ export async function httpApp(
 ) {
   const app = new Application({
     root: '/nonexistent-cslug-test-root',
-    configs: { app: { url: 'https://albastr.test', key: 'k'.repeat(32), env: 'test' }, ...configs },
+    configs: { app: { url: 'https://example.test', key: 'k'.repeat(32), env: 'test' }, ...configs },
   })
   app.useProviders([HttpProvider, ...providers])
   app.singleton(Logger, () => Logger.null()) // tests assert on responses; keep the output clean
@@ -17,7 +17,7 @@ export async function httpApp(
   app.resolve(Router).load(routes)
   const kernel = app.resolve(HttpKernel).compile()
   const call = (path: string, init: RequestInit & { host?: string } = {}) => {
-    const url = new URL(path, `http://${init.host ?? 'albastr.test'}`)
+    const url = new URL(path, `http://${init.host ?? 'example.test'}`)
     return kernel.handle(new Request(url, init))
   }
   return { app, kernel, call }

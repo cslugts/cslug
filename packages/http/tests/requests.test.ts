@@ -182,7 +182,7 @@ describe('responses and errors', () => {
 
   test('unknown errors: 500 with request id, logged; no detail in production; HTML page for browsers', async () => {
     const lines: string[] = []
-    const h = await httpApp(routes, { app: { url: 'https://albastr.test', env: 'production' } })
+    const h = await httpApp(routes, { app: { url: 'https://example.test', env: 'production' } })
     app = h.app
     h.app.swap(Logger, new Logger({ write: (l) => lines.push(l) }))
     const kernel = new HttpKernel(
@@ -191,12 +191,12 @@ describe('responses and errors', () => {
       new (await import('../src')).ExceptionHandler(h.app, new Logger({ write: (l) => lines.push(l) })),
     ).compile()
     const res = await kernel.handle(
-      new Request('http://albastr.test/boom', { headers: { accept: 'application/json' } }),
+      new Request('http://example.test/boom', { headers: { accept: 'application/json' } }),
     )
     const body = await res.json()
     expect(res.status).toBe(500)
     expect(body).toEqual({
-      type: 'https://albastr.test/errors/server.error',
+      type: 'https://example.test/errors/server.error',
       title: 'Something went wrong on our side.',
       status: 500,
       code: 'server.error',
@@ -204,7 +204,7 @@ describe('responses and errors', () => {
     })
     expect(JSON.stringify(body)).not.toContain('secret internal detail')
     expect(lines.some((l) => l.includes('secret internal detail') && l.includes('"level":"error"'))).toBe(true) // but logged
-    const html = await kernel.handle(new Request('http://albastr.test/boom', { headers: { accept: 'text/html' } }))
+    const html = await kernel.handle(new Request('http://example.test/boom', { headers: { accept: 'text/html' } }))
     expect(html.headers.get('content-type')).toContain('text/html')
     expect(await html.text()).toContain('<h1>500</h1>')
   })
@@ -220,9 +220,9 @@ describe('responses and errors', () => {
     app = h.app
     const back = await h.call('/accept', {
       method: 'POST',
-      headers: { referer: 'https://albastr.test/bookings/b1/pay' },
+      headers: { referer: 'https://example.test/bookings/b1/pay' },
     })
-    expect([back.status, back.headers.get('location')]).toEqual([303, 'https://albastr.test/bookings/b1/pay'])
+    expect([back.status, back.headers.get('location')]).toEqual([303, 'https://example.test/bookings/b1/pay'])
     expect((await h.call('/accept', { method: 'POST' })).headers.get('location')).toBe('/fallback')
     const away = await h.call('/go')
     expect([away.status, away.headers.get('location')]).toEqual([302, 'https://pay.example.test/checkout/1'])

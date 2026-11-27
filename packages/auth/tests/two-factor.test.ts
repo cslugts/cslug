@@ -52,8 +52,8 @@ describe('TOTP (RFC 6238)', () => {
   })
 
   test('otpauth URI for authenticator apps', () => {
-    expect(otpauthUri('JBSWY3DPEHPK3PXP', 'ada@example.test', 'Albastr')).toBe(
-      'otpauth://totp/Albastr:ada%40example.test?secret=JBSWY3DPEHPK3PXP&issuer=Albastr&algorithm=SHA1&digits=6&period=30',
+    expect(otpauthUri('JBSWY3DPEHPK3PXP', 'ada@example.test', 'Demo')).toBe(
+      'otpauth://totp/Demo:ada%40example.test?secret=JBSWY3DPEHPK3PXP&issuer=Demo&algorithm=SHA1&digits=6&period=30',
     )
   })
 })

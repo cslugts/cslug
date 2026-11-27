@@ -15,7 +15,7 @@ afterEach(async () => {
 async function apiApp(http: Record<string, unknown>) {
   app = new Application({
     root: ROOT,
-    configs: { app: { url: 'https://albastr.test', key: 'k'.repeat(32), env: 'test' }, http },
+    configs: { app: { url: 'https://example.test', key: 'k'.repeat(32), env: 'test' }, http },
   }).useProviders([HttpProvider])
   app.singleton(Logger, () => Logger.null())
   await app.start()
@@ -24,7 +24,7 @@ async function apiApp(http: Record<string, unknown>) {
   return async (path: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers)
     if (jar.size) headers.set('cookie', [...jar].map(([k, v]) => `${k}=${v}`).join('; '))
-    const res = await kernel.handle(new Request(new URL(path, 'https://albastr.test'), { ...init, headers }))
+    const res = await kernel.handle(new Request(new URL(path, 'https://example.test'), { ...init, headers }))
     for (const c of res.headers.getSetCookie()) {
       const [k, ...rest] = (c.split(';')[0] ?? '').split('=')
       if (k) jar.set(k, rest.join('='))
@@ -32,14 +32,14 @@ async function apiApp(http: Record<string, unknown>) {
     return res
   }
 }
-const ORIGIN = { origin: 'https://albastr.test', accept: 'application/json' }
+const ORIGIN = { origin: 'https://example.test', accept: 'application/json' }
 
 test('fromFrontEnd: Origin, else Referer, else Sec-Fetch-Site', () => {
   const h = (headers: Record<string, string>) => ({ header: (n: string) => headers[n] })
-  const origins = ['https://albastr.test']
-  expect(fromFrontEnd(h({ origin: 'https://albastr.test' }), origins)).toBe(true)
+  const origins = ['https://example.test']
+  expect(fromFrontEnd(h({ origin: 'https://example.test' }), origins)).toBe(true)
   expect(fromFrontEnd(h({ origin: 'https://evil.test' }), origins)).toBe(false)
-  expect(fromFrontEnd(h({ referer: 'https://albastr.test/trips?x=1' }), origins)).toBe(true)
+  expect(fromFrontEnd(h({ referer: 'https://example.test/trips?x=1' }), origins)).toBe(true)
   expect(fromFrontEnd(h({ referer: 'not a url' }), origins)).toBe(false)
   expect(fromFrontEnd(h({ 'sec-fetch-site': 'same-origin' }), origins)).toBe(true)
   expect(fromFrontEnd(h({ 'sec-fetch-site': 'cross-site' }), origins)).toBe(false)
@@ -75,9 +75,9 @@ describe('http.api.stateful', () => {
     const off = await apiApp({})
     expect(await (await off('/api/session', { headers: ORIGIN })).json()).toEqual({ session: false })
     await app?.shutdown()
-    const listed = await apiApp({ api: { stateful: ['https://app.albastr.test'] } })
+    const listed = await apiApp({ api: { stateful: ['https://app.example.test'] } })
     expect(
-      (await (await listed('/api/session', { headers: { origin: 'https://app.albastr.test' } })).json()).session,
+      (await (await listed('/api/session', { headers: { origin: 'https://app.example.test' } })).json()).session,
     ).toBe(true)
     expect((await (await listed('/api/session', { headers: ORIGIN })).json()).session).toBe(false)
   })

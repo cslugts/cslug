@@ -1,6 +1,6 @@
 # A tour: the protected deposit
 
-This guide follows **one** Albastr feature through every layer of cslug. It is the riskiest part of the MVP
+This guide follows **one** feature of the pilot app (a travel booking platform) through every layer of cslug. It is the riskiest part of the MVP
 (build order step 1: *protected payment*, feature #5), so it is the best test of whether the framework is right.
 
 **The story.** A traveller accepts a proposal → pays a deposit into escrow through the payment partner →

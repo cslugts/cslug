@@ -4,7 +4,7 @@
 
 | # | Question | Decision |
 |---|---|---|
-| Q0 | Name of the app | **Albastr** |
+| Q0 | Name of the app | Decided (private) |
 | Q3 | Inertia pages or server templates + Vue islands? | **Vue islands** ([D5](./decisions.md#d5-views-vue-on-the-server-components-hydrated-as-islands-)) |
 | Q4 | Drizzle, or own typed tables + repositories? | **Own, no Drizzle** ([D6](./decisions.md#d6-database-own-typed-tables-repositories-and-query-builder-on-bunsql-)) |
 | Q6 | Dependencies | **Almost zero**: no runtime deps; only `vue`, `sass`, `tailwindcss` as optional asset compilers ([D0](./decisions.md#d0-almost-zero-dependencies-)) |

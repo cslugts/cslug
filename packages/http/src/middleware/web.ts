@@ -16,7 +16,7 @@ export type SessionOptions = {
   cookie?: string
   lifetime?: string
   sameSite?: 'lax' | 'strict' | 'none'
-  /** Cookie domain, e.g. `.albastr.com` to share a login across subdomains. */
+  /** Cookie domain, e.g. `.example.com` to share a login across subdomains. */
   domain?: string
 }
 

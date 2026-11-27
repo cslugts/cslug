@@ -2,7 +2,7 @@
 
 ```ts
 // config/redis.ts
-export default defineConfig({ connections: { default: { url: env.REDIS_URL } }, prefix: 'albastr:' })
+export default defineConfig({ connections: { default: { url: env.REDIS_URL } }, prefix: 'app:' })
 ```
 
 `RedisProvider` binds `Redis` (the default connection) and, unless `cache.default` / `session.store` say

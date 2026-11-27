@@ -223,12 +223,12 @@ describe('guide 04: env schema fields', () => {
     })
     expect(
       env.extend({ DATABASE_URL: v.url() }).parse({
-        APP_URL: 'https://albastr.com',
+        APP_URL: 'https://example.com',
         APP_KEY: 'k'.repeat(32),
-        DATABASE_URL: 'postgres://cslug:secret@db:5432/albastr',
+        DATABASE_URL: 'postgres://cslug:secret@db:5432/demo',
         REDIS_URL: 'redis://cache:6379',
       }).DATABASE_URL,
-    ).toBe('postgres://cslug:secret@db:5432/albastr')
+    ).toBe('postgres://cslug:secret@db:5432/demo')
     const parsed = env.parse({ APP_URL: 'http://localhost:3000', APP_KEY: 'k'.repeat(32), SMTP_PORT: '2525' })
     expect(parsed).toEqual({
       APP_ENV: 'development',

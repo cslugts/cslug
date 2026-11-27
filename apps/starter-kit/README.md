@@ -24,7 +24,7 @@ A small todo app that exercises most of cslug. It is what `bun create cslug` sho
 | CLI command | `purge-completed-todos-command.ts` (`cslug todos:purge --days=90`) | cli |
 | i18n (en, fr), ICU plurals | `resources/lang/` | i18n |
 | Factories, seeder, feature tests | `database/`, `tests/` | testing |
-| Single-instance deploy | `railway.json`, `Dockerfile` (`cslug start`) | cli |
+| Single-instance deploy | `cslug build`, then `cslug start` (guide 21) | cli |
 
 ## Run it
 

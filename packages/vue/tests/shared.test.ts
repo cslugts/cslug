@@ -286,13 +286,13 @@ describe('shared helpers', () => {
   test('buildUrl matches the server rules', () => {
     const routes = {
       'todos.toggle': { path: '/todos/:todo/toggle' },
-      'ops.show': { path: '/', domain: ':operator.albastr.test' },
+      'ops.show': { path: '/', domain: ':operator.example.test' },
     }
-    expect(buildUrl(routes, 'https://albastr.test', 'todos.toggle', { todo: 'a b', page: 2 })).toBe(
+    expect(buildUrl(routes, 'https://example.test', 'todos.toggle', { todo: 'a b', page: 2 })).toBe(
       '/todos/a%20b/toggle?page=2',
     )
-    expect(buildUrl(routes, 'https://albastr.test', 'ops.show', { operator: 'mada' })).toBe(
-      'https://mada.albastr.test/',
+    expect(buildUrl(routes, 'https://example.test', 'ops.show', { operator: 'mada' })).toBe(
+      'https://mada.example.test/',
     )
     expect(() => buildUrl(routes, undefined, 'todos.toggle')).toThrow('needs parameter "todo"')
     expect(() => buildUrl(routes, undefined, 'nope')).toThrow('No route named "nope"')

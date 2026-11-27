@@ -81,7 +81,7 @@ transaction waits for commit.
 ```ts
 // config/mail.ts
 export default defineConfig({
-  from: { address: 'bonjour@albastr.com', name: 'Albastr' },
+  from: { address: 'bonjour@example.com', name: 'My app' },
   transport: env.MAIL_TRANSPORT,                         // 'smtp' | 'resend' | 'log'
   transports: {
     smtp: { host: env.SMTP_HOST, port: 587, user: env.SMTP_USER, password: env.SMTP_PASSWORD },   // own SMTP client (STARTTLS, AUTH)

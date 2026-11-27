@@ -43,10 +43,10 @@ const routes = (r: Parameters<Parameters<typeof httpApp>[0]>[0]) => {
   })
   r.resource('operators', OperatorController).only(['index', 'show', 'store', 'update', 'destroy'])
   r.post('/admin/bookings/:booking/release', ReleaseStageController).name('admin.bookings.release')
-  r.group({ domain: 'api.albastr.test', prefix: '/v1', as: 'api' }, (r) => {
+  r.group({ domain: 'api.example.test', prefix: '/v1', as: 'api' }, (r) => {
     r.get('/quotes', () => ({ api: true })).name('quotes.index')
   })
-  r.group({ domain: ':operator.albastr.test', as: 'operator-site' }, (r) => {
+  r.group({ domain: ':operator.example.test', as: 'operator-site' }, (r) => {
     r.get('/', ({ params }) => ({ site: params.operator }))
       .name('home')
       .where('operator', /^[a-z0-9-]{3,40}$/)
@@ -85,12 +85,12 @@ describe('routing (guide 05)', () => {
   test('domain routing: fixed host, host parameters with constraints; others fall through', async () => {
     const h = await httpApp(routes)
     app = h.app
-    expect(await (await h.call('/v1/quotes', { host: 'api.albastr.test' })).json()).toEqual({ api: true })
+    expect(await (await h.call('/v1/quotes', { host: 'api.example.test' })).json()).toEqual({ api: true })
     expect((await h.call('/v1/quotes')).status).toBe(404)
-    expect(await (await h.call('/', { host: 'ravinala-tours.albastr.test' })).json()).toEqual({
+    expect(await (await h.call('/', { host: 'ravinala-tours.example.test' })).json()).toEqual({
       site: 'ravinala-tours',
     })
-    expect(await (await h.call('/', { host: 'ab.albastr.test' })).text()).toBe('home') // constraint fails → the domain-less route
+    expect(await (await h.call('/', { host: 'ab.example.test' })).text()).toBe('home') // constraint fails → the domain-less route
   })
 
   test('405 with Allow, HEAD falls back to GET (no body), 404 as problem+json', async () => {
@@ -107,7 +107,7 @@ describe('routing (guide 05)', () => {
     expect(await r404.json()).toMatchObject({
       status: 404,
       code: 'route.not_found',
-      type: 'https://albastr.test/errors/route.not_found',
+      type: 'https://example.test/errors/route.not_found',
     })
   })
 
@@ -117,9 +117,9 @@ describe('routing (guide 05)', () => {
     expect(route('public.circuits.show', { locale: 'it', slug: 'tana-isalo' })).toBe('/it/circuits/tana-isalo')
     expect(route('operators.show', { operator: 'op 1' }, { query: { tab: 'docs' } })).toBe('/operators/op%201?tab=docs')
     expect(route('home', { ref: 'x' })).toBe('/?ref=x') // unknown params become query
-    expect(route('api.quotes.index')).toBe('https://api.albastr.test/v1/quotes')
-    expect(route('operator-site.home', { operator: 'ravinala-tours' })).toBe('https://ravinala-tours.albastr.test/')
-    expect(route('home', {}, { absolute: true })).toBe('https://albastr.test/')
+    expect(route('api.quotes.index')).toBe('https://api.example.test/v1/quotes')
+    expect(route('operator-site.home', { operator: 'ravinala-tours' })).toBe('https://ravinala-tours.example.test/')
+    expect(route('home', {}, { absolute: true })).toBe('https://example.test/')
     expect(() => route('operators.show')).toThrow('Route "operators.show" needs parameter "operator"')
     expect(() => route('nope')).toThrow('No route named "nope"')
   })
@@ -128,13 +128,13 @@ describe('routing (guide 05)', () => {
     const h = await httpApp(routes)
     app = h.app
     const url = route('download', { file: 'trip-pack.pdf' }, { signed: true, expiresIn: '30m' })
-    expect(url).toMatch(/^https:\/\/albastr\.test\/download\/trip-pack\.pdf\?expires=\d+&signature=/)
+    expect(url).toMatch(/^https:\/\/example\.test\/download\/trip-pack\.pdf\?expires=\d+&signature=/)
     expect(await (await h.call(url)).text()).toBe('trip-pack.pdf')
     expect((await h.call(url.replace('trip-pack', 'other'))).status).toBe(403)
     const key = 'k'.repeat(32)
     const expired = urlFor(
       h.app.resolve(Router),
-      'https://albastr.test',
+      'https://example.test',
       key,
       'download',
       { file: 'x' },

@@ -56,7 +56,7 @@ export async function fixtureApp() {
   const app = new Application({
     root: import.meta.dir,
     configs: {
-      app: { url: 'https://albastr.test', key: 'k'.repeat(32), env: 'test' },
+      app: { url: 'https://example.test', key: 'k'.repeat(32), env: 'test' },
       ...(dbUrl ? { database: { url: dbUrl } } : {}),
     },
   })

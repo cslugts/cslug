@@ -36,7 +36,7 @@ Throwaway code; the real implementation goes in `@cslug/queue`.
 | Consume + ack, 4 consumers, `COUNT 100` | **≈77,000 jobs/s** (20k in 260 ms) |
 | Enqueue → delivered to a blocked worker | **p50 0.2–0.3 ms, p99 1.4–2.2 ms**, max ≈5 ms |
 
-Albastr's MVP needs a few hundred jobs a day; the overhead of the queue itself is negligible.
+The pilot app's MVP needs a few hundred jobs a day; the overhead of the queue itself is negligible.
 
 ## Findings for `@cslug/queue` and `@cslug/redis`
 

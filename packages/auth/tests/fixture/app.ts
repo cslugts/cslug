@@ -131,7 +131,7 @@ export async function fixtureApp() {
   const app = new Application({
     root: import.meta.dir,
     configs: {
-      app: { env: 'test', key: 'k'.repeat(32), url: 'https://albastr.test' },
+      app: { env: 'test', key: 'k'.repeat(32), url: 'https://example.test' },
       database: { url: Object.assign(new URL(url), { pathname: `/${name}` }).toString() },
       auth: { users: UserRepository, passwords: { memoryCost: 4096, timeCost: 1 }, throttle: '3/min' },
     },

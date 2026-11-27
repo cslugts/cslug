@@ -28,14 +28,14 @@ describe('string', () => {
   test('email (trimmed), url, uuid, uuid7', () => {
     expect(v.email().toLowerCase().parse('  ADA@Example.TEST ')).toBe('ada@example.test')
     expect(errorsOf(() => v.email().parse('ada@'))).toEqual({ '': ['validation.email'] })
-    expect(v.url().parse('https://albastr.com/fr')).toBe('https://albastr.com/fr')
+    expect(v.url().parse('https://example.com/fr')).toBe('https://example.com/fr')
     expect(v.url().parse('postgres://u:p@db:5432/app')).toBe('postgres://u:p@db:5432/app')
     expect(v.url().parse('redis://cache:6379/0')).toBe('redis://cache:6379/0')
     for (const bad of ['javascript:alert(1)', 'data:text/html,<b>x</b>', 'file:///etc/passwd', 'not a url']) {
       expect(errorsOf(() => v.url().parse(bad))).toEqual({ '': ['validation.url'] })
     }
-    expect(errorsOf(() => v.url().protocols('https').parse('http://albastr.com'))).toEqual({ '': ['validation.url'] })
-    expect(v.url().protocols('https:', 'http:').parse('http://albastr.com')).toBe('http://albastr.com')
+    expect(errorsOf(() => v.url().protocols('https').parse('http://example.com'))).toEqual({ '': ['validation.url'] })
+    expect(v.url().protocols('https:', 'http:').parse('http://example.com')).toBe('http://example.com')
     const id7 = Bun.randomUUIDv7()
     expect(v.uuid7().parse(id7)).toBe(id7)
     expect(v.uuid().parse(crypto.randomUUID())).toBeString()

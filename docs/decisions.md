@@ -8,7 +8,7 @@ Each decision lists what was **decided** or **proposed**, the **alternatives**, 
 | ⚑ | Proposed, needs sign-off (see [open-questions.md](./open-questions.md)) |
 | — | Proposed, low risk |
 
-Feedback received so far: rename the app to **Albastr** ✅ · use **Vue islands**, not Inertia ✅ · typed tables
+Feedback received so far: name the app (the name stays private) ✅ · use **Vue islands**, not Inertia ✅ · typed tables
 and repositories **without Drizzle** ✅ · **almost zero dependencies** ✅ · **scoped `@cslug/*` packages** ✅ · **static shortcuts are fine** ✅ · **folders by type, `booking-repository.ts` naming** ✅ ·
 **standard decorators** ✅ · **islands rendered on the server by default** ✅ · **queue on Redis Streams** ✅ ·
 **Vue as the server template language** ✅.
