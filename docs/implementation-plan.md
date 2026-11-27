@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M8 are done; 0.3.0 is released. Next is milestone M9 (`ai`, `create-cslug`, extras).
+> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M8 are done; M9 is in progress (0.4.0 released: create-cslug, `cslug add`, `describe`, `repl`, the migration differ). Next: `ai`.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
