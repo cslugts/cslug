@@ -1,6 +1,6 @@
 {
   "name": "@cslug/redis",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Redis connections and Redis drivers for cache, locks, rate limits and sessions.",
   "license": "MIT",
   "type": "module",
