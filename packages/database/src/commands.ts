@@ -199,6 +199,38 @@ export class MakeMigrationCommand extends DatabaseCommand {
   }
 }
 
+/**
+ * `cslug db:shell`: `psql` on the app's database (`config database.url`). The password goes through `PGPASSWORD`,
+ * never the command line (where `ps` shows it). `--command` runs one statement and exits.
+ */
+export class DbShellCommand extends Command {
+  static signature = 'db:shell'
+  static description = 'Open psql on the app database'
+  static boot = false
+  static args = { command: flag.string().optional().alias('c').describe('Run one SQL statement and exit') }
+
+  async handle({ command }: Command.Args<typeof DbShellCommand>) {
+    const configured = this.app.config<string | undefined>('database.url')
+    if (!configured) {
+      this.error('No database configured (config/database.ts → url)')
+      return 1
+    }
+    const psql = Bun.which('psql')
+    if (!psql) {
+      this.error('psql is not installed (Debian/Ubuntu: apt install postgresql-client; macOS: brew install libpq)')
+      return 1
+    }
+    const url = new URL(configured)
+    const password = decodeURIComponent(url.password)
+    url.password = ''
+    const proc = Bun.spawn([psql, url.toString(), ...(command ? ['-c', command] : [])], {
+      stdio: ['inherit', 'inherit', 'inherit'],
+      env: { ...process.env, ...(password ? { PGPASSWORD: password } : {}) },
+    })
+    return await proc.exited
+  }
+}
+
 /** `cslug db:diff`: what `make:migration --from-tables` would write, without writing it. */
 export class DbDiffCommand extends DatabaseCommand {
   static signature = 'db:diff'
@@ -243,6 +275,7 @@ export const databaseCommands = [
   DbSeedCommand,
   MakeMigrationCommand,
   DbDiffCommand,
+  DbShellCommand,
   make('table', 'app/tables'),
   make('repository', 'app/repositories'),
   make('factory', 'database/factories'),

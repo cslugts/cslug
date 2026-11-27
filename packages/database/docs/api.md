@@ -123,6 +123,9 @@ and `$$` bodies are fine). A first line `-- cslug:no-transaction` runs the file 
 
 A failing migration is rolled back entirely and the error names the file.
 
+`cslug db:shell` opens `psql` on `config database.url` (`-c` / `--command` runs one statement). The password is
+passed through `PGPASSWORD`, not on the command line.
+
 ### The table differ
 
 `cslug make:migration --from-tables` compares `app/tables/` with the database and writes the SQL; `cslug db:diff`

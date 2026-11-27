@@ -5,6 +5,7 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 ## Unreleased
 
 ### @cslug/database
+- `cslug db:shell [-c sql]`: `psql` on the app database, the password through `PGPASSWORD`.
 - The table differ: `cslug make:migration --from-tables` writes the SQL that brings the database to `app/tables/`
   (up and down; renames asked; data-losing changes flagged with `-- review:`), `cslug db:diff` shows it.
   `loadTables`, `tableSpec`, `introspect`, `diffSchemas`, `renameCandidates`, `migrationSql`.

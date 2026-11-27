@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { cli, tempDatabase } from './support'
+import { BIN, cli, FIXTURE, tempDatabase } from './support'
 
 let db: Awaited<ReturnType<typeof tempDatabase>>
 beforeAll(async () => {
@@ -32,5 +32,41 @@ describe.skipIf(!process.env.DATABASE_URL)('database commands (guide 09)', () =>
     const again = await run(['migrate', '--seed'])
     expect(again.out).toContain('seeded database-seeder')
     expect((await run(['migrate:fresh', '--seed'])).code).toBe(0)
+  })
+})
+
+describe('db:shell', () => {
+  test('psql gets the URL without the password; the password goes through PGPASSWORD', async () => {
+    const { mkdtempSync, writeFileSync, chmodSync, rmSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const { tmpdir } = await import('node:os')
+    const bin = mkdtempSync(join(tmpdir(), 'fake-psql-'))
+    writeFileSync(join(bin, 'psql'), '#!/bin/sh\necho "args: $*"\necho "PGPASSWORD=$PGPASSWORD"\n')
+    chmodSync(join(bin, 'psql'), 0o755)
+    const proc = Bun.spawn([process.execPath, BIN, 'db:shell', '-c', 'select 1'], {
+      cwd: FIXTURE,
+      stdout: 'pipe',
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        FIXTURE_DATABASE_URL: 'postgres://ada:s%40cret@db.test:5432/app',
+      },
+    })
+    const out = await new Response(proc.stdout).text()
+    rmSync(bin, { recursive: true, force: true })
+    expect(await proc.exited).toBe(0)
+    expect(out).toContain('args: postgres://ada@db.test:5432/app -c select 1')
+    expect(out).toContain('PGPASSWORD=s@cret')
+  })
+
+  test.skipIf(!process.env.DATABASE_URL || !Bun.which('psql'))('runs a statement on the database', async () => {
+    const proc = Bun.spawn([process.execPath, BIN, 'db:shell', '--command', 'select 41 + 1 as answer'], {
+      cwd: FIXTURE,
+      stdout: 'pipe',
+      env: { ...process.env, FIXTURE_DATABASE_URL: db?.url },
+    })
+    const out = await new Response(proc.stdout).text()
+    expect(await proc.exited).toBe(0)
+    expect(out).toMatch(/answer\s*\n-+\s*\n\s*42/)
   })
 })
