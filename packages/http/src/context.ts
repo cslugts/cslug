@@ -3,7 +3,7 @@ import { type Output, type Schema, type Validatable, Validator, validate } from 
 import { coerceForm, nestKeys } from './body'
 import type { Session } from './session'
 
-type ValidatorClass = abstract new (...args: never[]) => Validator
+export type ValidatorClass = abstract new (...args: never[]) => Validator
 /** What `request.validate()` accepts: a schema, a Validator instance or class, a Standard Schema. */
 export type Validated<T> = T extends ValidatorClass ? Output<InstanceType<T>> : Output<T>
 

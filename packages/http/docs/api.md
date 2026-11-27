@@ -9,6 +9,7 @@
 |---|---|
 | `r.get/post/put/patch/delete/options(path, action)` | `action`: `[Controller, 'method']`, a single-action class (`handle`), or a closure |
 | `.name(n)`, `.middleware(...m)`, `.where('param', /re/)` | |
+| `.validates(schema)` | Live validation: a request with `X-Cslug-Validate: field,…` (or `*`) runs the route's middleware and this schema, answers `204` (`X-Cslug-Validated: 1`) or `422` with only those fields' errors, and never calls the handler; without `.validates()` such a request is `400` (`http.no_live_validation`) |
 | `r.group({ prefix, domain, middleware, as, ...meta }, fn)` | Nested groups accumulate prefix, middleware and name prefix; `domain` may contain `:params` |
 | `r.resource('operators', Ctl).only([...]) / .except([...])` | index, create, store, show, edit, update (PATCH), destroy; nested `'operators.documents'` |
 

@@ -9,7 +9,14 @@ import { buildUrl } from '../shared/url'
 import { pageData } from './data'
 
 export { type Serialized, serialize } from '../serialize'
-export { type Form, type FormCallbacks, type SubmitOptions, useForm } from '../shared/form'
+export {
+  type ClientSchema,
+  type Form,
+  type FormCallbacks,
+  type FormOptions,
+  type SubmitOptions,
+  useForm,
+} from '../shared/form'
 export { csrfHeaders, type HttpResult, http, type Progress, type RequestOptions } from '../shared/http'
 export { defineStore } from '../shared/store'
 export { type PageData, pageData } from './data'

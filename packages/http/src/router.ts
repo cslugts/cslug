@@ -1,5 +1,6 @@
 import { type Class, CslugError } from '@cslug/core'
-import type { HttpContext } from './context'
+import type { Validatable } from '@cslug/validation'
+import type { HttpContext, ValidatorClass } from './context'
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
 export type Next = () => Promise<Response>
@@ -24,6 +25,8 @@ export type RouteDef = {
   middleware: Middleware[]
   wheres: Record<string, RegExp>
   meta: Record<string, unknown>
+  /** The schema live validation checks this route's input against (`.validates(schema)`). */
+  validates?: Validatable | ValidatorClass
 }
 
 export type GroupOptions = {
@@ -54,6 +57,15 @@ export class RouteBuilder {
   }
   middleware(...middleware: Middleware[]): this {
     this.def.middleware.push(...middleware)
+    return this
+  }
+  /**
+   * The schema this route validates its input with, for live validation (`form.validate()` in `@cslug/vue`): a
+   * request with `X-Cslug-Validate` runs the route's middleware and this validation, answers 204 or 422, and never
+   * calls the handler. The handler still calls `request.validate()` itself.
+   */
+  validates(schema: Validatable | ValidatorClass): this {
+    this.def.validates = schema
     return this
   }
   /** Constrain a path or domain parameter: `.where('operator', /^[a-z0-9-]{3,40}$/)`. */

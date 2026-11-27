@@ -35,7 +35,13 @@ export async function tempDatabase() {
   }
 }
 
-export const freePort = () => 20000 + Math.floor(Math.random() * 20000)
+/** A port the OS says is free right now (bound on port 0, then released), not a random guess that may be taken. */
+export function freePort(): number {
+  const probe = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: () => new Response() })
+  const port = probe.port as number
+  probe.stop(true)
+  return port
+}
 
 export async function waitFor(check: () => Promise<boolean>, ms = 10_000) {
   const end = Date.now() + ms

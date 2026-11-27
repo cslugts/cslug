@@ -128,6 +128,20 @@ Override per field with `{ message: 'key' }`: `v.literal(true, { message: 'booki
 }
 ```
 
+## Live validation
+
+Forms can check a field while the user types (`form.validate('email')` in `@cslug/vue`, see
+[guide 08](./08-views-vue-scss.md#live-validation)). Rules that only the server can check (a unique email) need the
+route to say which schema it validates with:
+
+```ts
+r.post('/register', [RegisterController, 'store']).name('register.store').validates(RegisterValidator)
+```
+
+A validate-only request (`X-Cslug-Validate: email`) runs the route's middleware (session, CSRF, throttle) and
+`RegisterValidator`, answers `204` or `422` with that field's errors only, and **never calls the controller**: no
+user is created. The controller still validates as usual. Routes without `.validates()` refuse such requests (400).
+
 ## Files
 
 ```ts

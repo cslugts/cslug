@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
+import { v } from '@cslug/validation'
 import { defineStore, http, useForm } from '../src'
 import { formatDateIn, formatDurationIn, formatMoneyIn } from '../src/shared/format'
 import { buildUrl } from '../src/shared/url'
@@ -202,6 +203,63 @@ describe('useForm: callbacks, redirects, state (Inertia names)', () => {
     await form.submit('put', '/todos/t2')
     expect([calls[1]?.url, calls[1]?.init.method]).toEqual(['/todos/t2', 'PUT'])
     expect(() => form.submit({ currentTarget: null } as unknown as Event)).toThrow('needs the submit event of a <form>')
+  })
+})
+
+describe('useForm: live validation', () => {
+  const Trip = v.object({ title: v.string().min(3), groupSize: v.int().min(1), notes: v.string().max(5).optional() })
+
+  test('in the browser with the shared schema: only the asked fields, no request; valid / invalid / touched', async () => {
+    const calls = stub(() => json(200, {}))
+    const form = useForm({ title: 'ab', groupSize: 0, notes: '' }, { schema: Trip })
+    expect(await form.validate('title')).toBe(false)
+    expect(form.errors).toEqual({ title: 'Must be at least 3 characters.' }) // groupSize not touched: no error yet
+    expect([form.invalid('title'), form.valid('title'), form.touched('title'), form.touched('groupSize')]).toEqual([
+      true,
+      false,
+      true,
+      false,
+    ])
+    form.data.title = 'Isalo'
+    expect(await form.validate()).toBe(true) // the touched fields
+    expect([form.errors, form.valid('title')]).toEqual([{}, true])
+    expect(await form.validate(['title', 'groupSize'])).toBe(false)
+    expect(form.errors).toEqual({ groupSize: 'Must be at least 1.' })
+    expect(calls).toEqual([])
+  })
+
+  test('on the server: X-Cslug-Validate, debounced into one request, files left out; 422 sets, 204 clears', async () => {
+    const calls = stub(() => json(422, { errors: { email: ['Already taken.'], name: ['Too short.'], other: ['x'] } }))
+    const photo = new File(['png'], 'p.png')
+    const form = useForm({ email: 'ada@example.test', name: 'A', photo }, { action: '/users', validationTimeout: 10 })
+    const first = form.validate('email')
+    const second = form.validate('name')
+    expect(form.validating).toBe(false) // debounced: nothing sent yet
+    expect([await first, await second]).toEqual([false, false])
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.url).toBe('/users')
+    expect(calls[0]?.init.headers).toMatchObject({ 'x-cslug-validate': 'email,name', 'x-cslug-request': '1' })
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ email: 'ada@example.test', name: 'A' })
+    expect(form.errors).toEqual({ email: 'Already taken.', name: 'Too short.' }) // not "other": it was not asked
+    stub(() => new Response(null, { status: 204 }))
+    expect(await form.validate('email')).toBe(true)
+    expect([form.errors, form.validating]).toEqual([{ name: 'Too short.' }, false])
+  })
+
+  test("both: the server only once the schema passes; the URL from the input's <form>; a clear error without one", async () => {
+    const calls = stub(() => new Response(null, { status: 204 }))
+    const form = useForm({ title: 'ab', groupSize: 2 }, { schema: Trip, validate: 'both', validationTimeout: 1 })
+    const blur = {
+      target: {
+        form: { getAttribute: (n: string) => (n === 'action' ? '/trips' : 'post'), querySelector: () => null },
+      },
+    } as unknown as Event
+    expect(await form.validate('title', blur)).toBe(false) // the schema fails: no request
+    expect(calls).toHaveLength(0)
+    form.data.title = 'Isalo'
+    expect(await form.validate('title', blur)).toBe(true)
+    expect([calls[0]?.url, calls[0]?.init.method]).toEqual(['/trips', 'POST'])
+    expect(() => useForm({ email: '' }).validate('email')).toThrow('form.validate() needs the route')
   })
 })
 
