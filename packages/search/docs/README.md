@@ -55,7 +55,39 @@ const page = await search(this.circuits, 'isalo 4x4', { highlight: ['summary'], 
 Everything is a `whereSql`, `selectSql` and `orderBySql` on the query, so it composes with the rest of the query builder
 (`where`, `paginate`, `first`, `cursor` on another key is not meaningful with a rank).
 
+## Indexes for documents that are not rows
+
+```ts
+// app/search/help-search-index.ts
+export const helpIndex = searchIndex<{ url: string; kind: 'faq' | 'guide' }>('help', {
+  languages: ['french', 'english'],                 // the first is the default
+  documents: async function* () {                   // what `cslug search:reindex help` refills it with
+    for (const page of await resolve(HelpPageRepository).all())
+      yield { key: page.slug, title: page.title, body: page.text, language: page.locale === 'en' ? 'english' : 'french',
+              metadata: { url: `/help/${page.slug}`, kind: page.kind } }
+  },
+})
+
+await helpIndex.upsert({ key: 'visa', title: 'Visa à l’arrivée', body, metadata: { url: '/help/visa', kind: 'faq' } })
+const { data, meta } = await helpIndex.search('visa', { filter: { kind: 'faq' }, highlight: true, page: 1 })
+// data: { key, title, metadata, rank, highlight?: { title, body } }[]
+```
+
+Documents live in `cslug_search_documents` (one row per index and key: title, body, metadata, its text search
+configuration, and a vector generated from the title (A) and the body (B) in that language). A document's
+`language` must be one of the index's `languages`; the query covers them all unless `language` narrows it.
+
+- `upsert(doc)` / `upsertMany(docs)` add or replace by key (one statement); `remove(...keys)`, `clear()`, `count()`.
+- `search(term, { page = 1, perPage = 20, filter, language, highlight, typos })` → `{ data, meta }` like
+  `paginate()`: ranked as `search()` ranks rows, `filter` matches metadata (`metadata @> filter`), `highlight`
+  (`true` or `{ words, fragments }`) marks the title and body (HTML-escaped first), `typos` also matches similar
+  titles.
+- `reindex()` (and `cslug search:reindex [name]`, which imports `app/search/`): upserts everything `documents()`
+  yields, in batches of 500, then removes the documents it did not yield. Without a name, every index that has a
+  source. Indexes are defined once per name (`searchIndex()` throws on a second definition).
+
+Table search never needs a reindex: PostgreSQL computes `searchable()` columns on every write.
+
 ## Not yet
 
-`SearchIndex` (documents that are not rows) and `cslug search:reindex`, semantic search with pgvector and an
-`Embedder`, hybrid ranking, and the AI search tool come in the next parts of M10.
+Semantic search with pgvector and an `Embedder`, hybrid ranking, and the AI search tool come in the next parts of M10.

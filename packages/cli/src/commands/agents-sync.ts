@@ -51,6 +51,7 @@ const LAYOUT: [string, string][] = [
   ['app/notifications', 'notifications'],
   ['app/agents', 'AI agents (`Agent` subclasses)'],
   ['app/tools', 'AI tools (`Tool` subclasses; `@mcp()` exposes them)'],
+  ['app/search', 'search indexes (`searchIndex()`, refilled by `cslug search:reindex`)'],
   ['app/commands', 'app commands (`*-command.ts`, discovered by `cslug`)'],
   ['app/providers', 'service providers'],
   ['config', 'one file per package (`config/database.ts`…), values from `env`'],
