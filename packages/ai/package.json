@@ -1,6 +1,6 @@
 {
   "name": "@cslug/ai",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Agents and tools, structured output, prompts, streaming; Anthropic and OpenAI-compatible providers.",
   "license": "MIT",
   "type": "module",
