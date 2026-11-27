@@ -1,0 +1,46 @@
+{
+  "name": "@cslug/telemetry",
+  "version": "0.7.1",
+  "description": "Traces, metrics and logs to any OpenTelemetry collector (OTLP/HTTP), and /metrics for Prometheus.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cslugts/cslug.git",
+    "directory": "packages/telemetry"
+  },
+  "homepage": "https://github.com/cslugts/cslug/tree/main/packages/telemetry",
+  "keywords": [
+    "cslug",
+    "bun",
+    "framework",
+    "opentelemetry",
+    "otlp",
+    "prometheus",
+    "tracing",
+    "metrics"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "docs",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.3.14"
+  },
+  "peerDependencies": {
+    "@cslug/core": "workspace:*",
+    "@cslug/http": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@cslug/http": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@cslug/http": "workspace:*"
+  }
+}

@@ -80,6 +80,11 @@ export const graph: Record<string, PackageSpec> = {
     description: 'Full-text search over any table on PostgreSQL: weighted, multilingual, accent-insensitive, ranked.',
     requires: ['core', 'database'],
   },
+  telemetry: {
+    description: 'Traces, metrics and logs to any OpenTelemetry collector (OTLP/HTTP), and /metrics for Prometheus.',
+    requires: ['core'],
+    optional: ['http'],
+  },
   ai: {
     description: 'Agents, tools, structured output, conversations and MCP.',
     requires: ['core', 'validation'],

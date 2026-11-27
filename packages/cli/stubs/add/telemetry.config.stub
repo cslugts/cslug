@@ -1,0 +1,11 @@
+import { defineConfig } from '@cslug/core'
+
+/**
+ * Traces, metrics and logs. With OTEL_EXPORTER_OTLP_ENDPOINT set (an OpenTelemetry collector, or a vendor's OTLP
+ * endpoint with OTEL_EXPORTER_OTLP_HEADERS for its key), they are exported; /metrics serves Prometheus.
+ */
+export default defineConfig({
+  sampleRate: 1, // the share of new traces exported (failed requests always are)
+  otlp: { logs: false }, // logs: 'info' sends log lines too
+  metrics: { path: '/metrics', token: process.env.METRICS_TOKEN }, // without a token: loopback only
+})

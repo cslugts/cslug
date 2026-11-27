@@ -4,11 +4,21 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/telemetry (new)
+- Records the spans and metrics cslug's packages report and exports them, with log lines (opt in), to any
+  OpenTelemetry collector over OTLP/HTTP JSON: batched, bounded, flushed at shutdown, never throwing into the app;
+  `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_EXPORTER_OTLP_HEADERS` honoured.
+- Sampling (`sampleRate`; continued traces follow the caller; failed spans always exported); resource attributes
+  (service, version, instance, environment, role).
+- `GET /metrics` in Prometheus format: loopback only by default, a bearer token or IPv4 ranges otherwise.
+- `cslug add telemetry`; guide 23 (Observability).
+
 ### @cslug/core
 - Logger targets: `stdout`, `stderr`, `file` (daily files with `{date}` and `keep`), `custom`, each with its own
   level and format; `LOG_LEVEL` / `LOG_FORMAT` defaults; the process role (`CSLUG_ROLE`) on every line; children
   share their parent's targets; `originRequestId`, `traceId` and `spanId` from the context.
 
+- `Logger.addTarget()`; `BasicTracer` `sampleRate`.
 - `Tracer` and `Metrics` contracts (no-op by default; `@cslug/telemetry` will bind real ones), W3C `traceparent`,
   `BasicTracer` / `BasicMetrics` for tests. Spans set `traceId` / `spanId` in the context, so logs carry them.
 

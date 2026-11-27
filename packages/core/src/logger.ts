@@ -100,7 +100,6 @@ type Sink = { min: number; format: LogFormat; write: (line: string, level: LogLe
  * entry. `targets` sends lines to stdout, stderr, files (one per day with `{date}`) or custom functions.
  */
 export class Logger {
-  private readonly min: number
   private readonly redactKeys: string[]
   private readonly sinks: Sink[]
 
@@ -132,7 +131,20 @@ export class Logger {
                     : (line: string) => process.stdout.write(`${line}\n`)
             return { min: LEVELS[t.level ?? level], format: t.format ?? format, write }
           }))
-    this.min = Math.min(...this.sinks.map((s) => s.min))
+  }
+
+  /** Send lines to one more target too (this logger, its children and its parent share targets). */
+  addTarget(target: Extract<LogTarget, { type: 'custom' | 'stderr' | 'stdout' }>): void {
+    const level = this.options.level ?? 'info'
+    const write =
+      target.type === 'custom'
+        ? target.write
+        : (line: string) => (target.type === 'stderr' ? process.stderr : process.stdout).write(`${line}\n`)
+    this.sinks.push({
+      min: LEVELS[target.level ?? level],
+      format: target.format ?? this.sinks[0]?.format ?? 'json',
+      write,
+    })
   }
 
   /** A logger that writes nothing (unit tests). */
@@ -145,7 +157,7 @@ export class Logger {
   }
 
   isEnabled(level: LogLevel): boolean {
-    return LEVELS[level] >= this.min
+    return this.sinks.some((s) => LEVELS[level] >= s.min)
   }
 
   debug(message: string, fields?: LogFields): void {

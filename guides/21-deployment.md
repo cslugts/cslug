@@ -184,11 +184,10 @@ platform wants an image, write the Dockerfile you need around these commands.
   (`web`, `worker`, `scheduler`); a job's lines also carry `originRequestId`, the request that started the work,
   so one search follows a request into its jobs. Secrets are redacted. `config/log.ts` sets the level and format
   (`LOG_LEVEL`, `LOG_FORMAT`) and more destinations (stderr, daily files with retention).
-- `/metrics` (behind `auth('token')`): request counts and latencies, jobs by state, queue lag, DB pool usage.
+- With `@cslug/telemetry`: `/metrics` for Prometheus (loopback, a token or an address range), and traces,
+  metrics and logs exported to an OpenTelemetry collector. See [guide 23](./23-observability.md).
 - Error reporting hook: `this.app.resolve(ExceptionHandler).report((error, ctx) => sentry.captureException(error))`.
-- Tracing and metrics: http, queue, database and ai record spans and durations through core's `Tracer` and
-  `Metrics` (no-op until `@cslug/telemetry` is installed); a request, the jobs it dispatches and their queries
-  share one trace, and log lines carry its `traceId`.
+- Tracing: a request, the jobs it dispatches and their queries share one trace; log lines carry its `traceId`.
 
 ## Production checklist
 
