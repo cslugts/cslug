@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { type Application, Clock, CslugError, Lock, ServiceProvider, token } from '@cslug/core'
-import { addMigrations } from '@cslug/database'
+import { addMigrations, Database } from '@cslug/database'
 import { API_MIDDLEWARE, type MiddlewareFn, WEB_MIDDLEWARE } from '@cslug/http'
 import { type AuthConfig, isClass, type UserSource } from './config'
 import { Hash } from './hash'
@@ -8,6 +8,7 @@ import { MagicLinks } from './magic-links'
 import { AUTH_DEPS, authenticate } from './middleware'
 import { Gate } from './policy'
 import { Tokens } from './tokens'
+import { TwoFactor } from './two-factor'
 
 const AUTHENTICATE = token<MiddlewareFn>('auth.authenticate')
 
@@ -20,8 +21,8 @@ export async function userSource(app: Application): Promise<UserSource> {
 }
 
 /**
- * Binds `Hash`, `Gate`, `Tokens` and `MagicLinks`, adds `authenticate()` to the web and api groups, and the
- * access-tokens migration. Config: `config/auth.ts`.
+ * Binds `Hash`, `Gate`, `Tokens`, `MagicLinks` and `TwoFactor`, adds `authenticate()` to the web and api groups,
+ * and the access-tokens and two-factor migrations. Config: `config/auth.ts`.
  */
 export class AuthProvider extends ServiceProvider {
   register() {
@@ -49,6 +50,18 @@ export class AuthProvider extends ServiceProvider {
           config.magicLinks,
         ),
     )
+    this.app.singleton(
+      TwoFactor,
+      (c) =>
+        new TwoFactor(
+          () => c.resolve(Database),
+          () => c.resolve(Clock),
+          {
+            ...config.twoFactor,
+            issuer: config.twoFactor?.issuer ?? String(this.app.config('app.name') ?? 'cslug'),
+          },
+        ),
+    )
     this.app.instance(AUTHENTICATE, authenticate())
     this.app.tag([AUTHENTICATE], WEB_MIDDLEWARE)
     this.app.tag([AUTHENTICATE], API_MIDDLEWARE)
@@ -57,6 +70,7 @@ export class AuthProvider extends ServiceProvider {
       users,
       hash: () => this.app.resolve(Hash),
       tokens: () => this.app.resolve(Tokens),
+      twoFactor: () => this.app.resolve(TwoFactor),
     })
   }
 }

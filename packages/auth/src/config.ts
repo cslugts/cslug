@@ -1,4 +1,5 @@
 import type { Class } from '@cslug/core'
+import type { TwoFactorConfig } from './two-factor'
 
 /** What auth needs from the users repository (a cslug `Repository` has both). */
 export type UserSource = {
@@ -27,6 +28,8 @@ export type AuthConfig = {
   loginRoute?: string
   /** Where `guest()` sends signed-in users. Default `/`. */
   home?: string
+  /** TOTP two-factor authentication: issuer, drift window, recovery codes, how long a login waits for its code. */
+  twoFactor?: TwoFactorConfig
 }
 
 /** True for a `class` (not a lazy-import function): `config.users` accepts both. */
