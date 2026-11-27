@@ -1,6 +1,8 @@
 import { Clock, type Duration, EventBus, Logger, parseDuration, type RateLimit, ServiceProvider } from '@cslug/core'
 import { RedisConnections, RedisProvider } from '@cslug/redis'
 import { queueCommands } from './commands'
+import { discoverJobs } from './discover'
+import { describeJobs } from './job'
 import { QueuedListenerJob } from './listener-job'
 import { Outbox } from './outbox'
 import { Queue } from './queue'
@@ -65,6 +67,10 @@ export class QueueProvider extends ServiceProvider {
 
   register() {
     this.commands(queueCommands)
+    this.describe('jobs', async () => {
+      await discoverJobs(this.app)
+      return describeJobs()
+    })
     const config = this.config
     this.app.singleton(
       RedisQueue,

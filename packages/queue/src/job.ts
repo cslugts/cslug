@@ -142,5 +142,15 @@ export function registerJob(job: JobClass): void {
 
 export const findJob = (name: string): JobClass | undefined => registry.get(name)
 
+/** The registered jobs as `cslug describe jobs` shows them (payload as JSON Schema when the job has `Job.schema`). */
+export const describeJobs = () =>
+  [...registry.values()].map((job) => {
+    const { backoff, ...settings } = settingsOf(job)
+    const schema: unknown = Reflect.get(job, 'payloadSchema')
+    const toJson: unknown = schema && Reflect.get(schema, 'toJSONSchema')
+    const payload = typeof toJson === 'function' ? { payload: toJson.call(schema) } : {}
+    return { name: jobName(job), ...settings, backoff: typeof backoff === 'function' ? 'custom' : backoff, ...payload }
+  })
+
 export const isJobClass = (value: unknown): value is JobClass =>
   typeof value === 'function' && value.prototype instanceof Job && !Object.is(value, Job)

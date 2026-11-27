@@ -8,7 +8,7 @@ Where commands come from:
 
 | Source | How |
 |---|---|
-| built-in | `list`, `about`, `config:show`, `key:generate`, `add`, `start`, `dev`, `make:command/provider/event/listener/service/test` |
+| built-in | `list`, `about`, `config:show`, `key:generate`, `add`, `describe`, `repl`, `start`, `dev`, `make:command/provider/event/listener/service/test` |
 | packages | their provider calls `this.commands([...])` in `register()`. @cslug/http: `serve`, `routes`, `make:controller/validator/middleware`. @cslug/database: `migrate`, `migrate:status/rollback/fresh`, `db:seed`, `make:migration/table/repository/factory/seeder` |
 | your app | classes exported from `app/commands/**/*-command.ts`, imported only when needed. A file that fails to import is skipped with a warning |
 
@@ -33,4 +33,14 @@ under `bun --watch`. Roles whose command is not installed are skipped with a war
 `bootstrap/providers.ts` before `AppServiceProvider`; config files are written only when missing and listed in
 `config/index.ts`. Running it again changes nothing. When a file does not have the shape `bun create cslug` writes,
 it says what to add by hand. `--no-install` edits the files without running `bun add`.
+
+## `cslug describe` and `cslug repl`
+
+`cslug describe [section] [--json]` prints the app as data: a summary of the sections, one section, or everything
+with `--json`. The CLI has `providers` and `config` (keys only); packages add theirs with `this.describe(name, fn)`
+in a provider: `routes` (http), `tables` (database, from `app/tables/`), `jobs` and `schedules` (queue).
+
+`cslug repl` boots the app and reads TypeScript lines: top-level `await`, declarations kept between lines, an open
+brace continues on the next line. In scope: `app`, `resolve`, `config` and the exports of `app/tables/` and
+`app/repositories/`. `evaluate(code, scope)` and `replScope(app)` are exported for tools.
 

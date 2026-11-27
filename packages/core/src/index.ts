@@ -15,6 +15,8 @@ export {
   Command,
   type CommandClass,
   ConsoleIO,
+  DESCRIBE,
+  type DescribeSection,
   flag,
   kebab,
   names,

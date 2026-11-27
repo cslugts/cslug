@@ -55,12 +55,15 @@ export class XProvider extends ServiceProvider /* implements ProviderHooks */ {
 The hooks and `dependsOn` are not declared on the base class, so apps using `noImplicitOverride` don't need
 `override`. `ProviderHooks` gives the hook signatures for `implements`.
 
+In `register()`, `this.commands([...])` contributes `cslug` commands (tag `COMMANDS`) and
+`this.describe('routes', () => data)` a `cslug describe` section (tag `DESCRIBE`, `DescribeSection`).
+
 ## `Application` (extends `Container`)
 
 | | |
 |---|---|
 | `new Application({ root?, configs? })` | `rootDir`, `configs`; the app is bound to itself (`@inject(Application)`) |
-| `useProviders(list)` | Before `start()` |
+| `useProviders(list)` | Before `start()`; `providers` returns the list |
 | `start({ signals? })` | `register()` all, then `boot()` in order. On a failed boot: shuts down the booted ones in reverse, then throws `ProviderError` with the original error as `cause`. `signals: true` installs SIGTERM/SIGINT → `shutdown()` → exit |
 | `shutdown()` | Reverse order; idempotent; collects errors into an `AggregateError` |
 | `isRunning` | |

@@ -53,20 +53,23 @@ export class RoutesCommand extends Command {
   }
 
   handle({ json, filter }: Command.Args<typeof RoutesCommand>) {
-    const rows = this.app
-      .resolve(Router)
-      .routes.filter((r) => !filter || r.path.includes(filter) || r.name?.includes(filter))
-      .map((r) => ({
-        method: r.method,
-        path: `${r.domain ? `//${r.domain}` : ''}${r.path}`,
-        name: r.name ?? '',
-        action: actionName(r.action),
-        middleware: r.middleware.map((m) => (typeof m === 'function' ? m.name || 'fn' : String(m))).join(', '),
-      }))
+    const rows = routeRows(this.app.resolve(Router)).filter(
+      (r) => !filter || r.path.includes(filter) || r.name.includes(filter),
+    )
     if (json) this.line(JSON.stringify(rows))
-    else this.table(rows)
+    else this.table(rows.map((r) => ({ ...r, middleware: r.middleware.join(', ') })))
   }
 }
+
+/** The routes as `cslug routes` and `cslug describe routes` show them. */
+export const routeRows = (router: Router) =>
+  router.routes.map((r) => ({
+    method: r.method,
+    path: `${r.domain ? `//${r.domain}` : ''}${r.path}`,
+    name: r.name ?? '',
+    action: actionName(r.action),
+    middleware: r.middleware.map((m) => (typeof m === 'function' ? m.name || 'fn' : String(m))),
+  }))
 
 const actionName = (action: unknown): string => {
   if (Array.isArray(action)) return `${(action[0] as { name?: string })?.name}.${String(action[1])}`

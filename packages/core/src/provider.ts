@@ -1,5 +1,6 @@
 import type { Application } from './application'
-import { COMMANDS, type CommandClass } from './command'
+import { COMMANDS, type CommandClass, DESCRIBE, type DescribeSection } from './command'
+import { token } from './token'
 
 /**
  * The one place a subsystem is wired. `register()` binds, `boot()` connects and listens, `shutdown()` closes.
@@ -20,6 +21,13 @@ export abstract class ServiceProvider {
   /** Contribute `cslug` commands (call in `register()`). */
   protected commands(commands: readonly CommandClass[]): void {
     this.app.tag([...commands] as never[], COMMANDS)
+  }
+
+  /** Contribute a `cslug describe` section (call in `register()`); `collect` runs when it is asked for. */
+  protected describe(name: string, collect: () => unknown): void {
+    const section = token<DescribeSection>(`cslug.describe.${name}`)
+    this.app.instance(section, { name, collect })
+    this.app.tag([section], DESCRIBE)
   }
 }
 

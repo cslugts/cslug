@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { Logger, ServiceProvider } from '@cslug/core'
-import { httpCommands } from './commands'
+import { httpCommands, routeRows } from './commands'
 import { ExceptionHandler } from './errors'
 import { HttpKernel } from './kernel'
 import { bodyLimit, cors, csrf, securityHeaders, session } from './middleware'
@@ -38,6 +38,7 @@ export const API_MIDDLEWARE = 'http.middleware.api'
 export class HttpProvider extends ServiceProvider {
   register() {
     this.commands(httpCommands)
+    this.describe('routes', () => routeRows(this.app.resolve(Router)))
     this.app.singleton(Router, () => new Router())
     this.app.singleton(ExceptionHandler, (c) => new ExceptionHandler(this.app, c.resolve(Logger)))
     this.app.singleton(
