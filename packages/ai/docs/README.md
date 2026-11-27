@@ -20,7 +20,16 @@ An agent is an `@inject()` class with a `model` (a model ID, or a role from `ai.
 4. parses and validates the final answer with the full schema → typed result, or `AiOutputError`.
 
 `stream({ input, context })` yields the text as it arrives (tools run between turns). `sse(stream)` makes it a
-`text/event-stream` response, keeping the request's context.
+`text/event-stream` response, keeping the request's context. The stream's `result` promise settles with the finished
+run once the text has been read (and rejects with the run's error).
+
+**Conversations.** `history` takes a previous result's `messages` and continues them: the request is the history,
+then the new input. `result()` (on the agent or on `Ai`) and `stream().result` return `messages`: the history plus
+this run's input, tool rounds and answer, to pass as `history` next turn. Provider blocks (thinking, fallbacks) are
+kept, so send the messages back unchanged; they are JSON. The history passed in is not modified. With the Anthropic
+driver and `promptCaching` on, a request with more than one message also sets automatic caching (top-level
+`cache_control`), after the system prompt's breakpoint, so each turn and tool round reads the earlier ones from the
+cache.
 
 ## Providers
 

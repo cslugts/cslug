@@ -216,6 +216,33 @@ const base: ModelRequest = {
 describe('AnthropicProvider (Messages API over fetch)', () => {
   const claude = () => new AnthropicProvider({ driver: 'anthropic', apiKey: 'sk-test', baseUrl: server.url.origin })
 
+  test('a conversation (more than one message) is cached automatically after the system prompt; promptCaching: false sends no cache_control', async () => {
+    reply = () => json({ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} })
+    const conversation = {
+      ...base,
+      messages: [
+        { role: 'user' as const, content: [{ type: 'text' as const, text: 'hi' }] },
+        { role: 'assistant' as const, content: [{ type: 'text' as const, text: 'hello' }] },
+        { role: 'user' as const, content: [{ type: 'text' as const, text: 'and?' }] },
+      ],
+    }
+    await claude().complete(conversation)
+    expect((requests.at(-1) as Seen).body).toMatchObject({
+      cache_control: { type: 'ephemeral' },
+      system: [{ cache_control: { type: 'ephemeral' } }],
+    })
+    await claude().complete(base)
+    expect((requests.at(-1) as Seen).body).not.toHaveProperty('cache_control')
+    const uncached = new AnthropicProvider({
+      driver: 'anthropic',
+      apiKey: 'sk-test',
+      baseUrl: server.url.origin,
+      promptCaching: false,
+    })
+    await uncached.complete(conversation)
+    expect(JSON.stringify((requests.at(-1) as Seen).body)).not.toContain('cache_control')
+  })
+
   test('the request: headers, cached system prompt, tools, structured output, fallbacks; thinking blocks kept', async () => {
     reply = () =>
       json({

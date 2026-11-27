@@ -64,7 +64,11 @@ export class AiEvalCommand extends Command {
         continue
       }
       try {
-        const result = await ai.result(this.app.resolve(cls), { input: fixture.input, context: fixture.context })
+        const result = await ai.result(this.app.resolve(cls), {
+          input: fixture.input,
+          context: fixture.context,
+          history: fixture.history,
+        })
         const diff = jsonDiff(fixture.output, result.raw)
         rows.push({
           fixture: name,

@@ -20,6 +20,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Daily budget: `ai.budget: { perDay: { usd }, alertAt }`, each call charged at the model's estimated price (cache
   reads and writes included), kept in the cache; `AiBudgetError` once spent, `AiBudgetAlert` event at `alertAt`.
   `ai.result()` gives a run's raw answer, usage and cost.
+- Conversations: `run` / `result` / `stream` take `history` (a previous result's `messages`) and results return
+  `messages`, tool rounds and provider blocks included. `stream()` returns an `AiStream` whose `result` settles
+  once read. The Anthropic driver caches the conversation automatically after the system prompt.
 
 ## 0.4.1 (2026-11-27)
 

@@ -2,7 +2,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { type Application, CslugError, Logger } from '@cslug/core'
 import type { Agent, AgentSettings, RunOptions } from './agent'
-import { Ai, type AiConfig } from './ai'
+import { Ai, type AiConfig, type AiResult } from './ai'
+import { AiStream } from './ai-stream'
+import type { Message } from './model'
 
 type AgentClass<A extends Agent = Agent> = abstract new (...args: never[]) => A
 /** A recorded run: the agent, its input and context. */
@@ -13,6 +15,8 @@ export type AiFixture = {
   agent: string
   input: string
   context: Record<string, unknown>
+  /** The conversation before this run, when it continued one. */
+  history?: Message[]
   /** The model's answer before validation (parsed JSON, or the text). */
   output: unknown
   model: string
@@ -21,6 +25,8 @@ export type AiFixture = {
 
 /** The folder fixtures live in, under the app root. */
 export const FIXTURES_DIR = 'tests/fixtures/ai'
+
+const textOf = (raw: unknown) => (typeof raw === 'string' ? raw : JSON.stringify(raw))
 
 export const readFixture = (path: string): AiFixture => JSON.parse(readFileSync(path, 'utf8')) as AiFixture
 
@@ -37,7 +43,10 @@ export class AiFake extends Ai {
     super(app, {}, Logger.null())
   }
 
-  respond<A extends Agent>(agent: AgentClass<A>, output: unknown | ((run: AiRun) => unknown)): this {
+  /** An agent's answer: a value, or a function of the run (its input, context, history). */
+  respond<A extends Agent>(agent: AgentClass<A>, answer: (run: AiRun) => unknown): this
+  respond<A extends Agent>(agent: AgentClass<A>, output: unknown): this
+  respond<A extends Agent>(agent: AgentClass<A>, output: unknown): this {
     this.answers.set(agent, typeof output === 'function' ? (output as (run: AiRun) => unknown) : () => output)
     return this
   }
@@ -68,6 +77,7 @@ export class AiFake extends Ai {
       agent: run.agent.constructor.name,
       input: run.input,
       context: run.context,
+      ...(run.history.length ? { history: run.history } : {}),
       output: result.raw,
       model: result.model,
       recordedAt: new Date().toISOString(),
@@ -78,23 +88,44 @@ export class AiFake extends Ai {
     return result.raw
   }
 
-  override async run(agent: AgentSettings, { input, context = {} }: RunOptions): Promise<unknown> {
-    const run: AiRun = { agent, input, context }
+  /** The fake's answer as a run result: no provider call, no cost; `messages` continue the `history`. */
+  override async result(agent: AgentSettings, { input, context = {}, history = [] }: RunOptions): Promise<AiResult> {
+    const run: AiRun = { agent, input, context, history }
     this.runs.push(run)
     const answer = [...this.answers].find(([cls]) => agent instanceof cls)?.[1]
     if (!answer)
       throw new Error(`No fake answer for ${agent.constructor.name}: t.ai.respond(${agent.constructor.name}, …)`)
-    const value = await answer(run)
-    return agent.output ? this.validate(agent, value) : String(value)
+    const raw = await answer(run)
+    const value = agent.output ? this.validate(agent, raw) : String(raw)
+    return {
+      value,
+      raw,
+      model: 'fake',
+      steps: 1,
+      usage: { inputTokens: 0, outputTokens: 0 },
+      costUsd: 0,
+      messages: [
+        ...history,
+        { role: 'user', content: [{ type: 'text', text: input }] },
+        { role: 'assistant', content: [{ type: 'text', text: textOf(raw) }] },
+      ],
+    }
+  }
+
+  /** The whole answer as one piece of text, then the result. */
+  override stream(agent: AgentSettings, options: RunOptions): AiStream {
+    const result = this.result(agent, options)
+    return new AiStream(
+      (async function* () {
+        const done = await result
+        yield { type: 'text' as const, text: textOf(done.raw) }
+        yield { type: 'result' as const, result: done }
+      })(),
+    )
   }
 
   override async close(): Promise<void> {
     await this.real?.close()
-  }
-
-  override async *stream(agent: AgentSettings, options: RunOptions): AsyncIterable<string> {
-    const value = await this.run(agent, options)
-    yield typeof value === 'string' ? value : JSON.stringify(value)
   }
 
   ran<A extends Agent>(agent: AgentClass<A>): AiRun[] {
