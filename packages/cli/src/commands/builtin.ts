@@ -141,6 +141,54 @@ export class KeyGenerateCommand extends Command {
   }
 }
 
+/**
+ * `cslug key:rotate`: a new APP_KEY; the current one moves to APP_PREVIOUS_KEYS, so what it encrypted and signed
+ * (encrypted columns, signed URLs, magic links, two-factor secrets) keeps working. Prints the remaining steps.
+ */
+export class KeyRotateCommand extends Command {
+  static signature = 'key:rotate'
+  static description = 'Rotate APP_KEY (the old key moves to APP_PREVIOUS_KEYS; --write edits .env)'
+  static boot = false
+  static args = { write: flag.boolean().describe('Edit .env (otherwise the new values are printed)') }
+
+  handle({ write }: Command.Args<typeof KeyRotateCommand>) {
+    const key = `base64:${Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64')}`
+    const path = join(this.app.rootDir, '.env')
+    const text = existsSync(path) ? readFileSync(path, 'utf8') : ''
+    const current = /^APP_KEY=(.*)$/m.exec(text)?.[1]?.trim() || process.env.APP_KEY
+    const previous = (/^APP_PREVIOUS_KEYS=(.*)$/m.exec(text)?.[1] ?? process.env.APP_PREVIOUS_KEYS ?? '')
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean)
+    if (!current) {
+      this.error('No APP_KEY to rotate: run `cslug key:generate --write` first')
+      return 1
+    }
+    const keys = [current, ...previous.filter((k) => k !== current)].join(',')
+    if (write) {
+      let next = /^APP_KEY=.*$/m.test(text)
+        ? text.replace(/^APP_KEY=.*$/m, `APP_KEY=${key}`)
+        : `${text}APP_KEY=${key}\n`
+      next = /^APP_PREVIOUS_KEYS=.*$/m.test(next)
+        ? next.replace(/^APP_PREVIOUS_KEYS=.*$/m, `APP_PREVIOUS_KEYS=${keys}`)
+        : next.replace(/^(APP_KEY=.*)$/m, `$1\nAPP_PREVIOUS_KEYS=${keys}`)
+      writeFileSync(path, next)
+      this.success('.env: new APP_KEY, the old one first in APP_PREVIOUS_KEYS')
+    } else {
+      this.line(`APP_KEY=${key}`)
+      this.line(`APP_PREVIOUS_KEYS=${keys}`)
+    }
+    this.line('')
+    this.line('Next:')
+    this.line('  1. Set both variables on every process (web, worker, scheduler) and deploy.')
+    this.line('     Values encrypted or signed with the old key keep working.')
+    this.line('  2. cslug db:reencrypt   re-encrypts encrypted columns with the new key.')
+    this.line('  3. Once signed URLs and magic links made before the rotation have expired, remove the old key')
+    this.line('     from APP_PREVIOUS_KEYS.')
+    return 0
+  }
+}
+
 const makeArgs = {
   name: arg.string().describe('Name, optionally in a folder: admin/Claim'),
   force: flag.boolean().describe('Overwrite'),
@@ -171,6 +219,7 @@ export const builtinCommands: CommandClass[] = [
   AboutCommand,
   ConfigShowCommand,
   KeyGenerateCommand,
+  KeyRotateCommand,
   AddCommand,
   DescribeCommand,
   McpDevCommand,

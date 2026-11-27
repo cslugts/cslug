@@ -14,6 +14,7 @@ import {
   RateLimiter,
   SessionStore,
 } from './contracts'
+import { Encrypter, parseKeys } from './encrypter'
 import { ProviderError } from './errors'
 import { EventBus } from './events'
 import { type I18nConfig, Translator } from './i18n'
@@ -60,6 +61,14 @@ export class Application extends Container {
       Translator.fromDirectory(`${this.rootDir}/resources/lang`, (this.config('i18n') as I18nConfig | undefined) ?? {}),
     )
     // in-memory drivers; @cslug/redis replaces them
+    this.singleton(
+      Encrypter,
+      () =>
+        new Encrypter(
+          this.config<string | undefined>('app.key'),
+          parseKeys(this.config<string | string[] | undefined>('app.previousKeys')),
+        ),
+    )
     this.singleton(Cache, () => new MemoryCache())
     // no-op until @cslug/telemetry binds real ones
     this.singleton(Tracer, () => new NoopTracer())

@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { type Application, Clock, CslugError, Lock, ServiceProvider, token } from '@cslug/core'
+import { type Application, Clock, CslugError, Encrypter, Lock, ServiceProvider, token } from '@cslug/core'
 import { addMigrations, Database } from '@cslug/database'
 import { API_MIDDLEWARE, type MiddlewareFn, WEB_MIDDLEWARE } from '@cslug/http'
 import { type AuthConfig, isClass, type UserSource } from './config'
@@ -41,14 +41,7 @@ export class AuthProvider extends ServiceProvider {
     this.app.singleton(Gate, () => new Gate())
     this.app.singleton(
       MagicLinks,
-      (c) =>
-        new MagicLinks(
-          this.app.config<string>('app.key') ?? '',
-          users,
-          c.resolve(Lock),
-          c.resolve(Clock),
-          config.magicLinks,
-        ),
+      (c) => new MagicLinks(c.resolve(Encrypter), users, c.resolve(Lock), c.resolve(Clock), config.magicLinks),
     )
     this.app.singleton(
       TwoFactor,

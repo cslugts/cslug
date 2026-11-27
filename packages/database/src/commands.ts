@@ -12,8 +12,11 @@ import {
   renameCandidates,
   tableSpec,
 } from './differ'
+import { decrypt, encrypt, needsReencrypt } from './encryption'
 import { isSeeder } from './factory'
 import { Migrator } from './migrator'
+import { sql } from './sql'
+import { snake } from './table'
 
 const STUBS = join(import.meta.dir, '../stubs')
 
@@ -244,6 +247,55 @@ export class DbDiffCommand extends DatabaseCommand {
   }
 }
 
+/**
+ * `cslug db:reencrypt`: after a key rotation, re-encrypt every `encrypted()` column value that was made with a key in
+ * APP_PREVIOUS_KEYS, with APP_KEY. Safe to run twice; values already on APP_KEY are left alone.
+ */
+export class DbReencryptCommand extends DatabaseCommand {
+  static signature = 'db:reencrypt'
+  static description = 'Re-encrypt encrypted columns made with a previous key (after cslug key:rotate)'
+  static args = { batch: flag.number().default(500).describe('Rows read at a time') }
+
+  async handle({ batch }: Command.Args<typeof DbReencryptCommand>) {
+    const db = this.app.resolve(Database)
+    let total = 0
+    for (const table of await loadTables(this.app.rootDir)) {
+      const columns = Object.entries(table.columns)
+        .filter(([, c]) => c.def.encrypted)
+        .map(([key]) => snake(key))
+      if (!columns.length) continue
+      const pk = snake(table.primaryKey)
+      let updated = 0
+      let after: unknown
+      for (;;) {
+        const rows = await db.many<Record<string, unknown>>(
+          sql`select ${sql.ident(pk)} as pk, ${sql.join(columns.map((c) => sql.ident(c)))} from ${sql.ident(table.name)}
+            ${after === undefined ? sql.empty : sql`where ${sql.ident(pk)} > ${after}`}
+            order by ${sql.ident(pk)} limit ${batch}`,
+        )
+        for (const row of rows) {
+          const changes = columns.filter((c) => {
+            const v = row[c.replace(/_([a-z])/g, (_, l: string) => l.toUpperCase())]
+            return typeof v === 'string' && needsReencrypt(v)
+          })
+          if (!changes.length) continue
+          const set = changes.map((c) => {
+            const v = row[c.replace(/_([a-z])/g, (_, l: string) => l.toUpperCase())] as string
+            return sql`${sql.ident(c)} = ${encrypt(decrypt(v))}`
+          })
+          await db.exec(sql`update ${sql.ident(table.name)} set ${sql.join(set)} where ${sql.ident(pk)} = ${row.pk}`)
+          updated++
+        }
+        if (rows.length < batch) break
+        after = rows.at(-1)?.pk
+      }
+      if (updated) this.success(`${table.name}: ${updated} row${updated === 1 ? '' : 's'} re-encrypted`)
+      total += updated
+    }
+    if (!total) this.info('Nothing to re-encrypt: every encrypted value uses APP_KEY')
+  }
+}
+
 const makeArgs = { name: arg.string().describe('e.g. Claim'), force: flag.boolean() }
 const make = (kind: 'table' | 'repository' | 'factory' | 'seeder', dir: string) =>
   class extends Command {
@@ -268,6 +320,7 @@ const make = (kind: 'table' | 'repository' | 'factory' | 'seeder', dir: string) 
   }
 
 export const databaseCommands = [
+  DbReencryptCommand,
   MigrateCommand,
   MigrateStatusCommand,
   MigrateRollbackCommand,

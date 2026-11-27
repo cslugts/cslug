@@ -6,6 +6,8 @@ export const env = defineEnv({
   LOG_FORMAT: v.enum(['json', 'pretty']).optional(),
   APP_URL: v.url(),
   APP_KEY: v.secret().min(32),
+  /** Keys used before `cslug key:rotate` (comma-separated): still accepted for reading and verifying. */
+  APP_PREVIOUS_KEYS: v.secret().optional(),
   DATABASE_URL: v.url(),
   REDIS_URL: v.url().default('redis://localhost:6379'),
 })

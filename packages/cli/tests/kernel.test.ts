@@ -31,6 +31,7 @@ describe('the cslug kernel (guide 20)', () => {
       'about',
       'config:show',
       'key:generate',
+      'key:rotate',
       'start',
       'dev',
       'make:command',
@@ -150,5 +151,21 @@ describe('generators', () => {
     writeFileSync(join(root, '.env'), 'APP_ENV=local\nAPP_KEY=old\n')
     await cli(['key:generate', '--write'], { root })
     expect(readFileSync(join(root, '.env'), 'utf8')).toMatch(/^APP_ENV=local\nAPP_KEY=base64:\S{44}\n$/)
+  })
+
+  test('key:rotate: a new APP_KEY, the old one first in APP_PREVIOUS_KEYS; the next steps', async () => {
+    writeFileSync(join(root, '.env'), 'APP_ENV=local\nAPP_KEY=k2\n')
+    const first = await cli(['key:rotate', '--write'], { root })
+    expect(first.out).toContain('cslug db:reencrypt')
+    const env = readFileSync(join(root, '.env'), 'utf8')
+    expect(env).toMatch(/^APP_ENV=local\nAPP_KEY=base64:\S{44}\nAPP_PREVIOUS_KEYS=k2\n$/)
+    const newest = /APP_KEY=(\S+)/.exec(env)?.[1]
+    await cli(['key:rotate', '--write'], { root })
+    expect(readFileSync(join(root, '.env'), 'utf8')).toContain(`APP_PREVIOUS_KEYS=${newest},k2\n`)
+    const printed = await cli(['key:rotate'], { root })
+    expect(printed.out).toMatch(/^APP_KEY=base64:\S{44}\nAPP_PREVIOUS_KEYS=base64:/)
+    writeFileSync(join(root, '.env'), 'APP_ENV=local\n')
+    const missing = await cli(['key:rotate'], { root })
+    expect(missing.code).toBe(1)
   })
 })

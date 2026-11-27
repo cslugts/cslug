@@ -1,5 +1,5 @@
 /** Built-in middleware: `import { securityHeaders, bodyLimit, … } from '@cslug/http/middleware'`. */
-import { CslugError, ForbiddenError, parseDuration } from '@cslug/core'
+import { CslugError, Encrypter, ForbiddenError, parseDuration } from '@cslug/core'
 import type { MiddlewareFn } from '../router'
 import { verifySignedUrl } from '../url'
 
@@ -79,8 +79,7 @@ export const timeout =
 
 /** 403 unless the URL was made by `route(name, params, { signed: true })` and has not expired. */
 export const signed = (): MiddlewareFn => async (ctx, next) => {
-  const key = ctx.app.config<string | undefined>('app.key')
-  if (!key || !verifySignedUrl(ctx.request.url.toString(), key))
+  if (!verifySignedUrl(ctx.request.url.toString(), ctx.app.resolve(Encrypter)))
     throw new ForbiddenError('http.invalid_signature', 'This link is invalid or has expired.')
   return next()
 }

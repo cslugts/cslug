@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { type AuthUser, Clock, inject, parseDuration } from '@cslug/core'
 import { Database, sql } from '@cslug/database'
 import { idOf } from './config'
+import { TokenCreated, TokenRevoked } from './events'
 
 export type AccessToken = {
   id: string
@@ -39,6 +40,12 @@ export class Tokens {
     const row =
       await this.db.one<AccessToken>(sql`insert into cslug_access_tokens (id, user_id, name, token_hash, abilities, expires_at)
       values (${id}, ${idOf(user)}, ${options.name}, ${sha256(plain)}, ${sql.json(options.abilities ?? ['*'])}, ${expires}) returning *`)
+    await TokenCreated.emit({
+      userId: idOf(user),
+      tokenId: id,
+      name: options.name,
+      abilities: options.abilities ?? ['*'],
+    })
     return { plainText: `${id}.${plain}`, token: clean(row) }
   }
 
@@ -68,11 +75,13 @@ export class Tokens {
   }
 
   async revoke(id: string): Promise<void> {
-    await this.db.exec(sql`delete from cslug_access_tokens where id = ${id}`)
+    if (await this.db.exec(sql`delete from cslug_access_tokens where id = ${id}`))
+      await TokenRevoked.emit({ tokenId: id })
   }
 
   async revokeAll(user: AuthUser): Promise<void> {
     await this.db.exec(sql`delete from cslug_access_tokens where user_id = ${idOf(user)}`)
+    await TokenRevoked.emit({ userId: idOf(user), all: true })
   }
 }
 

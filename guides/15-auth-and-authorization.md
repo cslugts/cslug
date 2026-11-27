@@ -132,9 +132,19 @@ get it from `useRequest().user`.
 
 Route middleware: `auth()` (guests: 401 for JSON, else a redirect to the login route that remembers the URL for
 `redirect().intended()`), `auth('token')` (API tokens only), `guest()`, `ability('quotes:write')` (token
-abilities; session users pass), `can('admin.access')` (a gate). Magic links are signed with `APP_KEY`.
+abilities; session users pass), `can('admin.access')` (a gate). Magic links are signed with `APP_KEY` (and still
+accepted after a key rotation while the old key is in `APP_PREVIOUS_KEYS`).
 "Single use" is an atomic lock on the link's nonce, so they need no table. API tokens live in
 `cslug_access_tokens`, a migration that `@cslug/auth` adds to `cslug migrate`.
+
+**Events.** Auth emits `LoginAttempting`, `LoginSucceeded`, `LoginFailed` (wrong password, wrong code, throttled),
+`LoggedOut`, `TwoFactorEnabled` / `TwoFactorDisabled`, `RecoveryCodesRegenerated`, `TokenCreated` and `TokenRevoked`
+(payloads in `packages/auth/docs/api.md`). Listen to record them or to warn a user; a `LoginAttempting` listener that
+throws refuses the attempt:
+
+```ts
+LoginFailed.on(({ reason, userId, ip }) => log.warn('login failed', { reason, userId, ip }))
+```
 
 **Typing `auth.user()`.** The framework learns the app's user type through module augmentation, once, next to
 the configs:

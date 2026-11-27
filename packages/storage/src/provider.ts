@@ -1,4 +1,4 @@
-import { AppError, CslugError, ForbiddenError, ServiceProvider } from '@cslug/core'
+import { AppError, CslugError, Encrypter, ForbiddenError, ServiceProvider } from '@cslug/core'
 import type { HttpContext } from '@cslug/http'
 import { FileNotFoundError } from './disk'
 import { LocalDisk, type LocalSigner } from './drivers'
@@ -36,7 +36,7 @@ export class StorageProvider extends ServiceProvider {
       http.urlFor(
         router,
         this.app.config<string | undefined>('app.url'),
-        this.app.config<string | undefined>('app.key'),
+        this.app.resolve(Encrypter),
         'storage.file',
         query,
         { signed: true, expiresIn: options.expiresIn },
@@ -50,8 +50,7 @@ export class StorageProvider extends ServiceProvider {
   }
 
   private async serve(http: HttpModule, ctx: HttpContext): Promise<Response> {
-    const key = this.app.config<string | undefined>('app.key')
-    if (!key || !http.verifySignedUrl(ctx.request.url.toString(), key))
+    if (!http.verifySignedUrl(ctx.request.url.toString(), this.app.resolve(Encrypter)))
       throw new ForbiddenError('http.invalid_signature', 'This link is invalid or has expired.')
     const disk = this.app.resolve(Storage).disk(ctx.params.disk)
     if (!(disk instanceof LocalDisk)) throw new FileNotFoundError('')

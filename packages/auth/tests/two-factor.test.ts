@@ -1,8 +1,23 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { Clock, FakeClock, resolve } from '@cslug/core'
+import { AppError, Clock, Encrypter, FakeClock, resolve } from '@cslug/core'
 import { Database, sql } from '@cslug/database'
 import { testApp } from '@cslug/testing'
-import { base32Decode, base32Encode, hotp, otpauthUri, totpCode, totpSecret, verifyTotp } from '../src'
+import {
+  base32Decode,
+  base32Encode,
+  hotp,
+  LoggedOut,
+  LoginAttempting,
+  LoginFailed,
+  LoginSucceeded,
+  otpauthUri,
+  RecoveryCodesRegenerated,
+  TwoFactorDisabled,
+  TwoFactorEnabled,
+  totpCode,
+  totpSecret,
+  verifyTotp,
+} from '../src'
 import { fixtureApp, Hash, TwoFactor, UserRepository } from './fixture/app'
 
 // RFC 4226 appendix D and RFC 6238 appendix B (SHA-1): the secret is the ASCII "12345678901234567890"
@@ -171,5 +186,67 @@ describe.skipIf(!process.env.DATABASE_URL)('two-factor logins (guide 15)', () =>
     await resolve(TwoFactor).disable(user)
     expect(await resolve(TwoFactor).enabled(user)).toBe(false)
     await login().assertRedirect('/dashboard')
+  })
+
+  test('events: attempts, failures (credentials, code), successes, logout, 2FA changes; a listener can refuse', async () => {
+    const user = await signUp()
+    const seen: string[] = []
+    const events = [
+      LoginAttempting,
+      LoginSucceeded,
+      LoginFailed,
+      LoggedOut,
+      TwoFactorEnabled,
+      TwoFactorDisabled,
+      RecoveryCodesRegenerated,
+    ]
+    const offs = events.map((E) =>
+      (E as typeof LoginFailed).on((p) => {
+        seen.push([E.eventName, p.reason, p.userId === user.id ? 'user' : p.userId, p.email].filter(Boolean).join(' '))
+      }),
+    )
+    await t.post('/login').form({ email: 'staff@example.test', password: 'wrong' }).assertStatus(422)
+    await t.post('/login').form({ email: 'nobody@example.test', password: 'wrong' }).assertStatus(422)
+    await login().assertRedirect('/dashboard')
+    await t.post('/logout').form({})
+    const { secret } = await resolve(TwoFactor).enable(user, user.email)
+    await resolve(TwoFactor).confirm(user, totpCode(secret, clock.now()))
+    await resolve(TwoFactor).regenerateRecoveryCodes(user)
+    await login().assertRedirect('/two-factor')
+    await t.post('/two-factor').form({ code: '000000' }).assertStatus(422)
+    await resolve(TwoFactor).disable(user)
+    await resolve(TwoFactor).disable(user) // nothing to disable: no event
+    expect(seen).toEqual([
+      'auth.login_attempting staff@example.test',
+      'auth.login_failed credentials user staff@example.test',
+      'auth.login_attempting nobody@example.test',
+      'auth.login_failed credentials nobody@example.test',
+      'auth.login_attempting staff@example.test',
+      'auth.login_succeeded user',
+      'auth.logged_out user',
+      'auth.two_factor_enabled user',
+      'auth.recovery_codes_regenerated user',
+      'auth.login_attempting staff@example.test',
+      'auth.login_failed two_factor user',
+      'auth.two_factor_disabled user',
+    ])
+    // a LoginAttempting listener that throws refuses the attempt before the password is checked
+    const refuse = LoginAttempting.on(() => {
+      throw new AppError('auth.locked', 'Too many failed logins; try again later.', { status: 423 })
+    })
+    await login().assertStatus(423)
+    for (const off of [...offs, refuse]) off()
+  })
+
+  test('key rotation: a two-factor secret stored with the old key still works with the new one', async () => {
+    const user = await signUp()
+    const { secret } = await resolve(TwoFactor).enable(user, user.email)
+    const current = t.app.resolve(Encrypter)
+    t.app.swap(Encrypter, new Encrypter('n'.repeat(32), ['k'.repeat(32)]))
+    try {
+      expect(await resolve(TwoFactor).confirm(user, totpCode(secret, clock.now()))).toHaveLength(8)
+    } finally {
+      t.app.swap(Encrypter, current)
+    }
   })
 })

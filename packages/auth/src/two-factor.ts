@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { type Clock, ConflictError } from '@cslug/core'
 import { type Database, decrypt, encrypt, sql } from '@cslug/database'
 import { idOf } from './config'
+import { RecoveryCodesRegenerated, TwoFactorDisabled, TwoFactorEnabled } from './events'
 import { base32Encode, otpauthUri, totpSecret, verifyTotp } from './totp'
 
 /** `config/auth.ts` → `twoFactor`. */
@@ -70,6 +71,7 @@ export class TwoFactor {
     const codes = this.newCodes()
     await this.db().exec(sql`update cslug_two_factor set confirmed_at = ${this.clock().now()},
       recovery_codes = ${sql.json(codes.map(hashCode))} where user_id = ${idOf(user)}`)
+    await TwoFactorEnabled.emit({ userId: idOf(user) })
     return codes
   }
 
@@ -90,6 +92,7 @@ export class TwoFactor {
     const codes = this.newCodes()
     const n = await this.db().exec(sql`update cslug_two_factor set recovery_codes = ${sql.json(codes.map(hashCode))}
       where user_id = ${idOf(user)} and confirmed_at is not null`)
+    if (n) await RecoveryCodesRegenerated.emit({ userId: idOf(user) })
     return n ? codes : null
   }
 
@@ -104,7 +107,8 @@ export class TwoFactor {
 
   /** Turn 2FA off (the secret and recovery codes are deleted). */
   async disable(user: object): Promise<void> {
-    await this.db().exec(sql`delete from cslug_two_factor where user_id = ${idOf(user)}`)
+    const n = await this.db().exec(sql`delete from cslug_two_factor where user_id = ${idOf(user)}`)
+    if (n) await TwoFactorDisabled.emit({ userId: idOf(user) })
   }
 
   private newCodes() {

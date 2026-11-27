@@ -18,3 +18,20 @@
 | `UserSource` | What `users` must provide: `find(id)`, `findBy(where)`, and optionally `update(id, values)` (stores a rehashed password on login; a database repository has it) |
 
 Type the user once: `declare module '@cslug/core' { interface AuthUser extends User {} }`.
+
+## Events
+
+Emitted through core's event bus (`Event.on(…)`, `@listener(…)`), for audit logs, lockout and notifications. They
+never carry passwords, codes or tokens.
+
+| Event | Name | Payload | When |
+|---|---|---|---|
+| `LoginAttempting` | `auth.login_attempting` | `email`, `ip` | Before `attempt()` checks the password; a listener that throws refuses the attempt |
+| `LoginSucceeded` | `auth.login_succeeded` | `userId`, `ip` | `login()` (after a password, a magic link or a two-factor code) |
+| `LoginFailed` | `auth.login_failed` | `reason` (`credentials`, `two_factor`, `throttled`), `email?`, `userId?`, `ip` | A wrong password or unknown email, a wrong code, too many attempts |
+| `LoggedOut` | `auth.logged_out` | `userId`, `ip` | `logout()` |
+| `TwoFactorEnabled` / `TwoFactorDisabled` | `auth.two_factor_enabled` / `_disabled` | `userId` | `confirm()` / `disable()` |
+| `RecoveryCodesRegenerated` | `auth.recovery_codes_regenerated` | `userId` | `regenerateRecoveryCodes()` |
+| `TokenCreated` | `auth.token_created` | `userId`, `tokenId`, `name`, `abilities` | `tokens.create()` |
+| `TokenRevoked` | `auth.token_revoked` | `tokenId`, or `userId` and `all` | `revoke()` / `revokeAll()` |
+

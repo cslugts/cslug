@@ -6,6 +6,17 @@ import './types'
 
 export { Auth, PENDING_KEY, SESSION_KEY } from './auth'
 export type { AuthConfig, UserSource } from './config'
+export {
+  LoggedOut,
+  LoginAttempting,
+  LoginFailed,
+  LoginSucceeded,
+  RecoveryCodesRegenerated,
+  TokenCreated,
+  TokenRevoked,
+  TwoFactorDisabled,
+  TwoFactorEnabled,
+} from './events'
 export { Hash } from './hash'
 export { isLocalPath, MagicLinkError, MagicLinks } from './magic-links'
 export { ability, auth, authenticate, can, guest } from './middleware'

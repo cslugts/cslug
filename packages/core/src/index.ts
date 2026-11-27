@@ -63,6 +63,7 @@ export {
   SessionStore,
 } from './contracts'
 export { type Duration, parseDuration } from './duration'
+export { Encrypter, hmac, parseKeys, safeEqual } from './encrypter'
 export {
   AppError,
   BadRequestError,

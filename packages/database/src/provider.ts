@@ -1,8 +1,8 @@
-import { HEALTH_CHECKS, healthCheck, Logger, ServiceProvider } from '@cslug/core'
+import { Encrypter, HEALTH_CHECKS, healthCheck, Logger, ServiceProvider } from '@cslug/core'
 import { databaseCommands } from './commands'
 import { Database, type DatabaseConfig } from './database'
 import { loadTables } from './differ'
-import { setEncryptionKey } from './encryption'
+import { setEncrypter } from './encryption'
 
 /** The tables exported by `app/tables/*.ts` (`cslug describe tables`): columns, keys, indexes, references. */
 export async function describeTables(rootDir: string) {
@@ -31,7 +31,7 @@ export class DatabaseProvider extends ServiceProvider {
   register() {
     this.commands(databaseCommands)
     this.describe('tables', () => describeTables(this.app.rootDir))
-    setEncryptionKey(this.app.config<string | undefined>('app.key'))
+    setEncrypter(() => this.app.resolve(Encrypter))
     this.app.singleton(Database, (c) => {
       const config = this.app.config<DatabaseConfig | undefined>('database')
       if (!config?.url) throw new Error('config/database.ts must define `url` (usually env.DATABASE_URL)')
