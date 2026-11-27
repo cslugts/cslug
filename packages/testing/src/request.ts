@@ -1,6 +1,7 @@
 import { expect } from 'bun:test'
 import type { Application } from '@cslug/core'
 import { SessionStore } from '@cslug/core'
+import { importOptional } from './fakes'
 
 type Assertion = (res: TestResponse) => void | Promise<void>
 export type Handler = (request: Request) => Promise<Response>
@@ -410,7 +411,7 @@ type VueHooks = {
 let vue: Promise<VueHooks | undefined> | undefined
 /** @cslug/vue's view hook, if installed. */
 const vueHooks = () => {
-  vue ??= import('@cslug/vue').then((m) => m as unknown as VueHooks).catch(() => undefined)
+  vue ??= importOptional<VueHooks>('@cslug/vue').catch(() => undefined)
   return vue
 }
 

@@ -4,6 +4,16 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/testing
+- Fix: an app that does not install every optional package (an `--api` app without vue, a `--web` app without
+  queue or mail) failed `typecheck` with "Cannot find module" inside `@cslug/testing`. The optional packages' types
+  now come from a `.d.ts` (which `skipLibCheck` lets degrade to `any`) and their runtime imports from
+  `importOptional()`.
+
+### Tooling
+- `bun run check:create` installs the packages into each scaffolded app as npm does (copied, without the
+  repository's dev dependencies) and runs the app's own `cslug`, so a missing optional package is caught.
+
 ## 0.4.0 (2026-11-27)
 
 Starting and growing an app (milestone M9, first part): `bun create cslug`, `cslug add`, `describe`, `repl`, the
