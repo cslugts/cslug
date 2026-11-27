@@ -1,7 +1,8 @@
 /**
  * Check `bun create cslug` end to end: scaffold each preset into a temporary folder, link its node_modules to this
  * repository's packages (and the starter kit's vue, sass and compilers, so one copy of each is loaded), then
- * typecheck it, build its assets (web, full) and run its own tests on a fresh database.
+ * typecheck it, build its assets (web, full) and run its own tests on a fresh database. A last web app gets the
+ * other packages with `cslug add`, which must leave it compiling and passing.
  */
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -35,39 +36,59 @@ const link = (app: string, name: string, target: string) => {
   symlinkSync(realpathSync(target), path, 'dir')
 }
 
-const step = async (preset: string, label: string, cmd: string[], cwd: string, env: Record<string, string> = {}) => {
-  console.log(`create-cslug ${preset}: ${label}`)
+const step = async (name: string, label: string, cmd: string[], cwd: string, env: Record<string, string> = {}) => {
+  console.log(`create-cslug ${name}: ${label}`)
   const proc = Bun.spawn(cmd, { cwd, env: { ...process.env, ...env }, stdout: 'inherit', stderr: 'inherit' })
   if ((await proc.exited) === 0) return true
-  console.error(`create-cslug ${preset}: ${label} failed`)
+  console.error(`create-cslug ${name}: ${label} failed`)
   failed = true
   return false
 }
 
 try {
-  for (const preset of ['api', 'web', 'full'] as Preset[]) {
-    const app = join(work, `${preset}-app`)
+  // the presets, then a web app given the other packages with `cslug add`
+  const cases: [label: string, preset: Preset, add?: string][] = [
+    ['api', 'api'],
+    ['web', 'web'],
+    ['full', 'full'],
+    ['web+add', 'web', 'queue,mail,storage,notification,webhook'],
+  ]
+  for (const [label, preset, add] of cases) {
+    const app = join(work, `${label.replace('+', '-')}-app`)
     await scaffold({ dir: app, preset })
-    const pkg = (await Bun.file(join(app, 'package.json')).json()) as Record<string, Record<string, string>>
-    for (const dep of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
-      if (dep.startsWith('@cslug/')) link(app, dep, join(root, 'packages', dep.slice(7)))
-      else if (existsSync(join(thirdParty, dep))) link(app, dep, join(thirdParty, dep))
+    const cli = join(root, 'packages/cli/src/bin.ts')
+    const linkAll = async () => {
+      const pkg = (await Bun.file(join(app, 'package.json')).json()) as Record<string, Record<string, string>>
+      for (const dep of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
+        if (existsSync(join(app, 'node_modules', dep))) continue
+        if (dep.startsWith('@cslug/')) link(app, dep, join(root, 'packages', dep.slice(7)))
+        else if (existsSync(join(thirdParty, dep))) link(app, dep, join(thirdParty, dep))
+      }
+    }
+    await linkAll()
+    if (add) {
+      // what `bun add` would do, offline: the dependencies, then their links
+      if (!(await step(label, `cslug add ${add}`, [process.execPath, cli, 'add', add, '--no-install'], app))) continue
+      const pkgPath = join(app, 'package.json')
+      const json = await Bun.file(pkgPath).json()
+      for (const name of add.split(',')) json.dependencies[`@cslug/${name}`] = json.dependencies['@cslug/core']
+      await Bun.write(pkgPath, JSON.stringify(json, null, 2))
+      await linkAll()
     }
     const web = preset !== 'api'
     const typecheck = web
       ? join(app, 'node_modules/vue-tsc/bin/vue-tsc.js')
       : join(app, 'node_modules/typescript/bin/tsc')
-    if (!(await step(preset, 'typecheck', [process.execPath, typecheck, '-p', '.', '--noEmit'], app))) continue
-    if (web && !(await step(preset, 'build', [process.execPath, join(root, 'packages/cli/src/bin.ts'), 'build'], app)))
-      continue
+    if (!(await step(label, 'typecheck', [process.execPath, typecheck, '-p', '.', '--noEmit'], app))) continue
+    if (web && !(await step(label, 'build', [process.execPath, cli, 'build'], app))) continue
 
-    const db = `create_cslug_${preset}_test`
+    const db = `create_cslug_${label.replace('+', '_')}_test`
     await admin.unsafe(`drop database if exists "${db}" with (force)`)
     await admin.unsafe(`create database "${db}"`)
     const redis = new RedisClient(redisUrl)
     await redis.send('FLUSHDB', [])
     redis.close()
-    await step(preset, 'tests', [process.execPath, 'test'], app, {
+    await step(label, 'tests', [process.execPath, 'test'], app, {
       DATABASE_URL: Object.assign(new URL(base), { pathname: `/${db}` }).toString(),
       REDIS_URL: redisUrl,
     })

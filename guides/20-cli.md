@@ -16,7 +16,7 @@ installed packages: `migrate` exists only with `@cslug/database`, `queue:work` o
 | i18n | `i18n:check`, `i18n:extract` |
 | Mail | `mail:preview` |
 | AI | `ai:prompts`, `ai:record`, `ai:eval`, `mcp:serve`, `mcp:dev`, `agents:sync` |
-| Misc | `key:generate`, `webhooks:replay`, `add tailwind` |
+| Misc | `key:generate`, `webhooks:replay`, `add` |
 
 Every command supports `--help`; inspect commands support `--json`.
 
@@ -30,6 +30,15 @@ cslug make:crud Claim                         # claim-table, claim-repository, c
 cslug make:view claims/show                   # resources/views/claims/show.vue with a typed defineProps stub
 cslug make:component claim-timeline           # resources/components/claim-timeline.vue (use with hydrate=… to make an island)
 ```
+
+## Adding a package
+
+```bash
+cslug add queue,mail        # bun add @cslug/queue @cslug/mail (at the CLI's version), providers, config/queue.ts,
+                            # config/mail.ts, routes/schedule.ts, a worker and the scheduler in cslug.config.ts
+```
+
+Names: `queue`, `mail`, `storage`, `notification`, `webhook`, `tailwind`. Running it twice changes nothing.
 
 Stubs are literal files in `stubs/` and can be published to the app (`cslug stubs:publish`) to customise them.
 Generators never overwrite without `--force` and print every file they write.

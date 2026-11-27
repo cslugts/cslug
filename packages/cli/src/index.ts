@@ -6,6 +6,7 @@
  * `Command`, `arg` and `flag` live in @cslug/core (so packages can contribute commands) and are re-exported here.
  */
 export { arg, Command, type CommandClass, ConsoleIO, flag, names } from '@cslug/core'
+export { ADDITIONS, AddCommand } from './commands/add'
 export { generator, STUBS } from './commands/builtin'
 export { type CslugConfig, defineCslugConfig } from './config'
 export { BufferedIO, commandHelp } from './io'

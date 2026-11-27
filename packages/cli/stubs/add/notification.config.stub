@@ -1,0 +1,7 @@
+import { defineConfig } from '@cslug/core'
+
+export default defineConfig({
+  queue: 'default',
+  whatsapp: { driver: 'log' }, // 'manual': staff send it from a template
+  sms: { driver: 'log' },
+})

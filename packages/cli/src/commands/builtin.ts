@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { arg, Command, type CommandClass, flag, names } from '@cslug/core'
 import { DevCommand, StartCommand } from '../supervisor'
+import { AddCommand } from './add'
 
 export const STUBS = join(import.meta.dir, '../../stubs')
 
@@ -166,6 +167,7 @@ export const builtinCommands: CommandClass[] = [
   AboutCommand,
   ConfigShowCommand,
   KeyGenerateCommand,
+  AddCommand,
   StartCommand,
   DevCommand,
   generator('command', 'app/commands', 'Create a command class'),

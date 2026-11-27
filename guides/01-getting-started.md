@@ -27,7 +27,7 @@ cslug dev                            # app (bun --hot) + asset watcher + queue w
 
 What got installed (the default `--web` preset): `@cslug/core`, `validation`, `http`, `vue`, `database`, `redis`,
 `auth`, `cli`, and `@cslug/testing` for tests, plus `vue` and `sass` as compilers and `vue-tsc` for type-checking.
-No AI, queue or mail package until you add one: `cslug add queue`, `cslug add mail`, `cslug add ai`.
+No queue or mail package until you add one: `cslug add queue,mail` (or start with `--full`).
 
 ## Your first page
 

@@ -39,6 +39,7 @@ plus `app`, `clock`, `log`, `io`. When the session is not interactive, prompts r
 | `CliKernel(app)` | `.run(argv)` → exit code; `.commands()` |
 | `Supervisor(specs, options)` | `.start()`, `.stop(signal)` → exit code; `plannedProcesses(config, flags)` |
 | `generator(kind, dir, description)` | a `make:<kind>` command from `stubs/<kind>.stub` |
+| `AddCommand`, `ADDITIONS` | `cslug add <names>` and what each name installs and wires |
 | `BufferedIO(answers?)` | capture output in tests: `app.instance(ConsoleIO, io)` |
 | `defineCslugConfig()` | `cslug.config.ts`: `processes` (`web.instances`, `worker[]`, `scheduler`), `shutdownTimeout`, `assets` |
 | `commandHelp(cmd)` | |
