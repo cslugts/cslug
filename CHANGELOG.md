@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.5.0 (2026-11-27)
+
+`@cslug/ai`: agents, tools, MCP, conversations, fixtures and evals, a daily budget; and two tools for coding agents
+in every app, `cslug mcp:dev` and `cslug agents:sync`.
+
 ### @cslug/cli
 - `cslug mcp:dev`: a development MCP server (stdio) for coding agents, in every app: `describe`, `routes`,
   `tables`, `query` (read-only), `logs`, `last_error`, `run_test`, `docs_search`. Refused in production.

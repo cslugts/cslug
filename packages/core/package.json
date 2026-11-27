@@ -1,6 +1,6 @@
 {
   "name": "@cslug/core",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Application, container and @inject, providers, config, events, logger, errors, context, Clock, Money, i18n, contracts.",
   "license": "MIT",
   "type": "module",

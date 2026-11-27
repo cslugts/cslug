@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M8 are done; M9 is in progress (0.4.1 released: create-cslug, `cslug add`, `describe`, `repl`, the migration differ). Next: M10 `@cslug/search` (M9 is complete; a 0.5.0 release can come first).
+> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M9 are done (0.5.0 released: `@cslug/ai` with MCP and conversations, `cslug mcp:dev`, `cslug agents:sync`). Next: M10 `@cslug/search`.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
