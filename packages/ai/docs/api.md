@@ -30,7 +30,7 @@
 | `mcp(options?)` | Decorator: expose a `Tool` over MCP (`public`, `guard`, `ability`) |
 | `mcp(server).tools(names?)` | An MCP server's tools for an agent's `tools` |
 | `McpConnection(name, config)` | A client: `request(method, params)`, `close()` |
-| `handleMcp(message, tools, caller)` | One MCP message → its reply (the server); `MCP_VERSIONS`, `discoverTools(app)`, `mcpTools()` |
+| `handleMcp(message, tools, caller)` | One MCP message → its reply, over the `@mcp()` tools `caller` may use (core's `handleMcpMessage`); `asMcpTools(tools, caller)`, `MCP_VERSIONS`, `discoverTools(app)`, `mcpTools()` |
 | `McpServeCommand` | `cslug mcp:serve` (stdio) |
 | `AiFake`, `installAiFake(app)` | `fakes: ['ai']`: `respond`, `fixture(Agent, name)`, `assertRan`, `assertNotRan`, `ran`, `runs` |
 | `AiFixture`, `FIXTURES_DIR` | A fixture file's shape (`history` when the run continued one); `tests/fixtures/ai` |

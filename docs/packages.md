@@ -9,7 +9,7 @@ installs `@cslug/ai`.
 | Package | Owns | Depends on | Built on |
 |---|---|---|---|
 | `@cslug/validation` | `v` (schemas, coercion, refinements, JSON Schema export, Standard Schema), `Validator`, `ValidationError` | — | — |
-| `@cslug/core` | `Application`, container, `@inject`, `token`, `ServiceProvider`, config + env, events, logger, typed errors, ambient context, `Clock`, `Money`, **i18n** (`t()`, formatting), **contracts** (`Cache`, `Lock`, `RateLimiter`, `SessionStore`) with in-memory drivers | validation | `AsyncLocalStorage`, `Intl` |
+| `@cslug/core` | `Application`, container, `@inject`, `token`, `ServiceProvider`, config + env, events, logger, typed errors, ambient context, `Clock`, `Money`, **i18n** (`t()`, formatting), **contracts** (`Cache`, `Lock`, `RateLimiter`, `SessionStore`) with in-memory drivers, the MCP server protocol | validation | `AsyncLocalStorage`, `Intl` |
 | `@cslug/http` | Router (incl. domain routing), middleware, `HttpContext`, request/response, cookies, sessions (via `SessionStore`), CSRF, CORS, `throttle()` (via `RateLimiter`), error rendering, static files, `/health/*` | core, validation | `Bun.serve` |
 | `@cslug/vue` | `view()`, `renderStandalone()`, server `.vue` loader, `hydrate` → island transform, composables (`useT`, `useRequest`, `useForm`, `defineStore`), `route()`, formatters, `<Assets>`, `serialize()`, `Serialized<T>`, `mountIslands()`; build plugins at `@cslug/vue/build`; test preload `@cslug/vue/register` | http, validation (ICU messages in islands) · **peer: `vue`** · optional peers: `sass`, `tailwindcss`, `bun-plugin-tailwind` | `vue/server-renderer`, `vue/compiler-sfc`, `Bun.build` |
 | `@cslug/database` | `Database`, column builders, `Row`/`NewRow`, query builder, `sql` tag, `Repository`, `preload`, transactions (+ `afterCommit` hooks in core context), locks, idempotency, migrations + differ, factories, seeders | core | `Bun.sql` |
@@ -22,7 +22,7 @@ installs `@cslug/ai`.
 | `@cslug/webhook` | `verifySignature()`, `WebhookInbox` (exactly-once receipt), replay command | http, database | Web Crypto |
 | `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake); stored conversations and run records; embedding drivers for search (planned) | core, validation · optional: queue, http, database (conversations, runs), search (planned: retrieval, recall) | `fetch` |
 | `@cslug/search` *(planned, M10)* | Full-text search over tables (`tsvector`, ranking, highlights, trigram), `SearchIndex` for other documents, semantic search (pgvector) through an `Embedder` contract, hybrid ranking, `search:reindex` | core, database · optional: queue | PostgreSQL full text, `pg_trgm`, `pgvector` |
-| `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `dev`, `start` supervisor | core | `Bun.spawn` |
+| `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `mcp:dev`, `dev`, `start` supervisor | core · optional: database (`mcp:dev` query) | `Bun.spawn` |
 | `@cslug/testing` | `testApp()`, HTTP/HTML assertions, DB isolation, fakes, time travel | peers: every package it fakes | `bun test` |
 | `create-cslug` | `bun create cslug` scaffolder: presets `--api`, `--web`, `--full`, `--tailwind` (literal template files) | — | — |
 

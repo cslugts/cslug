@@ -72,7 +72,7 @@
       "name": "@cslug/cli",
       "version": "0.4.1",
       "bin": {
-        "cslug": "./src/bin.ts",
+        "cslug": "src/bin.ts",
       },
       "devDependencies": {
         "@cslug/database": "workspace:*",
@@ -81,7 +81,11 @@
       },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
+        "@cslug/database": "workspace:*",
       },
+      "optionalPeers": [
+        "@cslug/database",
+      ],
     },
     "packages/core": {
       "name": "@cslug/core",

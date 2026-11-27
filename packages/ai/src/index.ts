@@ -44,6 +44,7 @@ export {
 } from './drivers'
 export { AiFake, type AiFixture, type AiRun, FIXTURES_DIR, installAiFake } from './fake'
 export {
+  asMcpTools,
   discoverTools,
   handleMcp,
   MCP_VERSIONS,

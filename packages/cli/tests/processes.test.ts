@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { plannedProcesses, Supervisor } from '../src'
 import { BIN, FIXTURE, freePort, waitFor } from './support'
 
@@ -57,6 +60,27 @@ describe('Supervisor', () => {
     expect(Object.values(s.pids).every((p) => typeof p === 'number')).toBe(true)
     expect(await s.stop()).toBe(0)
     expect(lines.join('\n')).toMatch(/➜ web +pid \d+/)
+  })
+
+  test('logFile: every line the children print is also appended as JSON (cslug dev → .cslug/dev.log)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cslug-devlog-'))
+    const logFile = join(dir, 'dev.log')
+    const s = new Supervisor([{ name: 'web', argv: ['serve'] }], {
+      cwd: FIXTURE,
+      bin: fake,
+      prefix: false,
+      log: () => {},
+      logFile,
+    }).start()
+    await waitFor(async () => existsSync(logFile) && readFileSync(logFile, 'utf8').includes('up'), 5000)
+    expect(await s.stop()).toBe(0)
+    const entries = readFileSync(logFile, 'utf8')
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l))
+    expect(entries[0]).toMatchObject({ role: 'web', stream: 'stdout', line: 'child serve up' })
+    expect(entries.some((e) => e.line === 'child serve draining')).toBe(true)
+    rmSync(dir, { recursive: true, force: true })
   })
 
   test('restarts a crashing child with backoff', async () => {

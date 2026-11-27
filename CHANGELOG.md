@@ -4,6 +4,15 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/cli
+- `cslug mcp:dev`: a development MCP server (stdio) for coding agents, in every app: `describe`, `routes`,
+  `tables`, `query` (read-only), `logs`, `last_error`, `run_test`, `docs_search`. Refused in production.
+- `cslug dev` also writes what its processes print to `.cslug/dev.log` (JSON lines), which `mcp:dev` reads.
+
+### @cslug/core
+- The MCP server protocol moves here (`handleMcpMessage`, `serveMcpStdio`, `McpTool`, `MCP_VERSIONS`), shared by
+  `@cslug/ai` and `cslug mcp:dev`; `@cslug/ai`'s `handleMcp` and `MCP_VERSIONS` are unchanged.
+
 ### @cslug/ai
 - MCP: `@mcp()` exposes tools at `POST /mcp` (streamable HTTP, API-token abilities, Origin checked) and with
   `cslug mcp:serve` (stdio); protocol 2026-07-28 and the `initialize` versions back to 2025-03-26.

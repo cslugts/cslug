@@ -1,12 +1,12 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { arg, Command, flag, Logger, resolve, ServiceProvider } from '@cslug/core'
+import { arg, Command, flag, Logger, resolve, ServiceProvider, serveMcpStdio } from '@cslug/core'
 import type { HttpContext } from '@cslug/http'
 import { Ai, type AiConfig } from './ai'
 import { AiEvalCommand } from './ai-eval-command'
 import { databaseStore } from './conversation-store'
 import { Conversations } from './conversations'
-import { discoverTools, handleMcp, type McpCaller, type McpReply, mcpTools } from './mcp'
+import { asMcpTools, discoverTools, handleMcp, type McpCaller, type McpReply, mcpTools } from './mcp'
 
 /**
  * `cslug mcp:serve`: the `@mcp()` tools over stdio, for a local client (every exposed tool: the caller is whoever
@@ -19,16 +19,7 @@ export class McpServeCommand extends Command {
   async handle() {
     this.app.swap(Logger, new Logger({ write: (line) => process.stderr.write(`${line}\n`) }))
     const info = { name: String(this.app.config('app.name') ?? 'cslug'), version: '1' }
-    for await (const line of console) {
-      if (!line.trim()) continue
-      let reply: McpReply | undefined
-      try {
-        reply = await handleMcp(JSON.parse(line), (cls) => resolve(cls), 'local', info)
-      } catch {
-        reply = { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }
-      }
-      if (reply) process.stdout.write(`${JSON.stringify(reply)}\n`)
-    }
+    await serveMcpStdio(() => asMcpTools((cls) => resolve(cls), 'local'), info)
     return 0
   }
 }

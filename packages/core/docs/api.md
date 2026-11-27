@@ -198,3 +198,16 @@ Files: `<locale>.json`, and `<locale>/<namespace>.json` merged under the file na
 
 Memory drivers: `MemoryCache` (values cloned, bigint and Date supported), `MemoryLock`, `MemoryRateLimiter`
 (sliding window), `MemorySessionStore`. Each is one per application.
+
+## MCP (server side)
+
+The protocol, over any list of tools, shared by `@cslug/ai` (`@mcp()` tools at `POST /mcp`, `cslug mcp:serve`) and
+`@cslug/cli` (`cslug mcp:dev`).
+
+| | |
+|---|---|
+| `McpTool` | `{ name, description, inputSchema, call(args) }`: `call` validates its arguments; what it throws is an error result |
+| `handleMcpMessage(message, tools, serverInfo?)` | One JSON-RPC message → its reply (undefined for a notification): `server/discover`, `initialize` (2025-11-25, 2025-06-18, 2025-03-26), `ping`, `tools/list`, `tools/call` (a plain-object result is also `structuredContent`), `-32022` for an unsupported per-request version, `-32601` for an unknown method |
+| `serveMcpStdio(tools, serverInfo, io?)` | One message per line on stdin, replies on stdout, until stdin closes; a line that is not JSON gets `-32700` |
+| `MCP_VERSIONS` | `2026-07-28` (stateless, `server/discover`) and the `initialize` versions |
+| `McpMessage`, `McpReply`, `McpServerInfo` | The shapes |

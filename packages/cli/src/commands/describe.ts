@@ -1,4 +1,4 @@
-import { arg, Command, DESCRIBE, type DescribeSection, flag } from '@cslug/core'
+import { type Application, arg, Command, DESCRIBE, type DescribeSection, flag } from '@cslug/core'
 
 const flat = (row: unknown): row is Record<string, unknown> =>
   typeof row === 'object' && row !== null && !Array.isArray(row)
@@ -8,6 +8,22 @@ const cell = (value: unknown) =>
     : typeof value === 'object' && value !== null
       ? JSON.stringify(value)
       : value
+
+/** The sections `describe` knows: those the installed packages contribute, plus `providers` and `config` (keys). */
+export function describeSections(app: Application): Map<string, () => unknown> {
+  const sections = new Map<string, () => unknown>([
+    ['providers', () => app.providers.map((p) => p.name)],
+    [
+      'config',
+      () =>
+        Object.fromEntries(
+          Object.entries(app.configs).map(([name, value]) => [name, flat(value) ? Object.keys(value) : []]),
+        ),
+    ],
+  ])
+  for (const s of app.tagged<DescribeSection>(DESCRIBE)) sections.set(s.name, s.collect)
+  return sections
+}
 
 /**
  * `cslug describe [section] [--json]`: the app as data, for people, scripts and AI coding agents. Sections come from
@@ -22,17 +38,7 @@ export class DescribeCommand extends Command {
   }
 
   async handle({ section, json }: Command.Args<typeof DescribeCommand>) {
-    const sections = new Map<string, () => unknown>([
-      ['providers', () => this.app.providers.map((p) => p.name)],
-      [
-        'config',
-        () =>
-          Object.fromEntries(
-            Object.entries(this.app.configs).map(([name, value]) => [name, flat(value) ? Object.keys(value) : []]),
-          ),
-      ],
-    ])
-    for (const s of this.app.tagged<DescribeSection>(DESCRIBE)) sections.set(s.name, s.collect)
+    const sections = describeSections(this.app)
 
     if (!section) {
       const all: Record<string, unknown> = {}

@@ -37,10 +37,12 @@ plus `app`, `clock`, `log`, `io`. When the session is not interactive, prompts r
 | | |
 |---|---|
 | `CliKernel(app)` | `.run(argv)` → exit code; `.commands()` |
-| `Supervisor(specs, options)` | `.start()`, `.stop(signal)` → exit code; `plannedProcesses(config, flags)` |
+| `Supervisor(specs, options)` | `.start()`, `.stop(signal)` → exit code; options `cwd`, `bunFlags`, `env`, `shutdownTimeout`, `log`, `prefix`, `logFile`; `plannedProcesses(config, flags)` |
+| `DEV_LOG` | `.cslug/dev.log`, where `cslug dev` appends what its processes print |
 | `generator(kind, dir, description)` | a `make:<kind>` command from `stubs/<kind>.stub` |
 | `AddCommand`, `ADDITIONS` | `cslug add <names>` and what each name installs and wires |
-| `DescribeCommand` | `cslug describe [section] [--json]` |
+| `DescribeCommand` | `cslug describe [section] [--json]`; `describeSections(app)` |
+| `McpDevCommand`, `devTools(app)` | `cslug mcp:dev`; the tools it serves (`McpTool[]`) |
 | `ReplCommand`, `evaluate(code, scope)`, `replScope(app)` | `cslug repl` and its evaluator |
 | `BufferedIO(answers?)` | capture output in tests: `app.instance(ConsoleIO, io)` |
 | `defineCslugConfig()` | `cslug.config.ts`: `processes` (`web.instances`, `worker[]`, `scheduler`), `shutdownTimeout`, `assets` |
