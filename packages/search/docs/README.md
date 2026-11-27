@@ -88,6 +88,34 @@ configuration, and a vector generated from the title (A) and the body (B) in tha
 
 Table search never needs a reindex: PostgreSQL computes `searchable()` columns on every write.
 
+## Semantic and hybrid search
+
+```ts
+// config/search.ts
+export default defineConfig({ vectors: true })     // registers the embeddings migration: pgvector, then cslug migrate
+
+export const helpIndex = searchIndex('help', { languages: ['french', 'english'], semantic: true })
+await helpIndex.search('louer une voiture')                       // hybrid (the default for a semantic index)
+await helpIndex.search('louer une voiture', { mode: 'semantic', minSimilarity: 0.3 })
+```
+
+- **Embeddings.** A `semantic` index embeds each document's title and body (the first `maxChars`, default 8000:
+  `semantic: { maxChars }`) on `upsert`, with the app's `Embedder`, into `cslug_search_embeddings` (one vector per
+  document, deleted with it). A document is embedded again only when its text or the embedder's `model` changed (a
+  hash is kept), so `search:reindex` costs nothing for unchanged documents. Vectors of another model are ignored
+  until the document is embedded again.
+- **Modes.** `text` (full text, as before), `semantic` (nearest vectors by cosine distance; `rank` is the cosine
+  similarity, `minSimilarity` leaves out the rest; the query is embedded with `purpose: 'query'`), `hybrid`
+  (the best 100 of each, fused by reciprocal rank: `Σ 1 / (60 + position)`; a document found both ways comes first).
+  `filter`, `highlight` (on the words of the term) and pagination work in every mode.
+- **The `Embedder`** is a contract: `model` and `embed(texts, purpose)`. `@cslug/ai` will provide drivers
+  (OpenAI-compatible, Voyage); tests and development can bind `FakeEmbedder` (`app.instance(Embedder, new
+  FakeEmbedder())`): words hashed into buckets, plus optional `concepts` to show matches by meaning.
+- The search is exact (no approximate index): fine for thousands of documents. pgvector's `vector` extension may
+  need a superuser to install on some hosts.
+- Table rows are searched by meaning through an index: upsert the rows' text into a semantic `searchIndex()` where
+  they change (or from its `documents()` source).
+
 ## Not yet
 
-Semantic search with pgvector and an `Embedder`, hybrid ranking, and the AI search tool come in the next parts of M10.
+The embedding drivers in `@cslug/ai` and the AI search tool come in the next parts of M10.

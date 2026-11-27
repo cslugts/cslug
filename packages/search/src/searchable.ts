@@ -3,6 +3,8 @@ import { type Column, custom, type Generated, type Hidden, type Table } from '@c
 
 /** The `cslug_search` migration: unaccent, pg_trgm, and the accent-insensitive `cslug_<config>` configurations. */
 export const SEARCH_MIGRATIONS = join(import.meta.dir, '../migrations')
+/** The embeddings migration (pgvector), registered with `search.vectors: true`. */
+export const VECTOR_MIGRATIONS = join(import.meta.dir, '../migrations-vectors')
 
 /** A weight per searchable column: `A` counts most, then `B`, `C`, `D`. */
 export type Weights = Record<string, 'A' | 'B' | 'C' | 'D'>

@@ -1,7 +1,7 @@
 import { arg, Command, ServiceProvider } from '@cslug/core'
 import { addMigrations } from '@cslug/database'
 import { discoverSearchIndexes, searchIndexes } from './search-index'
-import { SEARCH_MIGRATIONS } from './searchable'
+import { SEARCH_MIGRATIONS, VECTOR_MIGRATIONS } from './searchable'
 
 /**
  * `cslug search:reindex [index]`: refill the indexes defined in `app/search/` from their `documents()` source (all of
@@ -35,11 +35,13 @@ export class SearchReindexCommand extends Command {
 /**
  * Registers the `cslug_search` migrations (`cslug migrate` runs them before the app's own): the `unaccent` and
  * `pg_trgm` extensions, the accent-insensitive `cslug_<config>` text search configurations, and
- * `cslug_search_documents` for `searchIndex()`; contributes `search:reindex`.
+ * `cslug_search_documents` for `searchIndex()`; with `search.vectors: true` (config/search.ts), pgvector and
+ * `cslug_search_embeddings` for semantic indexes. Contributes `search:reindex`.
  */
 export class SearchProvider extends ServiceProvider {
   register() {
     addMigrations(SEARCH_MIGRATIONS)
+    if (this.app.config<boolean | undefined>('search.vectors')) addMigrations(VECTOR_MIGRATIONS)
     this.commands([SearchReindexCommand])
   }
 }

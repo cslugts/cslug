@@ -13,6 +13,10 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - `searchIndex(name, { languages, documents })`: documents that are not rows, in `cslug_search_documents`
   (`upsert`, `remove`, `clear`, ranked `search` with metadata filters, highlights and typos, as a page);
   `cslug search:reindex [index]` refills indexes from their source and removes stale documents.
+- Semantic and hybrid search: `searchIndex(name, { semantic: true })` embeds documents on upsert (only when their
+  text or the model changed) with the app's `Embedder`, into `cslug_search_embeddings` (pgvector, opt in with
+  `search.vectors: true`); `search(term, { mode: 'semantic' | 'hybrid', minSimilarity })`, hybrid by reciprocal
+  rank fusion. `Embedder` contract and `FakeEmbedder`. `cslug add search` writes `config/search.ts`.
 
 ### @cslug/database
 - Generated columns: `.generatedAs((c) => sql)` (`generated always as (…) stored`), never written by inserts or
