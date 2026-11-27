@@ -106,7 +106,9 @@ export const providers = [
     roots.push(root)
     const unknown = await cli(['add', 'queue,payments', '--no-install'], { root })
     expect(unknown.code).toBe(1)
-    expect(unknown.out).toContain('Unknown: payments. Available: queue, mail, storage, notification, webhook, tailwind')
+    expect(unknown.out).toContain(
+      'Unknown: payments. Available: queue, mail, storage, notification, webhook, ai, tailwind',
+    )
     const { code, out } = await cli(['add', 'webhook', '--no-install'], { root })
     expect(code).toBe(0)
     expect(out).toContain('could not edit bootstrap/providers.ts')

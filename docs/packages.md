@@ -88,7 +88,7 @@ version, so nothing can drift.
 | `--api` (JSON API) | validation, core, http, database, redis, cli · dev: testing |
 | `--web` (default: pages + islands) | api + vue, auth · peer: `vue` |
 | `--full` | web + queue, mail, storage |
-| add later | `cslug add queue`, `mail`, `storage`, `notification`, `webhook`, `tailwind` (several: `cslug add queue,mail`): installs the package, adds its provider and config (`ai` once it exists) |
+| add later | `cslug add queue`, `mail`, `storage`, `notification`, `webhook`, `ai`, `tailwind` (several: `cslug add queue,mail`): installs the package, adds its provider and config |
 
 Albastr uses `--full` + notification + webhook. AI is added after the MVP.
 

@@ -38,7 +38,7 @@ cslug add queue,mail        # bun add @cslug/queue @cslug/mail (at the CLI's ver
                             # config/mail.ts, routes/schedule.ts, a worker and the scheduler in cslug.config.ts
 ```
 
-Names: `queue`, `mail`, `storage`, `notification`, `webhook`, `tailwind`. Running it twice changes nothing.
+Names: `queue`, `mail`, `storage`, `notification`, `webhook`, `ai`, `tailwind`. Running it twice changes nothing.
 
 Stubs are literal files in `stubs/` and can be published to the app (`cslug stubs:publish`) to customise them.
 Generators never overwrite without `--force` and print every file they write.
