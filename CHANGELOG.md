@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.4.0 (2026-11-27)
+
+Starting and growing an app (milestone M9, first part): `bun create cslug`, `cslug add`, `describe`, `repl`, the
+migration differ and `db:shell`.
+
 ### @cslug/database
 - `cslug db:shell [-c sql]`: `psql` on the app database, the password through `PGPASSWORD`.
 - The table differ: `cslug make:migration --from-tables` writes the SQL that brings the database to `app/tables/`
