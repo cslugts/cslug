@@ -4,6 +4,10 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.6.1 (2026-11-27)
+
+TOTP two-factor authentication in `@cslug/auth`.
+
 ### @cslug/auth
 - Two-factor authentication (TOTP, RFC 6238): `TwoFactor` (`enable` → secret + `otpauth://` URI, `confirm` →
   recovery codes, `verify`, `disable`, `regenerateRecoveryCodes`), stored in `cslug_two_factor` (secret encrypted,
