@@ -90,6 +90,28 @@ Without `config/ai.ts`, the default provider is `anthropic`. `ai.extend(name, pr
 `ai.result(agent, { input, context })` is `run()` in detail: `{ value, raw, model, steps, usage, costUsd }` (`raw` is
 the answer before validation: the parsed JSON, or the text).
 
+## Embeddings (for @cslug/search)
+
+```ts
+embeddings: { driver: 'voyage', model: 'voyage-3.5' },                                   // VOYAGE_API_KEY
+embeddings: { driver: 'openai-compatible', baseUrl: 'https://api.openai.com/v1', apiKey: env.OPENAI_API_KEY,
+              model: 'text-embedding-3-small', dimensions: 512 },
+embeddings: { driver: 'openai-compatible', baseUrl: 'http://localhost:11434/v1', model: 'nomic-embed-text' }, // Ollama
+```
+
+With `ai.embeddings` and `@cslug/search` installed, `AiProvider` binds search's `Embedder` (semantic indexes use it).
+Anthropic has no embeddings API; Voyage is the provider it recommends.
+
+- `voyage`: `POST {baseUrl}/embeddings` with `input_type` (`document` for indexed texts, `query` for searches) and
+  `output_dimension` from `dimensions`.
+- `openai-compatible`: `POST {baseUrl}/embeddings` `{ model, input, dimensions? }`.
+- The vectors' `model` includes the dimensions (`voyage-3.5@512`), so changing either re-embeds documents.
+- Calls are checked against and charged to the daily budget, as input tokens of `model`. There are no built-in
+  prices for embedding models: add yours to `ai.prices` (`{ 'voyage-3.5': { input: <USD per million>, output: 0 } }`),
+  otherwise the calls are logged once as unpriced and cost nothing in the budget.
+- `testApp({ fakes: ['ai'] })` also swaps the bound `Embedder` for a `FakeEmbedder`, so a test never calls the
+  provider.
+
 ## Daily budget
 
 ```ts

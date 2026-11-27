@@ -1,13 +1,18 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { arg, Command, flag, Logger, resolve, ServiceProvider, serveMcpStdio } from '@cslug/core'
+import { arg, Command, flag, Logger, resolve, ServiceProvider, serveMcpStdio, type Token } from '@cslug/core'
 import type { HttpContext } from '@cslug/http'
 import { PROMPT_VARIABLE } from './agent'
 import { Ai, type AiConfig } from './ai'
 import { AiEvalCommand } from './ai-eval-command'
 import { databaseStore } from './conversation-store'
 import { Conversations } from './conversations'
+import { embedderFor, type TextEmbedder } from './embedders'
+import { setFakeEmbedder } from './fake'
 import { asMcpTools, discoverTools, handleMcp, type McpCaller, type McpReply, mcpTools } from './mcp'
+
+/** What this package uses of @cslug/search (an optional peer, imported only when installed). */
+type SearchModule = { Embedder: Token<TextEmbedder>; FakeEmbedder: new () => TextEmbedder }
 
 /**
  * `cslug mcp:serve`: the `@mcp()` tools over stdio, for a local client (every exposed tool: the caller is whoever
@@ -80,7 +85,8 @@ export class AiRecordCommand extends Command {
 }
 
 /**
- * Binds `Ai` from `config/ai.ts` (`default`, `providers`, `models`, `mcp`, `budget`, `prices`, `runs`) and
+ * Binds `Ai` from `config/ai.ts` (`default`, `providers`, `models`, `mcp`, `budget`, `prices`, `runs`,
+ * `embeddings`: @cslug/search's `Embedder` when it is installed) and
  * `Conversations`; contributes `ai:prompts`, `ai:record`, `ai:eval` and `mcp:serve`. With @cslug/database: the
  * `cslug_ai_*` tables, stored conversations and a record per run.
  * With `@mcp()` tools in `app/tools/` and @cslug/http installed: `POST /mcp` (streamable HTTP, in the api group's
@@ -97,6 +103,7 @@ export class AiProvider extends ServiceProvider {
   }
 
   async boot() {
+    await this.bindEmbedder()
     const store = await databaseStore(this.app)
     if (store) {
       this.app.resolve(Conversations).store = store
@@ -114,6 +121,23 @@ export class AiProvider extends ServiceProvider {
       },
       { middleware: this.app.tagged(http.API_MIDDLEWARE) },
     )
+  }
+
+  /** With `ai.embeddings` and @cslug/search installed: its `Embedder`, from the configured driver. */
+  private async bindEmbedder() {
+    const config = this.app.config<AiConfig | undefined>('ai')?.embeddings
+    if (!config) return
+    // a variable specifier: apps without @cslug/search still type-check (TypeScript does not resolve it)
+    const specifier = '@cslug/search'
+    const search = (await import(specifier).catch(() => undefined)) as SearchModule | undefined
+    if (!search) {
+      this.app.resolve(Logger).warn('ai.embeddings_unused', { reason: '@cslug/search is not installed' })
+      return
+    }
+    const embedder = embedderFor(config, () => this.app.resolve(Ai).budget)
+    this.app.instance(search.Embedder, embedder)
+    // tests (`fakes: ['ai']`) swap it for a FakeEmbedder: no paid call from a test
+    setFakeEmbedder(search.Embedder, () => new search.FakeEmbedder())
   }
 
   /** One MCP message over HTTP: Origin checked (DNS rebinding), notifications 202, JSON responses. */

@@ -108,8 +108,8 @@ await helpIndex.search('louer une voiture', { mode: 'semantic', minSimilarity: 0
   similarity, `minSimilarity` leaves out the rest; the query is embedded with `purpose: 'query'`), `hybrid`
   (the best 100 of each, fused by reciprocal rank: `Σ 1 / (60 + position)`; a document found both ways comes first).
   `filter`, `highlight` (on the words of the term) and pagination work in every mode.
-- **The `Embedder`** is a contract: `model` and `embed(texts, purpose)`. `@cslug/ai` will provide drivers
-  (OpenAI-compatible, Voyage); tests and development can bind `FakeEmbedder` (`app.instance(Embedder, new
+- **The `Embedder`** is a contract: `model` and `embed(texts, purpose)`. `@cslug/ai` binds one from `config/ai.ts` →
+  `embeddings` (Voyage, OpenAI-compatible); tests and development can bind `FakeEmbedder` (`app.instance(Embedder, new
   FakeEmbedder())`): words hashed into buckets, plus optional `concepts` to show matches by meaning.
 - The search is exact (no approximate index): fine for thousands of documents. pgvector's `vector` extension may
   need a superuser to install on some hosts.
@@ -118,4 +118,4 @@ await helpIndex.search('louer une voiture', { mode: 'semantic', minSimilarity: 0
 
 ## Not yet
 
-The embedding drivers in `@cslug/ai` and the AI search tool come in the next parts of M10.
+The AI search tool (an agent searching an index) and conversation recall come in the last part of M10.

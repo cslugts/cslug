@@ -33,7 +33,8 @@
     "@cslug/validation": "workspace:*",
     "@cslug/queue": "workspace:*",
     "@cslug/http": "workspace:*",
-    "@cslug/database": "workspace:*"
+    "@cslug/database": "workspace:*",
+    "@cslug/search": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@cslug/queue": {
@@ -44,11 +45,15 @@
     },
     "@cslug/database": {
       "optional": true
+    },
+    "@cslug/search": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@cslug/testing": "workspace:*",
     "@cslug/http": "workspace:*",
-    "@cslug/database": "workspace:*"
+    "@cslug/database": "workspace:*",
+    "@cslug/search": "workspace:*"
   }
 }

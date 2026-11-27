@@ -83,7 +83,12 @@ await helpIndex.search('louer une voiture')     // hybrid: words and meaning, a 
 ```
 
 Documents are embedded when they are upserted, and only again when their text changes. Searches combine full-text
-and nearest-vector results (`mode: 'text' | 'semantic' | 'hybrid'`). The embedding model comes from the app's
-`Embedder`; tests use `FakeEmbedder`.
+and nearest-vector results (`mode: 'text' | 'semantic' | 'hybrid'`). The embedding model is set in `config/ai.ts`:
 
-Coming next: embedding drivers in `@cslug/ai` and a search tool for agents.
+```ts
+embeddings: { driver: 'voyage', model: 'voyage-3.5' },      // VOYAGE_API_KEY; or 'openai-compatible' (OpenAI, Ollama)
+```
+
+Tests with `fakes: ['ai']` use a `FakeEmbedder` instead, so they never call the provider.
+
+Coming next: a search tool for agents.

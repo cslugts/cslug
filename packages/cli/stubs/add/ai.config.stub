@@ -8,4 +8,5 @@ export default defineConfig({
   },
   models: { fast: 'claude-haiku-5-5', smart: 'claude-opus-5-5' }, // code refers to roles, not model IDs
   // budget: { perDay: { usd: 10 }, alertAt: 0.8 }, // estimated spend per day; AiBudgetError once it is reached
+  // embeddings: { driver: 'voyage', model: 'voyage-3.5' }, // semantic search (@cslug/search); key from VOYAGE_API_KEY
 })
