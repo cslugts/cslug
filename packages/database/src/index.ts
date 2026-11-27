@@ -26,15 +26,27 @@ export {
   uuid,
   varchar,
 } from './columns'
-export { DbSeedCommand, databaseCommands, MigrateCommand } from './commands'
+export { DbDiffCommand, DbSeedCommand, databaseCommands, MakeMigrationCommand, MigrateCommand } from './commands'
 export { Database, type DatabaseConfig, type Json, Queryable, Transaction, type TransactionOptions } from './database'
+export {
+  type Change,
+  type ColumnSpec,
+  diffSchemas,
+  introspect,
+  loadTables,
+  migrationSql,
+  type RenameCandidate,
+  renameCandidates,
+  type TableSpec,
+  tableSpec,
+} from './differ'
 export { decrypt, encrypt, setEncryptionKey } from './encryption'
 export { isRetryable, QueryError, RowCountError, SerializationError, UniqueViolationError } from './errors'
 export { Factory, type FactoryContext, type FactoryValues, factory, isSeeder, type Seeder, seeder } from './factory'
 export { Fake } from './fake'
 export { addMigrations, FRAMEWORK_MIGRATIONS, type MigrationStatus, Migrator, parseMigration } from './migrator'
 export { between, eq, gt, gte, ilike, inList, isNull, like, lt, lte, ne, not, notIn, notNull, Op } from './operators'
-export { DatabaseProvider } from './provider'
+export { DatabaseProvider, describeTables } from './provider'
 export { type Page, Query, type Where } from './query'
 export { belongsTo, hasMany, preload } from './relations'
 export { Repository, type RepositoryApi } from './repository'

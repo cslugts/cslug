@@ -121,8 +121,26 @@ and `$$` bodies are fine). A first line `-- cslug:no-transaction` runs the file 
 | `Migrator.create(dir, name)` | Writes an empty, timestamped file |
 | `FRAMEWORK_MIGRATIONS` | cslug's own (e.g. `cslug_idempotency`), always run first |
 
-A failing migration is rolled back entirely and the error names the file. (`cslug migrate*` commands arrive
-with `@cslug/cli` in M3. The table differ, `--from-tables`, comes later.)
+A failing migration is rolled back entirely and the error names the file.
+
+### The table differ
+
+`cslug make:migration --from-tables` compares `app/tables/` with the database and writes the SQL; `cslug db:diff`
+prints the same changes (and the SQL with `--sql`) without writing a file.
+
+| | |
+|---|---|
+| `loadTables(rootDir)` | The tables `app/tables/` exports |
+| `tableSpec(table)` / `introspect(db)` | Both sides in one shape (`TableSpec`): columns (type as `format_type()` reports it, nullability, default), unique, check (`oneOf`) and foreign-key constraints, indexes. `introspect` reads the `public` schema and skips `cslug_*` tables (packages migrate those) |
+| `renameCandidates(desired, actual)` | A column in the database only and one in the tables only, same table and type: maybe a rename (the command asks; without a terminal it assumes a rename, which keeps the data) |
+| `diffSchemas(desired, actual, renames?)` | `Change[]` (`{ table, label, up, down, warning? }`): new tables (referenced ones first), added / dropped / renamed columns, type, nullability and default changes, constraints and indexes compared by name and definition, dropped tables |
+| `migrationSql(changes)` | `-- up` in order, `-- down` in reverse |
+
+Constraint names follow PostgreSQL's defaults (`t_col_key`, `t_col_fkey`, `t_col_check`), so a table created by a
+generated migration diffs clean; a rename also renames the column's constraints and indexes. Changes that can lose
+data or fail on existing rows (a dropped column or table, a type change, `not null` without a default) are listed as
+`-- review:` comments at the top of the file. Anything else (views, triggers, data migrations, custom `check()`) is
+hand-written SQL.
 
 ## Factories and seeders
 

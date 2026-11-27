@@ -1,21 +1,12 @@
-import { existsSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 import { HEALTH_CHECKS, healthCheck, Logger, ServiceProvider } from '@cslug/core'
 import { databaseCommands } from './commands'
 import { Database, type DatabaseConfig } from './database'
+import { loadTables } from './differ'
 import { setEncryptionKey } from './encryption'
-import { Table } from './table'
 
 /** The tables exported by `app/tables/*.ts` (`cslug describe tables`): columns, keys, indexes, references. */
 export async function describeTables(rootDir: string) {
-  const dir = join(rootDir, 'app/tables')
-  const tables: Table[] = []
-  if (existsSync(dir))
-    for (const file of (readdirSync(dir, { recursive: true }) as string[])
-      .filter((f) => /(?<!\.test)\.ts$/.test(f))
-      .sort())
-      for (const value of Object.values(await import(join(dir, file))))
-        if (value instanceof Table && !tables.includes(value)) tables.push(value)
+  const tables = await loadTables(rootDir)
   return tables.map((t) => ({
     name: t.name,
     primaryKey: t.primaryKey,

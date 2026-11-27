@@ -10,7 +10,7 @@ test('describeTables: the tables app/tables exports, for cslug describe tables',
   expect(notes?.columns.find((c) => c.key === 'authorId')).toEqual({
     name: 'author_id',
     key: 'authorId',
-    type: 'text',
+    type: 'uuid',
     nullable: false,
     references: 'authors.id',
   })
