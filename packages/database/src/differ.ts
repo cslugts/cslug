@@ -19,7 +19,16 @@ export async function loadTables(rootDir: string): Promise<Table[]> {
 
 // ── one shape for both sides: what the tables want and what the database has ─────────────────────────
 
-export type ColumnSpec = { name: string; type: string; nullable: boolean; default?: string; primary?: boolean }
+export type ColumnSpec = {
+  name: string
+  type: string
+  nullable: boolean
+  default?: string
+  primary?: boolean
+  /** `generated always as (expression) stored`; `hash` (kept in the column comment) tells when it changed. */
+  generated?: { expression: string; hash: string }
+}
+type IndexSpec = { name: string; columns: string[]; unique: boolean; using?: string; ops?: (string | null)[] }
 /** Constraints and indexes by name. Names follow PostgreSQL's defaults (`t_col_key`, `t_col_fkey`, `t_col_check`). */
 export type TableSpec = {
   name: string
@@ -27,8 +36,12 @@ export type TableSpec = {
   uniques: { name: string; column: string }[]
   checks: { name: string; column: string; values: string[] }[]
   foreignKeys: { name: string; column: string; table: string; references: string; onDelete?: string }[]
-  indexes: { name: string; columns: string[]; unique: boolean }[]
+  indexes: IndexSpec[]
 }
+
+/** Short hash of a generated expression, kept in the column comment (`cslug:generated <hash>`). */
+const hashOf = (expression: string) => new Bun.CryptoHasher('sha1').update(expression).digest('hex').slice(0, 12)
+const COMMENT = /^cslug:generated (\w+)$/
 
 /** `timestamptz` → `timestamp with time zone`, as `format_type()` reports it. */
 const TYPES: [RegExp, string][] = [
@@ -52,17 +65,25 @@ export function tableSpec(t: Table): TableSpec {
     uniques: [],
     checks: [],
     foreignKeys: [],
-    indexes: [...t.indexes],
+    indexes: t.indexes.map((i) => ({
+      name: i.name,
+      columns: i.columns,
+      unique: i.unique,
+      ...(i.using && i.using !== 'btree' ? { using: i.using } : {}),
+      ...(i.ops?.some(Boolean) ? { ops: i.ops } : {}),
+    })),
   }
   for (const [key, { def }] of Object.entries(t.columns)) {
     const name = t.sqlNames.get(key) as string
     const value = def.defaultSql ?? (def.defaultValue === undefined ? undefined : literal(def.defaultValue))
+    const generated = t.generatedSql.get(key)
     spec.columns.push({
       name,
       type: pgType(def.sqlType),
       nullable: def.nullable,
-      ...(value === undefined ? {} : { default: value }),
+      ...(value === undefined || generated ? {} : { default: value }),
       ...(def.primary ? { primary: true } : {}),
+      ...(generated ? { generated: { expression: generated, hash: hashOf(generated) } } : {}),
     })
     if (def.unique) spec.uniques.push({ name: `${t.name}_${name}_key`, column: name })
     if (def.oneOf) spec.checks.push({ name: `${t.name}_${name}_check`, column: name, values: [...def.oneOf] })
@@ -87,9 +108,12 @@ export async function introspect(db: Database): Promise<TableSpec[]> {
     type: string
     nullable: boolean
     default: string | null
+    generated: string
+    comment: string | null
   }>(
     sql`select c.relname as table, a.attname as name, format_type(a.atttypid, a.atttypmod) as type,
-          not a.attnotnull as nullable, pg_get_expr(d.adbin, d.adrelid) as default
+          not a.attnotnull as nullable, pg_get_expr(d.adbin, d.adrelid) as default, a.attgenerated::text as generated,
+          col_description(c.oid, a.attnum) as comment
         from pg_class c join pg_namespace n on n.oid = c.relnamespace
         join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
         left join pg_attrdef d on d.adrelid = c.oid and d.adnum = a.attnum
@@ -102,11 +126,22 @@ export async function introspect(db: Database): Promise<TableSpec[]> {
         from pg_constraint k join pg_class c on c.oid = k.conrelid join pg_namespace n on n.oid = c.relnamespace
         where ${own}`,
   )
-  const indexes = await db.many<{ table: string; name: string; unique: boolean; columns: string[] }>(
-    sql`select c.relname as table, i.relname as name, x.indisunique as unique,
+  const indexes = await db.many<{
+    table: string
+    name: string
+    unique: boolean
+    columns: string[]
+    using: string
+    ops: (string | null)[]
+  }>(
+    sql`select c.relname as table, i.relname as name, x.indisunique as unique, am.amname::text as using,
           array(select a.attname::text from unnest(x.indkey::int2[]) with ordinality k(n, o)
-            join pg_attribute a on a.attrelid = c.oid and a.attnum = k.n order by k.o) as columns
+            join pg_attribute a on a.attrelid = c.oid and a.attnum = k.n order by k.o) as columns,
+          array(select case when oc.opcdefault then null else oc.opcname::text end
+            from unnest(x.indclass::oid[]) with ordinality k(oid, o) join pg_opclass oc on oc.oid = k.oid
+            order by k.o) as ops
         from pg_index x join pg_class i on i.oid = x.indexrelid join pg_class c on c.oid = x.indrelid
+        join pg_am am on am.oid = i.relam
         join pg_namespace n on n.oid = c.relnamespace
         where ${own} and not exists (select 1 from pg_constraint k where k.conindid = x.indexrelid)`,
   )
@@ -121,7 +156,11 @@ export async function introspect(db: Database): Promise<TableSpec[]> {
       name: c.name,
       type: c.type,
       nullable: c.nullable,
-      ...(c.default === null ? {} : { default: c.default }),
+      ...(c.generated === 's'
+        ? { generated: { expression: c.default ?? '', hash: COMMENT.exec(c.comment ?? '')?.[1] ?? '' } }
+        : c.default === null
+          ? {}
+          : { default: c.default }),
     })
   for (const k of constraints) {
     const t = of(k.table)
@@ -144,7 +183,14 @@ export async function introspect(db: Database): Promise<TableSpec[]> {
         ...(fk[3] ? { onDelete: fk[3].toLowerCase() } : {}),
       })
   }
-  for (const i of indexes) of(i.table).indexes.push({ name: i.name, columns: i.columns, unique: i.unique })
+  for (const i of indexes)
+    of(i.table).indexes.push({
+      name: i.name,
+      columns: i.columns,
+      unique: i.unique,
+      ...(i.using !== 'btree' ? { using: i.using } : {}),
+      ...(i.ops.some(Boolean) ? { ops: i.ops } : {}),
+    })
   return [...tables.values()]
 }
 
@@ -160,6 +206,7 @@ const columnSql = (t: TableSpec, c: ColumnSpec) => {
   const fk = t.foreignKeys.find((k) => k.column === c.name)
   return [
     `${c.name} ${c.type}`,
+    c.generated ? `generated always as (${c.generated.expression}) stored` : '',
     c.primary ? 'primary key' : c.nullable ? '' : 'not null',
     c.default === undefined ? '' : `default ${c.default}`,
     t.uniques.some((u) => u.column === c.name) ? 'unique' : '',
@@ -169,10 +216,21 @@ const columnSql = (t: TableSpec, c: ColumnSpec) => {
     .filter(Boolean)
     .join(' ')
 }
-const indexSql = (t: string, i: TableSpec['indexes'][number]) =>
-  `create ${i.unique ? 'unique ' : ''}index ${i.name} on ${t} (${i.columns.join(', ')});`
+const indexSql = (t: string, i: IndexSpec) =>
+  `create ${i.unique ? 'unique ' : ''}index ${i.name} on ${t}${i.using ? ` using ${i.using}` : ''} (${i.columns
+    .map((c, n) => (i.ops?.[n] ? `${c} ${i.ops[n]}` : c))
+    .join(', ')});`
+const sameIndex = (a: IndexSpec, b: IndexSpec) =>
+  a.unique === b.unique &&
+  a.columns.join() === b.columns.join() &&
+  (a.using ?? 'btree') === (b.using ?? 'btree') &&
+  (a.ops ?? []).map((o) => o ?? '').join() === (b.ops ?? []).map((o) => o ?? '').join()
+/** The comment that records a generated column's expression hash (`null` clears it). */
+const commentSql = (t: string, c: ColumnSpec) =>
+  `comment on column ${t}.${c.name} is ${c.generated ? `'cslug:generated ${c.generated.hash}'` : 'null'};`
 const createTable = (t: TableSpec) => [
   `create table ${t.name} (\n${t.columns.map((c) => `  ${columnSql(t, c)}`).join(',\n')}\n);`,
+  ...t.columns.filter((c) => c.generated).map((c) => commentSql(t.name, c)),
   ...t.indexes.map((i) => indexSql(t.name, i)),
 ]
 const byName = <T extends { name: string }>(list: T[]) => new Map(list.map((x) => [x.name, x]))
@@ -243,16 +301,46 @@ export function diffSchemas(desired: TableSpec[], actual: TableSpec[], renames: 
       if (!was) {
         changes.push({
           table: t.name,
-          label: `+ column  ${t.name}.${c.name} ${c.type}`,
-          up: [`${a} add column ${columnSql(t, c)};`],
+          label: `+ column  ${t.name}.${c.name} ${c.type}${c.generated ? ' (generated)' : ''}`,
+          up: [`${a} add column ${columnSql(t, c)};`, ...(c.generated ? [commentSql(t.name, c)] : [])],
           down: [`${a} drop column ${c.name};`],
-          ...(!c.nullable && c.default === undefined
+          ...(!c.nullable && c.default === undefined && !c.generated
             ? { warning: `${t.name}.${c.name} is not null without a default: fails if the table has rows` }
             : {}),
         })
         continue
       }
       const col = `${a} alter column ${c.name}`
+      if (!!was.generated !== !!c.generated) {
+        // a column cannot become generated in place: drop it and add it again (its indexes go with it)
+        const indexes = (spec: TableSpec) => spec.indexes.filter((i) => i.columns.includes(c.name))
+        changes.push({
+          table: t.name,
+          label: `~ column  ${t.name}.${c.name} ${c.generated ? 'now generated' : 'no longer generated'}`,
+          up: [
+            `${a} drop column ${c.name};`,
+            `${a} add column ${columnSql(t, c)};`,
+            ...(c.generated ? [commentSql(t.name, c)] : []),
+            ...indexes(t).map((i) => indexSql(t.name, i)),
+          ],
+          down: [
+            `${a} drop column ${c.name};`,
+            `${a} add column ${columnSql(old, was)};`,
+            ...(was.generated ? [commentSql(t.name, was)] : []),
+            ...indexes(old).map((i) => indexSql(t.name, i)),
+          ],
+          warning: `${t.name}.${c.name} is dropped and added again: its values${c.generated ? '' : ' (computed until now)'} are lost`,
+        })
+        continue
+      }
+      if (c.generated && was.generated && c.generated.hash !== was.generated.hash)
+        changes.push({
+          table: t.name,
+          label: `~ column  ${t.name}.${c.name} generated expression`,
+          up: [`${col} set expression as (${c.generated.expression});`, commentSql(t.name, c)],
+          down: [`${col} set expression as (${was.generated.expression});`, commentSql(t.name, was)],
+          warning: `${t.name}.${c.name}: changing a generated expression rewrites the table (PostgreSQL 17+)`,
+        })
       if (was.type !== c.type)
         changes.push({
           table: t.name,
@@ -356,7 +444,7 @@ function constraintChanges(t: TableSpec, old: TableSpec): Change[] {
   const wasIndex = byName(old.indexes)
   for (const i of t.indexes) {
     const y = wasIndex.get(i.name)
-    if (y && y.unique === i.unique && y.columns.join() === i.columns.join()) continue
+    if (y && sameIndex(y, i)) continue
     changes.push({
       table: t.name,
       label: `${y ? '~' : '+'} index   ${i.name}`,

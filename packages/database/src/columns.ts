@@ -32,7 +32,19 @@ export type ColumnDef = {
   touch?: boolean
   /** Stored encrypted (AES-256-GCM with APP_KEY); decrypted on read; cannot be queried by value. */
   encrypted?: boolean
+  /**
+   * A stored generated column: the SQL expression, built from the other columns' quoted SQL names
+   * (`generated always as (…) stored`). The app never writes it.
+   */
+  generated?: (column: (key: string) => string) => string
+  /** Left out of selects and of `Row` (a search vector, a large derived value); still queryable in SQL. */
+  hidden?: boolean
 }
+
+/** A column the database computes (`generatedAs`): never part of an insert or update. */
+export type Generated = { readonly _generated: true }
+/** A column left out of selects and rows (`hidden()`). */
+export type Hidden = { readonly _hidden: true }
 
 /**
  * A column. `T` is its TypeScript value type; `N` whether it accepts null; `D` whether inserts may omit it
@@ -72,6 +84,18 @@ export class Column<T, N extends boolean = false, D extends boolean = false> {
   }
   check(expression: SqlFragment<unknown>): this {
     return this.with({ check: expression }) as this
+  }
+  /**
+   * Computed by PostgreSQL from other columns of the row: `generated always as (…) stored`.
+   * `column(key)` gives a sibling's quoted SQL name: `numeric(10, 2).generatedAs((c) => `${c('price')} * 1.2`)`.
+   * Inserts and updates leave it out; the migration differ creates it and follows expression changes.
+   */
+  generatedAs(expression: (column: (key: string) => string) => string): Column<T, N, true> & Generated {
+    return this.with<T, N, true>({ generated: expression }) as Column<T, N, true> & Generated
+  }
+  /** Leave it out of selects and of `Row` (it stays usable in `whereSql`, `orderBySql` and indexes). */
+  hidden(): this & Hidden {
+    return this.with({ hidden: true }) as this & Hidden
   }
 }
 
@@ -122,6 +146,8 @@ export const date = () => col<string>('date', 'date')
 /** An instant, `timestamptz` (stored in UTC), as a `Date`. */
 export const timestamp = () => col<Date>('timestamp', 'timestamptz')
 export const jsonb = <T>() => col<T>('jsonb', 'jsonb')
+/** Any other PostgreSQL type, read as the driver returns it: `custom<string>('tsvector')`, `custom('inet')`. */
+export const custom = <T = string>(sqlType: string) => col<T>('text', sqlType)
 /** Money in minor units. */
 export const amount = () => col<bigint>('bigint', 'bigint')
 /** ISO 4217 code. */

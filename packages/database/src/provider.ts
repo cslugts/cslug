@@ -19,6 +19,8 @@ export async function describeTables(rootDir: string) {
       ...(def.oneOf ? { oneOf: def.oneOf } : {}),
       ...(def.defaultSql ? { default: def.defaultSql } : {}),
       ...(def.references ? { references: `${def.references.table().name}.${def.references.column}` } : {}),
+      ...(def.generated ? { generated: true } : {}),
+      ...(def.hidden ? { hidden: true } : {}),
     })),
     indexes: t.indexes,
   }))

@@ -76,6 +76,31 @@ async importFromSheet(rows: NewOperator[]) { await this.operators.createMany(row
 Modifiers: `.nullable()`, `.default(v)`, `.defaultSql(sql\`now()\`)`, `.unique()`, `.references(() => t, opts)`,
 `.oneOf([...])`, `.encrypted()` (text columns; cannot appear in `where`), `.check(sql\`…\`)`.
 
+Columns PostgreSQL computes, and indexes beyond btree:
+
+```ts
+export const products = table('products', {
+  id: id(),
+  name: text(),
+  price: numeric(10, 2),
+  qty: integer().default(1),
+  total: numeric(12, 2).generatedAs((c) => `${c('price')} * ${c('qty')}`),     // generated always as (…) stored
+  search: custom('tsvector')
+    .generatedAs((c) => `to_tsvector('simple', ${c('name')})`)
+    .hidden(),                                                                  // not in selects, not in Row
+}, { indexes: (t) => [t.using('gin', 'search'), t.using('gin', ['name', 'gin_trgm_ops'])] })
+```
+
+- `.generatedAs((c) => expression)`: `c('key')` gives a sibling column's SQL name. Inserts and updates leave the
+  column out (even when a whole row is passed back), and it is not part of `NewRow`. The differ creates it, and when
+  the expression changes it emits `alter column … set expression` (PostgreSQL 17+), tracked by a hash in the column
+  comment.
+- `.hidden()`: left out of every select (`Row` does not have it); still usable in `whereSql`, `orderBySql` and
+  indexes. For large derived values such as a search vector.
+- `custom<T>('tsvector')` is a column of any other PostgreSQL type.
+- `t.using('gin', 'search')` builds `<table>_<columns>_<method>_idx` with that access method; `['name',
+  'gin_trgm_ops']` gives a column an operator class. `@cslug/search` builds on these three.
+
 ## Repositories
 
 `Repository(table)` gives a typed base. Add domain queries as methods.
@@ -156,7 +181,17 @@ for await (const b of this.bookings.where({ status: 'deposit_paid' }).each({ bat
 ```
 
 Keys of `where` are checked against the table's columns, and values against the column types.
-`.whereSql(sql\`…\`)` adds a raw condition when an operator is missing.
+`.whereSql(sql\`…\`)` adds a raw condition when an operator is missing; `.orderBySql(sql\`…\`)` a raw sort term, and
+`.selectSql('rank', sql<number>\`…\`)` a computed value on each row (typed, still paginated):
+
+```ts
+const q = sql`websearch_to_tsquery('simple', ${term})`
+await this.products.query()
+  .whereSql(sql`${products.c.search} @@ ${q}`)
+  .selectSql('rank', sql<number>`ts_rank_cd(${products.c.search}, ${q})`)
+  .orderBySql(sql`ts_rank_cd(${products.c.search}, ${q}) desc`)
+  .paginate(1, 20)                                  // data: (Row & { rank: number })[]
+```
 
 ## The `sql` tag (everything else)
 
