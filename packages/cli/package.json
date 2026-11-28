@@ -1,6 +1,6 @@
 {
   "name": "@cslug/cli",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "The cslug command: generators, dev server, start supervisor, REPL.",
   "license": "MIT",
   "type": "module",
