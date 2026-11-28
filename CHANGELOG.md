@@ -10,6 +10,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
   worker), `sleep` / `sleepUntil`, `waitFor(Event, match, { timeout })`, `waitForSignal(name)`, `now()`, `uuid()`.
 - `Workflow.start(input, { id })` (idempotent, durable inside a transaction), `workflows.signal()`, `find()`,
   `cancel()`; one resume at a time per run; `workflow.nondeterministic` when the code no longer matches a run.
+- Sagas: `step(name, fn, { compensate })`; when a run fails, the finished steps' compensations run last first, each
+  once and retried (`compensating` → `compensated` or `compensation_failed`). `cancel()` compensates the same way
+  (`cancelling` → `cancelled`).
 - `cslug add workflow`.
 
 ### @cslug/core

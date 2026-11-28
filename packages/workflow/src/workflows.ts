@@ -11,9 +11,9 @@ import {
 import { Database } from '@cslug/database'
 import { Job, Outbox } from '@cslug/queue'
 import { WorkflowContext } from './context'
-import { Suspension } from './errors'
+import { Cancellation, NondeterminismError, Suspension } from './errors'
 import { errorJson, toJson } from './json'
-import { FINISHED, type WorkflowRun, WorkflowStore } from './store'
+import { FINISHED, type RunStatus, type WorkflowRun, WorkflowStore } from './store'
 import {
   findWorkflow,
   registerWorkflow,
@@ -68,9 +68,14 @@ export class Workflows {
     return this.store.find(runId)
   }
 
-  /** Cancel a run that has not finished (it stops at its next wake-up); false when it had finished. */
-  cancel(runId: string): Promise<boolean> {
-    return this.store.cancel(runId)
+  /**
+   * Cancel a run that has not finished: it is `cancelling` until its next wake-up (queued now), which undoes its
+   * finished steps (their `compensate`) and ends it `cancelled`. False when it had finished or was being cancelled.
+   */
+  async cancel(runId: string): Promise<boolean> {
+    if (!(await this.store.cancel(runId))) return false
+    await this.wake(runId)
+    return true
   }
 
   /** Remember a workflow class, and watch the events it waits for. */
@@ -119,24 +124,48 @@ export class Workflows {
         return
       }
       this.register(workflow)
-      await this.store.setStatus(runId, 'running')
-      const ctx = new WorkflowContext(runId, await this.store.journal(runId), this.store, db, this.app.resolve(Clock))
+      const cancelling = run.status === 'cancelling'
+      if (!cancelling) await this.store.setStatus(runId, 'running')
+      const ctx = new WorkflowContext(
+        runId,
+        await this.store.journal(runId),
+        this.store,
+        db,
+        this.app.resolve(Clock),
+        cancelling,
+      )
       const scope = currentContext()?.scope ?? this.app
+      const suspend = async (s: Suspension, status = s.status as RunStatus) => {
+        await this.store.suspend(runId, { ...s, status })
+        const at = s.wakeAt?.getTime()
+        // one job per suspension point; again if this job ran before its time (the queue's clock was ahead)
+        if (at !== undefined && (at !== run.wakeAt?.getTime() || options.wakeAt === s.wakeAt?.toISOString()))
+          await this.wake(runId, s.wakeAt as Date)
+      }
+      let failure: unknown
       try {
         const instance = scope.resolve(workflow as never) as { run(c: WorkflowContext, input: unknown): unknown }
         const output = await instance.run(ctx, run.input)
-        await this.store.finish(runId, 'completed', { output: toJson(output) })
+        if (!cancelling) return await this.store.finish(runId, 'completed', { output: toJson(output) })
       } catch (error) {
-        if (!(error instanceof Suspension)) {
-          this.app.resolve(Logger).error('workflow.failed', { runId, workflow: run.workflow, error })
-          await this.store.finish(runId, 'failed', { error: errorJson(error) })
-          return
-        }
-        await this.store.suspend(runId, { ...error, status: error.status })
-        const at = error.wakeAt?.getTime()
-        // one job per suspension point; again if this job ran before its time (the queue's clock was ahead)
-        if (at !== undefined && (at !== run.wakeAt?.getTime() || options.wakeAt === error.wakeAt?.toISOString()))
-          await this.wake(runId, error.wakeAt as Date)
+        if (error instanceof Suspension) return await suspend(error)
+        if (!(error instanceof Cancellation)) failure = error
+      }
+      // failed or cancelled: undo the finished steps (a saga); a nondeterministic run cannot be trusted to
+      if (failure !== undefined && !cancelling)
+        this.app.resolve(Logger).error('workflow.failed', { runId, workflow: run.workflow, error: failure })
+      const error = cancelling || failure === undefined ? undefined : errorJson(failure)
+      if (!ctx.hasCompensations || failure instanceof NondeterminismError)
+        return await this.store.finish(runId, cancelling ? 'cancelled' : 'failed', { error })
+      try {
+        if (!cancelling) await this.store.setStatus(runId, 'compensating')
+        await ctx.compensate()
+        await this.store.finish(runId, cancelling ? 'cancelled' : 'compensated', { error })
+      } catch (compensation) {
+        if (compensation instanceof Suspension)
+          return await suspend(compensation, cancelling ? 'cancelling' : 'compensating')
+        this.app.resolve(Logger).error('workflow.compensation_failed', { runId, error: compensation })
+        await this.store.finish(runId, 'compensation_failed', { error: errorJson(compensation) })
       }
     })
   }

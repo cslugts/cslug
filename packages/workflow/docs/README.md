@@ -37,3 +37,16 @@ runs whose match the payload contains (`waiting_match <@ payload`), stores the p
 the emitter's transaction. Timeouts are `wake_at`: the wait then returns `undefined`.
 
 Values cross the journal as JSON: bigint and `Date` become strings (`Json<T>` types it).
+
+## Sagas and cancelling
+
+`step(name, fn, { compensate })`: compensations are functions, so they are not stored; the replay registers each
+finished step's `compensate` as it passes it. When the replay ends with an error other than
+`workflow.nondeterministic`, the same resume runs the registered compensations last first. Each is journaled at
+seq `-(step seq + 1)` (kind `compensate`), runs in a transaction with its entry, and is retried with the step's
+`tries` and `backoff`: the run is `compensating` and sleeps until then. It ends `compensated` (the original error
+kept) or, on a compensation's last try, `compensation_failed` (that error). Without compensations it ends `failed`.
+
+`cancel(id)` sets `cancelling` and queues a resume. That replay runs in cancel mode: the first `ctx` call whose
+entry is not completed throws `Cancellation`; the finished steps are compensated the same way, and the run ends
+`cancelled` (or `compensation_failed`).

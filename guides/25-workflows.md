@@ -106,10 +106,18 @@ export class ReviewController {
 }
 
 const run = await workflows.find('deposit:b1')
-// { id, workflow, status: 'pending' | 'running' | 'sleeping' | 'waiting' | 'completed' | 'failed' | 'cancelled',
-//   input, output, error, wakeAt, waitingFor, createdAt, updatedAt, finishedAt }
-await workflows.cancel('deposit:b1') // it stops at its next wake-up; a finished run stays as it is
+// { id, workflow, status, input, output, error, wakeAt, waitingFor, createdAt, updatedAt, finishedAt }
+await workflows.cancel('deposit:b1') // `cancelling`, then `cancelled` once its finished steps are undone
 ```
+
+| Status | |
+|---|---|
+| `pending`, `running`, `sleeping`, `waiting` | Not finished |
+| `compensating`, `cancelling` | Undoing finished steps (below) |
+| `completed` | `output` is `run()`'s return value |
+| `failed` | `error`; nothing to undo |
+| `compensated`, `compensation_failed` | Failed, then undone; or a compensation gave up |
+| `cancelled` | |
 
 ## Sagas: undoing what was done
 
@@ -126,9 +134,17 @@ const charge = await ctx.step('charge', () => this.gateway.capture(hold.id), {
 await ctx.step('confirm-with-operator', () => this.operators.confirm(bookingId)) // fails for good
 ```
 
-The run then runs the compensations of the finished steps in reverse order (`refund`, then `releaseHold`), each
-journaled and retried like a step, and ends `compensated`, or `compensation_failed` if one of them gives up. Cancelling
-a run compensates the same way.
+The run then runs the compensations of the finished steps in reverse order (`refund`, then `releaseHold`), each with
+the step's result, journaled so it runs once, and retried after the step's `backoff` up to its `tries` (the run is
+`compensating` meanwhile). It ends `compensated`, with the original error, or `compensation_failed` if one of them
+gives up: the steps before it are then left as they are, for a person to look at. Steps without `compensate` are
+skipped.
+
+The same happens when `run()` throws between steps. It does not happen for `workflow.nondeterministic`: a run whose
+code changed is not trusted to know what it did.
+
+Cancelling compensates too: `workflows.cancel(id)` marks the run `cancelling` and wakes it; the replay stops at the
+first call that has not run, undoes the finished steps, and the run ends `cancelled`.
 
 ## Operations
 

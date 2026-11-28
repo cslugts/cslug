@@ -3,7 +3,14 @@
  * waits for events and signals, idempotent starts (guide 25).
  */
 export { type StepOptions, WorkflowContext } from './context'
-export { isSuspension, NondeterminismError, StepFailedError, Suspension } from './errors'
+export {
+  Cancellation,
+  CompensationFailedError,
+  isSuspension,
+  NondeterminismError,
+  StepFailedError,
+  Suspension,
+} from './errors'
 export type { Json } from './json'
 export { WORKFLOW_MIGRATIONS, WorkflowProvider } from './provider'
 export { FINISHED, type JournalEntry, type RunStatus, type WorkflowRun, WorkflowStore } from './store'
