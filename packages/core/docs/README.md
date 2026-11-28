@@ -1,7 +1,7 @@
 # @cslug/core
 
 The application, the container with `@inject`, service providers, the ambient context, config and env, typed
-errors, `Clock`, `Money`, events, the logger, i18n, the `Cache`/`Lock`/`RateLimiter`/`SessionStore` contracts
+errors, `Clock`, `Money`, state machines (`states()`), events, the logger, i18n, the `Cache`/`Lock`/`RateLimiter`/`SessionStore` contracts
 with in-memory drivers, and the server side of MCP (`handleMcpMessage`, `serveMcpStdio`) that `@cslug/ai` and
 `cslug mcp:dev` share.
 

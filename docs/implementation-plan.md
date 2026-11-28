@@ -26,7 +26,7 @@
 | M12 telemetry | ✅ M12a `Tracer` / `Metrics` contracts in core (no-op by default, `BasicTracer` / `BasicMetrics`, W3C `traceparent`); http, queue, database and ai instrumented. M12b `@cslug/telemetry`: OTLP/HTTP JSON export of traces, metrics and logs (batched, bounded, flushed at shutdown; `OTEL_EXPORTER_OTLP_*`), sampling that keeps failed spans, `/metrics` in Prometheus format (loopback, token or CIDR list), `cslug add telemetry`, guide 23. **→ 0.8.0** |
 | M13 security | ✅ M13b: `@cslug/security` with `csp()` nonces, `ipFilter()`, a per-IP limit, `security.txt`, CI dependency audit, account lockout, `notBreached()`, audit log (**0.10.0**). Done before: M13a core `Encrypter` (encryption and signatures with `APP_KEY`, rotation through `APP_PREVIOUS_KEYS`) used by encrypted columns, signed URLs, magic links and two-factor secrets; `cslug key:rotate`, `cslug db:reencrypt`; auth events (**0.9.0**). Next: M13b `@cslug/security` (**→ 0.10.0**) |
 | M4c vue HMR | ✅ state-preserving HMR for islands in `cslug dev` over SSE (template → `rerender`, script → `reload`, component styles swapped, unrelated pages untouched), `--no-hmr`; server templates recompiled on save (they were stale until a restart); verified in headless Chrome over CDP. **→ 0.9.0**. See [M4c](#m4c-hmr-in-cslug-dev-1-pr) |
-| M14 state machine | ⬜ planned (core) |
+| M14 state machine | ✅ `states()` in core (typed targets, `assert` → 409 `<name>.invalid_transition`, `onEnter` / `onLeave` hooks) and `repo.transition()` in database (lock, idempotent, hooks and callback in one transaction); guide 00 uses it. **→ 0.11.0** |
 | M15 workflows | ⬜ planned (`@cslug/workflow`) |
 
 ## Context

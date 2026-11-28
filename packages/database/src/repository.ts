@@ -1,4 +1,4 @@
-import { CslugError, NotFoundError, resolve } from '@cslug/core'
+import { CslugError, NotFoundError, resolve, type StateMachine } from '@cslug/core'
 import { Database, type Queryable, type Transaction } from './database'
 import { Query, setClause, type Where, whereSql } from './query'
 import { sql } from './sql'
@@ -34,6 +34,13 @@ export interface RepositoryApi<T extends Table> {
   forceDelete(id: unknown): Promise<void>
   restore(id: unknown): Promise<Row<T>>
   lockForUpdate(id: unknown, options?: { skipLocked?: boolean; noWait?: boolean }): Promise<Row<T>>
+  transition<S extends string>(
+    id: unknown,
+    field: keyof Row<T> & string,
+    machine: StateMachine<S>,
+    to: NoInfer<S>,
+    fn?: (row: Row<T>, from: S) => unknown,
+  ): Promise<Row<T>>
   paginate(options?: {
     page?: number
     perPage?: number
@@ -221,6 +228,40 @@ export function Repository<T extends Table>(table: T) {
       const row = await this.query().where(this.byId(id)).lockForUpdate(options).first()
       if (!row) throw new NotFoundError(this.resource, String(id))
       return row
+    }
+
+    /**
+     * Move a row to state `to` of `machine`, in the ambient transaction (or a new one): lock the row, return it as
+     * it is when it is already in `to` (safe to repeat), else check the transition (409
+     * `<name>.invalid_transition`), run the machine's `onLeave` hook, update, run `onEnter`, then `fn(row, from)`.
+     *
+     * ```ts
+     * await bookings.transition(id, 'status', BookingStatus, 'deposit_paid', async (booking) => {
+     *   await ledger.record({ bookingId: booking.id, kind: 'deposit_held', amount })
+     * })
+     * ```
+     */
+    async transition<S extends string>(
+      id: unknown,
+      field: keyof Row<T> & string,
+      machine: StateMachine<S>,
+      to: NoInfer<S>,
+      fn?: (row: Row<T>, from: S) => unknown,
+    ): Promise<Row<T>> {
+      const run = async () => {
+        const row = await this.lockForUpdate(id)
+        const from = (row as Record<string, unknown>)[field] as S
+        if (from === to) return row
+        const updated = await machine.transition(
+          from,
+          to,
+          () => this.update(id, { [field]: to } as Partial<Row<T>>),
+          row,
+        )
+        await fn?.(updated, from)
+        return updated
+      }
+      return this.explicit || this.db.current ? run() : this.db.transaction(run)
     }
 
     paginate(

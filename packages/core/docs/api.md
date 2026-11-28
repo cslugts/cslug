@@ -127,6 +127,20 @@ Bound as a singleton; its time zone is `config('app.timezone')` (default UTC). A
 
 `parseDuration('1h30m')` → ms. Units: `ms s m h d w`. Invalid input throws (never a silent 0).
 
+## States
+
+`states(transitions, { name?, onEnter?, onLeave? })`: each state lists the states it may move to; a target that is
+not a state is a type error (and throws `states.unknown_state`).
+
+| | |
+|---|---|
+| `.values` | Every state, for `text().oneOf(Status.values)` |
+| `.type` | The union type: `type BookingStatus = typeof BookingStatus.type` |
+| `.is(value)` | Type guard |
+| `.can(from, to)` / `.next(from)` / `.final(state)` | Allowed? / reachable in one step / no way out |
+| `.assert(from, to)` | Throws `ConflictError('<name>.invalid_transition', { from, to })` (409); name defaults to `state` |
+| `.transition(from, to, change, row?)` | Assert, `onLeave[from]({ from, to, row })`, `change()`, `onEnter[to]({ from, to, row: result })`; what `repo.transition()` in `@cslug/database` calls inside its transaction |
+
 ## Money
 
 Immutable; integer minor units (`bigint`) + ISO 4217 currency; no floating point anywhere.
