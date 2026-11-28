@@ -24,6 +24,9 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Fixed: under `cslug dev`, an edited server template (view, layout) kept rendering the old version until the
   process restarted (`bun --watch` does not see `.vue` files); it is now recompiled on save. Idle live-reload
   connections get a heartbeat so they are not dropped (which reloaded the page).
+- `@cslug/http`: files from `public/` carry an ETag (size and exact mtime), which takes precedence over
+  `If-Modified-Since`. A file rewritten within the same second (a dev rebuild) was answered 304 and the browser
+  kept the old version.
 
 ### @cslug/cli, create-cslug
 - `cslug key:rotate [--write]`. New apps declare `APP_PREVIOUS_KEYS` (a secret) and pass it as

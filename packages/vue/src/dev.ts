@@ -152,7 +152,11 @@ export async function startDev(app: Application, options: BuildOptions & { hmr?:
     // only once it worked: a save caught half-written fails, and the next event must not look like "no change"
     known.set(file, after)
     broadcast('vue', { id, kind, ...(url ? { url } : {}), ...(server ? { css: server.css } : {}) })
-    log.info('vue.hot_update', { component: id, kind: url ? kind : 'reload' })
+    log.info('vue.hot_update', {
+      component: id,
+      kind: url ? kind : 'reload',
+      server: server ? 'recompiled' : 'not loaded',
+    })
     return true
   }
 

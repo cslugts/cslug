@@ -96,7 +96,7 @@ Config `http`: `port`, `host`, `shutdownTimeout`, `bodyLimit`, `trustedProxies`,
 
 GET/HEAD requests that match no route are served from `public/` (`config('http.public')`: a folder name, or
 `false`). Dotfiles and paths escaping the folder are refused. Hashed build files (`name-1a2b3c4d.js`) get
-`Cache-Control: public, max-age=31536000, immutable`; others revalidate with `Last-Modified` / 304.
+`Cache-Control: public, max-age=31536000, immutable`; others revalidate with an `ETag` (size and exact mtime; it wins over `If-Modified-Since`) or `Last-Modified`, answered 304 when unchanged.
 
 ## Commands
 
