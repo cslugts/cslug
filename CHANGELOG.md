@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.11.1 (2026-11-28)
+
+Fixes: listeners run in every process, `make:test` file names, the web template's 404 page; the guides are
+complete and checked against the code (guide 26 is new).
+
 ### Fixes
 - **core:** `Application.start()` imports `app/listeners/`, so `@listener` classes run in every process. Before, only
   queue workers imported the folder, and a synchronous listener never ran for events emitted in web requests.
