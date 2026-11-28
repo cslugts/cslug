@@ -38,6 +38,7 @@ plus `app`, `clock`, `log`, `io`. When the session is not interactive, prompts r
 |---|---|
 | `CliKernel(app)` | `.run(argv)` → exit code; `.commands()` |
 | `Supervisor(specs, options)` | `.start()`, `.stop(signal)` → exit code; options `cwd`, `bunFlags`, `env`, `shutdownTimeout`, `log`, `prefix`, `logFile`; `plannedProcesses(config, flags)` |
+| `DevCertCommand`, `setEnvValue(text, name, value)` | `cslug dev:cert <hosts> [--no-install] [--no-app-url]`: a trusted local certificate (mkcert) in `storage/certs/`, `TLS_CERT` / `TLS_KEY` / `APP_URL` in `.env`; the `.env` line helper it and `key:*` use |
 | `DEV_LOG` | `.cslug/dev.log`, where `cslug dev` appends what its processes print |
 | `generator(kind, dir, description)` | a `make:<kind>` command from `stubs/<kind>.stub` |
 | `AddCommand`, `ADDITIONS` | `cslug add <names>` and what each name installs and wires |

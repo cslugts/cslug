@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { arg, Command, type CommandClass, flag, names } from '@cslug/core'
 import { DevCommand, StartCommand } from '../supervisor'
@@ -131,13 +131,7 @@ export class KeyGenerateCommand extends Command {
     const key = `base64:${Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64')}`
     if (!write) return this.line(key)
     const path = join(this.app.rootDir, '.env')
-    const text = existsSync(path) ? readFileSync(path, 'utf8') : ''
-    writeFileSync(
-      path,
-      /^APP_KEY=.*$/m.test(text)
-        ? text.replace(/^APP_KEY=.*$/m, `APP_KEY=${key}`)
-        : `${text}${text && !text.endsWith('\n') ? '\n' : ''}APP_KEY=${key}\n`,
-    )
+    writeFileSync(path, setEnvValue(readEnvFile(path), 'APP_KEY', key))
     this.success('APP_KEY written to .env')
   }
 }
@@ -155,7 +149,7 @@ export class KeyRotateCommand extends Command {
   handle({ write }: Command.Args<typeof KeyRotateCommand>) {
     const key = `base64:${Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64')}`
     const path = join(this.app.rootDir, '.env')
-    const text = existsSync(path) ? readFileSync(path, 'utf8') : ''
+    const text = readEnvFile(path)
     const current = /^APP_KEY=(.*)$/m.exec(text)?.[1]?.trim() || process.env.APP_KEY
     const previous = (/^APP_PREVIOUS_KEYS=(.*)$/m.exec(text)?.[1] ?? process.env.APP_PREVIOUS_KEYS ?? '')
       .split(',')
@@ -167,9 +161,7 @@ export class KeyRotateCommand extends Command {
     }
     const keys = [current, ...previous.filter((k) => k !== current)].join(',')
     if (write) {
-      let next = /^APP_KEY=.*$/m.test(text)
-        ? text.replace(/^APP_KEY=.*$/m, `APP_KEY=${key}`)
-        : `${text}APP_KEY=${key}\n`
+      let next = setEnvValue(text, 'APP_KEY', key)
       next = /^APP_PREVIOUS_KEYS=.*$/m.test(next)
         ? next.replace(/^APP_PREVIOUS_KEYS=.*$/m, `APP_PREVIOUS_KEYS=${keys}`)
         : next.replace(/^(APP_KEY=.*)$/m, `$1\nAPP_PREVIOUS_KEYS=${keys}`)
@@ -186,6 +178,101 @@ export class KeyRotateCommand extends Command {
     this.line('  2. cslug db:reencrypt   re-encrypts encrypted columns with the new key.')
     this.line('  3. Once signed URLs and magic links made before the rotation have expired, remove the old key')
     this.line('     from APP_PREVIOUS_KEYS.')
+    return 0
+  }
+}
+
+const readEnvFile = (path: string) => (existsSync(path) ? readFileSync(path, 'utf8') : '')
+
+/** `.env` text with `NAME=value` replaced, or appended when the line is missing. */
+export function setEnvValue(text: string, name: string, value: string): string {
+  const line = new RegExp(`^${name}=.*$`, 'm')
+  if (line.test(text)) return text.replace(line, () => `${name}=${value}`)
+  return `${text}${text && !text.endsWith('\n') ? '\n' : ''}${name}=${value}\n`
+}
+
+const MKCERT_HINT = [
+  'mkcert is not installed. It creates a local certificate authority your browsers trust:',
+  '  Debian/Ubuntu  sudo apt install mkcert libnss3-tools',
+  '  Fedora         sudo dnf install mkcert nss-tools',
+  '  macOS          brew install mkcert nss',
+  '  Windows        choco install mkcert',
+  'or a release from https://github.com/FiloSottile/mkcert/releases',
+]
+
+/**
+ * `cslug dev:cert myapp.test`: a certificate for local HTTPS, from mkcert's local CA (trusted by the system and the
+ * browsers once `mkcert -install` ran), in `storage/certs/`; `TLS_CERT`, `TLS_KEY` and `APP_URL` written to `.env`,
+ * which `cslug serve` (and so `cslug dev` / `cslug start`) reads. Development only.
+ */
+export class DevCertCommand extends Command {
+  static signature = 'dev:cert'
+  static description = 'Create a trusted certificate for local HTTPS (mkcert) and point .env at it'
+  static boot = false
+  static args = {
+    hosts: arg.string().describe('Host names, comma-separated: myapp.test,*.myapp.test (localhost is always added)'),
+    install: flag.boolean().default(true).describe('Run `mkcert -install` first (--no-install: the CA is installed)'),
+    appUrl: flag.boolean().default(true).describe('Set APP_URL to https://<first host> (--no-app-url: leave it)'),
+  }
+
+  async handle({ hosts, install, appUrl }: Command.Args<typeof DevCertCommand>) {
+    const names = hosts
+      .split(',')
+      .map((h) => h.trim())
+      .filter(Boolean)
+    const tooWide = names.find((h) => /^\*\.[^.]+$/.test(h))
+    if (tooWide) {
+      this.error(
+        `${tooWide}: browsers reject a wildcard directly under a top-level domain. Name the hosts, or one level down: *.myapp${tooWide.slice(1)}`,
+      )
+      return 1
+    }
+    const mkcert = Bun.which('mkcert', { PATH: process.env.PATH ?? '' })
+    if (!mkcert) {
+      for (const line of MKCERT_HINT) this.line(line)
+      return 1
+    }
+    const run = async (args: string[]) =>
+      await Bun.spawn([mkcert, ...args], { cwd: this.app.rootDir, stdio: ['inherit', 'inherit', 'inherit'] }).exited
+    if (install && (await run(['-install'])) !== 0) {
+      this.error('`mkcert -install` failed')
+      return 1
+    }
+    const cert = 'storage/certs/dev.pem'
+    const key = 'storage/certs/dev-key.pem'
+    mkdirSync(join(this.app.rootDir, 'storage/certs'), { recursive: true })
+    const all = [...new Set([...names, 'localhost', '127.0.0.1', '::1'])]
+    if ((await run(['-cert-file', cert, '-key-file', key, ...all])) !== 0) {
+      this.error('mkcert could not create the certificate')
+      return 1
+    }
+
+    const path = join(this.app.rootDir, '.env')
+    let env = setEnvValue(setEnvValue(readEnvFile(path), 'TLS_CERT', cert), 'TLS_KEY', key)
+    const host = names.find((h) => !h.includes('*'))
+    let url: string | undefined
+    if (appUrl && host) {
+      const current = /^APP_URL=(.*)$/m.exec(env)?.[1]?.trim()
+      let port = ''
+      try {
+        port = current ? new URL(current).port : ''
+      } catch {}
+      url = `https://${host}${port ? `:${port}` : ''}`
+      env = setEnvValue(env, 'APP_URL', url)
+    }
+    writeFileSync(path, env)
+    this.success(
+      `Certificate for ${all.join(', ')} in storage/certs/ (git-ignored); TLS_CERT, TLS_KEY${url ? ', APP_URL' : ''} set in .env`,
+    )
+    this.line('')
+    this.line('Next:')
+    if (host && host !== 'localhost')
+      this.line(`  - Resolve ${host} to this machine: "127.0.0.1 ${host}" in /etc/hosts (or your local DNS).`)
+    this.line('  - Restart `cslug dev` (or `cslug serve`): it now listens over HTTPS.')
+    this.line(`  - Open ${url ?? `https://${host ?? 'localhost'}:3000`}. Port 443 on Linux needs`)
+    this.line(
+      '    `sudo setcap cap_net_bind_service=+ep $(which bun)` and `port: 443` in config/http.ts (or PORT=443).',
+    )
     return 0
   }
 }
@@ -223,6 +310,7 @@ export const builtinCommands: CommandClass[] = [
   ConfigShowCommand,
   KeyGenerateCommand,
   KeyRotateCommand,
+  DevCertCommand,
   AddCommand,
   DescribeCommand,
   McpDevCommand,

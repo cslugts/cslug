@@ -4,6 +4,14 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### Features
+- **http:** HTTPS in the server for local development. `HttpKernel.listen({ tls: { cert, key } })`; `cslug serve`
+  (and so `cslug dev` / `cslug start`) takes the certificate from `--tls-cert` / `--tls-key`, else `http.tls`, else
+  `TLS_CERT` / `TLS_KEY`. `tlsFiles()` and the `TlsFiles` type are exported.
+- **cli:** `cslug dev:cert myapp.test,*.myapp.test`: a certificate from mkcert's local CA (trusted by the system and
+  the browsers) in `storage/certs/`, with `TLS_CERT`, `TLS_KEY` and `APP_URL` written to `.env`. Refuses a
+  wildcard directly under a top-level domain (`*.test`), which browsers reject.
+
 ## 0.13.1 (2026-11-28)
 
 A new app always gets the latest release.

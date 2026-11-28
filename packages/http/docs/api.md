@@ -74,13 +74,14 @@ Function middleware `(ctx, next) => Response`, or a class with `handle(ctx, next
 
 ## Kernel
 
-`HttpKernel.handle(request)` (no port: used by tests), `listen({ port?, hostname? })`, `stop(timeoutMs)` (waits for
+`HttpKernel.handle(request)` (no port: used by tests), `listen({ port?, hostname?, reusePort?, tls? })` (`tls`:
+`{ cert, key }`, paths to PEM files; a missing file is named in the error), `stop(timeoutMs)` (waits for
 in-flight requests, then closes the rest), `health('live' | 'ready')` (runs checks tagged `HEALTH_CHECKS`, e.g.
 the database's). One log line per request: method, path, status, ms, route, requestId.
 
 ## `HttpProvider`
 
-Config `http`: `port`, `host`, `shutdownTimeout`, `bodyLimit`, `trustedProxies`, `cors` (api group), `api.stateful`
+Config `http`: `port`, `host`, `tls` (`{ cert, key }`: HTTPS, for local development), `shutdownTimeout`, `bodyLimit`, `trustedProxies`, `cors` (api group), `api.stateful`
 (`true` for `app.url`'s origin, or a list: `statefulApi()` first in the api group, before `authenticate()`),
 `groups.{web,api}`, `middleware`, `problemBase`, `health`.
 
@@ -115,5 +116,5 @@ GET/HEAD requests that match no route are served from `public/` (`config('http.p
 
 | | |
 |---|---|
-| `cslug serve [--port] [--host] [--reuse-port] [--with-worker] [--with-scheduler]` | The HTTP server; SIGTERM drains in-flight requests. `--with-worker` / `--with-scheduler` also run `queue:work` / `schedule:work` in this process (one-process deployment, guide 21); they are found by signature, so http does not import the queue, and missing commands are an error |
+| `cslug serve [--port] [--host] [--reuse-port] [--tls-cert --tls-key] [--with-worker] [--with-scheduler]` | The HTTP server; SIGTERM drains in-flight requests. HTTPS when a certificate is given: the flags, else `http.tls`, else `TLS_CERT` / `TLS_KEY` (`tlsFiles()` picks; `cslug dev:cert` writes them). `--with-worker` / `--with-scheduler` also run `queue:work` / `schedule:work` in this process (one-process deployment, guide 21); they are found by signature, so http does not import the queue, and missing commands are an error |
 | `cslug routes [filter] [--json]` | The routes, with names and middleware |

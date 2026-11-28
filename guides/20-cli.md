@@ -9,7 +9,7 @@ installed packages: `migrate` exists only with `@cslug/database`, `queue:work` o
 |---|---|---|
 | Run | `dev`, `start` (supervisor: web + worker + scheduler), `serve`, `build`, `typecheck`, `repl`, `list` | cli, http, vue |
 | Inspect | `routes`, `describe`, `config:show`, `about` | cli, http |
-| Keys | `key:generate`, `key:rotate` | cli |
+| Keys | `key:generate`, `key:rotate`, `dev:cert` (local HTTPS, guide 21) | cli |
 | Database | `migrate`, `migrate:status`, `migrate:rollback`, `migrate:fresh`, `db:seed`, `db:diff`, `db:shell`, `db:reencrypt` | database |
 | Queue | `queue:work`, `queue:health`, `queue:failed`, `queue:retry`, `queue:forget`, `queue:clear`, `queue:stats` | queue |
 | Schedule | `schedule:work`, `schedule:run`, `schedule:list`, `schedule:history`, `schedule:test` | queue |
