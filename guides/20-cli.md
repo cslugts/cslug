@@ -3,33 +3,54 @@
 One binary: `cslug`, from `@cslug/cli` (`bunx cslug`, or `bun cslug` via the package script). Commands come from the
 installed packages: `migrate` exists only with `@cslug/database`, `queue:work` only with `@cslug/queue`.
 
-## Built-in commands
+## Commands
 
-| Group | Commands |
-|---|---|
-| Run | `dev`, `serve`, `start` (supervisor: web + worker + scheduler), `build`, `typecheck`, `repl` |
-| Database | `migrate`, `migrate:status`, `migrate:rollback`, `migrate:fresh`, `db:seed`, `db:diff`, `db:shell` |
-| Queue | `queue:work`, `queue:health`, `queue:failed`, `queue:retry`, `queue:forget`, `queue:clear`, `queue:stats` |
-| Schedule | `schedule:work`, `schedule:run`, `schedule:list`, `schedule:history`, `schedule:test` |
-| Inspect | `routes`, `events`, `config:show`, `describe`, `about` |
-| Make | `make:controller`, `make:validator`, `make:table`, `make:repository`, `make:migration`, `make:job`, `make:listener`, `make:event`, `make:mail`, `make:notification`, `make:policy`, `make:command`, `make:provider`, `make:view`, `make:component`, `make:factory`, `make:agent`, `make:tool`, `make:test`, `make:crud` |
-| i18n | `i18n:check`, `i18n:extract` |
-| Mail | `mail:preview` |
-| AI | `ai:prompts`, `ai:record`, `ai:eval`, `mcp:serve`, `mcp:dev`, `agents:sync` |
-| Misc | `key:generate`, `webhooks:replay`, `add` |
+| Group | Commands | From |
+|---|---|---|
+| Run | `dev`, `start` (supervisor: web + worker + scheduler), `serve`, `build`, `typecheck`, `repl`, `list` | cli, http, vue |
+| Inspect | `routes`, `describe`, `config:show`, `about` | cli, http |
+| Keys | `key:generate`, `key:rotate` | cli |
+| Database | `migrate`, `migrate:status`, `migrate:rollback`, `migrate:fresh`, `db:seed`, `db:diff`, `db:shell`, `db:reencrypt` | database |
+| Queue | `queue:work`, `queue:health`, `queue:failed`, `queue:retry`, `queue:forget`, `queue:clear`, `queue:stats` | queue |
+| Schedule | `schedule:work`, `schedule:run`, `schedule:list`, `schedule:history`, `schedule:test` | queue |
+| Workflows | `workflow:list`, `workflow:show`, `workflow:retry`, `workflow:cancel`, `workflow:prune` | workflow |
+| Make | see below | cli, http, database |
+| Mail | `mail:preview` | mail |
+| Webhooks | `webhooks:replay` | webhook |
+| Search | `search:reindex` | search |
+| Security | `audit:prune` | security |
+| AI | `ai:prompts`, `ai:record`, `ai:eval`, `mcp:serve` | ai |
+| Agents | `mcp:dev`, `agents:sync` | cli |
+| Packages | `add` | cli |
 
-Every command supports `--help`; inspect commands support `--json`.
+`cslug list` shows what the installed packages give this app. Every command supports `--help`; inspect commands
+support `--json`. Options are written in kebab-case (`--dry-run`, `--older-than=90d`); `-c` style aliases exist where
+a command declares them.
 
 ## Generators
 
+| Command | Writes |
+|---|---|
+| `make:controller Claim [--resource]` | `app/controllers/claim-controller.ts` (`--resource`: the seven REST actions) |
+| `make:middleware RequireVerifiedOperator` | `app/middleware/require-verified-operator-middleware.ts` |
+| `make:validator StoreClaim` | `app/validators/store-claim-validator.ts` |
+| `make:table Claim` | `app/tables/claim-table.ts` (the `claims` table with `id` and timestamps) |
+| `make:repository Claim` | `app/repositories/claim-repository.ts` |
+| `make:migration [name] [--from-tables]` | `database/migrations/<timestamp>_<name>.sql`: empty, or the SQL for what `app/tables/` changed (guide 09) |
+| `make:factory Claim` / `make:seeder Pilot` | `database/factories/claim-factory.ts` / `database/seeders/pilot-seeder.ts` |
+| `make:command ExpireDocuments` | `app/commands/expire-documents-command.ts` |
+| `make:provider Payments` | `app/providers/payments-provider.ts` |
+| `make:event OperatorVerified` / `make:listener UpdateBadge` | `app/events/…`, `app/listeners/…` |
+| `make:service Escrow` | `app/services/escrow-service.ts` |
+| `make:test Claims` | `tests/claims.test.ts` |
+
 ```bash
-cslug make:job SendCheckin                    # app/jobs/send-checkin-job.ts
-cslug make:controller admin/Claim --resource  # app/controllers/admin/claim-controller.ts
-cslug make:crud Claim                         # claim-table, claim-repository, claim-controller, claim-policy,
-                                              # store-claim-validator, views and a feature test
-cslug make:view claims/show                   # resources/views/claims/show.vue with a typed defineProps stub
-cslug make:component claim-timeline           # resources/components/claim-timeline.vue (use with hydrate=… to make an island)
+cslug make:controller admin/Claim --resource  # a folder: app/controllers/admin/claim-controller.ts
 ```
+
+Names are given in PascalCase (or kebab-case) and may include folders. Generators never overwrite without `--force`
+and print every file they write. Jobs, mailables, notifications, policies, views and components have no generator
+yet: they are one small file each (guides 11, 14, 15, 08).
 
 ## Adding a package
 
@@ -38,17 +59,16 @@ cslug add queue,mail        # bun add @cslug/queue @cslug/mail (at the CLI's ver
                             # config/mail.ts, routes/schedule.ts, a worker and the scheduler in cslug.config.ts
 ```
 
-Names: `queue`, `mail`, `storage`, `notification`, `webhook`, `search`, `telemetry`, `security`, `workflow`, `ai`, `tailwind`. Running it twice changes nothing.
-
-Stubs are literal files in `stubs/` and can be published to the app (`cslug stubs:publish`) to customise them.
-Generators never overwrite without `--force` and print every file they write.
+Names: `queue`, `mail`, `storage`, `notification`, `webhook`, `search`, `telemetry`, `security`, `workflow`, `ai`,
+`tailwind`. Running it twice changes nothing. A file it cannot edit is reported with what to add by hand; `--no-install`
+only edits files.
 
 ## Writing a command
 
 ```ts
 // app/commands/expire-documents-command.ts
 import { inject } from '@cslug/core'
-import { Command, arg, flag } from '@cslug/cli'
+import { arg, Command, flag } from '@cslug/core'          // also re-exported by @cslug/cli
 import { OperatorDocumentRepository } from '#app/repositories/operator-document-repository'
 
 @inject(OperatorDocumentRepository)
@@ -72,8 +92,21 @@ export class ExpireDocumentsCommand extends Command {
 }
 ```
 
-Commands are discovered in `app/commands/` (files named `*-command.ts`). Output helpers: `info`, `success`, `warn`,
-`error`, `table`, `confirm`, `ask`, `choose`, `progress`. `this.clock`, `this.log` are available on the base class.
+Arguments are typed from `static args`:
+
+| Spec | Written | Value |
+|---|---|---|
+| `arg.string()`, `arg.number()`, `arg.date()` | positional, in declaration order | `string`, `number`, `'YYYY-MM-DD'` |
+| `flag.boolean()` | `--dry-run` | `true` / `false` |
+| `flag.string()`, `flag.number()`, `flag.date()` | `--older-than=90d`, `--limit 20` | |
+| `flag.list()` | `--queues=a,b` or `--queues a --queues b` | `string[]` |
+| `.optional()`, `.default(v)`, `.describe(text)`, `.alias('c')`, `.choices('a', 'b')` | | `.choices` narrows the type |
+
+A missing or wrong argument prints the usage and exits 2 (`--help` shows it all).
+
+Commands are discovered in `app/commands/` (files named `*-command.ts`), imported only when needed. Output helpers:
+`line`, `info`, `success`, `warn`, `error`, `table(rows)`, `progress`, and the prompts `confirm(question)` and
+`ask(question)`. `this.app`, `this.clock`, `this.log` are available on the base class.
 Return a number from `handle` to set the exit code (usage errors exit 2).
 
 Commands boot the providers (database, Redis …) before `handle`. A command that doesn't need them declares

@@ -314,7 +314,8 @@ export class PaymentWebhookController {
 // tests/feature/bookings/deposit.test.ts
 import { test, expect } from 'bun:test'
 import { Money } from '@cslug/core'
-import { testApp, signWebhook } from '@cslug/testing'
+import { testApp } from '@cslug/testing'
+import { signWebhook } from '@cslug/webhook'
 import { BookingFactory } from '#database/factories/booking-factory'
 import { SendCheckinJob } from '#app/jobs/send-checkin-job'
 import { DepositReceivedNotification } from '#app/notifications/deposit-received-notification'
@@ -327,8 +328,9 @@ test('replaying the deposit webhook 10 times writes one ledger entry', async () 
   const booking = await BookingFactory.create({ status: 'accepted' })
   const payload = { id: 'evt_1', type: 'hold.succeeded', bookingId: booking.id, holdId: 'hold_1', amount: '66000', currency: 'EUR' }
 
+  const headers = await signWebhook('payments', JSON.stringify(payload))   // what the partner would send
   for (let i = 0; i < 10; i++) {
-    await app.post('/webhooks/payments').json(payload).headers(signWebhook('payments', payload)).assertOk()
+    await app.post('/webhooks/payments').headers(headers).json(payload).assertOk()
   }
   await app.queue.drain()
 
