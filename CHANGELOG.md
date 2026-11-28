@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.12.0 (2026-11-28)
+
+Every generator the guides describe: `make:job`, `make:mail`, `make:notification`, `make:policy`, `make:view`,
+`make:component`, `make:agent`, `make:tool`, and `make:crud` for a whole resource.
+
 ### Generators
 - `make:job` (queue), `make:mail` with its Vue template (mail), `make:notification` (notification),
   `make:policy` (auth), `make:view` and `make:component` (vue), `make:agent` and `make:tool` (ai).
