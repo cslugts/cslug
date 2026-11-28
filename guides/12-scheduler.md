@@ -59,7 +59,7 @@ cslug schedule:test dispatch-daily-checkins     # run now, once, ignoring the sc
 
 ## Frequency helpers
 
-`everyMinute()`, `everyFiveMinutes()`, `everyFifteenMinutes()`, `hourly()`, `hourlyAt(17)`, `daily()`,
+`everyMinute()`, `everyFiveMinutes()`, `everyTenMinutes()`, `everyFifteenMinutes()`, `everyThirtyMinutes()`, `hourly()`, `hourlyAt(17)`, `daily()`,
 `dailyAt('08:00')`, `twiceDaily('08:00', '18:00')`, `weekly()`, `weeklyOn('monday', '07:00')`, `monthly()`,
 `monthlyOn(1, '09:00')`, `cron('*/10 * * * *')`, plus `.weekdays()`, `.between('08:00', '20:00')`,
 `.when(() => config('features.checkins'))`, `.environments(['production'])`.
@@ -74,7 +74,7 @@ export class DispatchDailyCheckinsJob extends Job {
   constructor(private bookings: BookingRepository, private clock: Clock) { super() }
 
   async handle() {
-    const today = this.clock.today('Indian/Antananarivo')
+    const today = this.clock.today(0, 'Indian/Antananarivo')        // today there (the offset comes first)
     for await (const booking of this.bookings.onTripOn(today)) {
       await SendCheckinJob.dispatch({ bookingId: booking.id, milestone: 'mid_trip' })
         .unique(`checkin:${booking.id}:mid_trip:${today}`)            // exactly once per booking per day

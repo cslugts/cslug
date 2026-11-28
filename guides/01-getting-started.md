@@ -67,6 +67,11 @@ conventions (one class per file, named in kebab-case after it) are in `docs/dire
 
 A table, its migration, a repository, a controller, a route and a view.
 
+```bash
+bunx cslug make:table Circuit             # app/tables/circuit-table.ts
+bunx cslug make:repository Circuit        # app/repositories/circuit-repository.ts
+```
+
 ```ts
 // app/tables/circuit-table.ts
 import { id, integer, jsonb, type Row, table, text, timestamps } from '@cslug/database'

@@ -109,7 +109,7 @@ Each package reads its section; `bun create cslug` writes the files you need, an
 
 | Section | Main keys | Guide |
 |---|---|---|
-| `app` | `name`, `env`, `url` (absolute URLs, the origin of `statefulApi`), `key`, `previousKeys`, `timezone` (the `Clock`, `date().future()`, the scheduler) | 26 |
+| `app` | `name`, `env`, `url` (absolute URLs, the origin of `statefulApi`), `key`, `previousKeys`, `timezone` (the `Clock`, `date().future()`, `formatDate()`; the scheduler has its own `schedule.timezone`) | 26 |
 | `log` | `level`, `format` (`json` / `pretty`), `targets`, `redact` | 23 |
 | `i18n` | `locales`, `default`, `fallback` | 16 |
 | `http` | `port`, `host`, `trustedProxies`, `bodyLimit`, `cors`, `api.stateful`, `groups`, `middleware`, `public` | 05 |

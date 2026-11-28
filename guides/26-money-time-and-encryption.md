@@ -75,8 +75,8 @@ export class CheckinPlanner {
 - **Two kinds of values.** A *calendar date* is a `'YYYY-MM-DD'` string (`date()` columns, `v.date()`): a
   birthday, a trip start. An *instant* is a `Date` (`timestamp()` columns, `v.datetime()`): when something happened.
   Converting between them always names a time zone, which is how off-by-one-day bugs are avoided.
-- **`app.timezone`** (default `UTC`) is the zone of `clock.today()`, of `v.date().future()` and `.past()`, of the
-  scheduler (guide 12) and of `formatDate()` (guide 16).
+- **`app.timezone`** (default `UTC`) is the zone of `clock.today()`, of `v.date().future()` and `.past()` and of
+  `formatDate()` (guide 16). Scheduled entries use `schedule.timezone` or their own `.timezone()` (guide 12).
 - **Durations** are strings everywhere in cslug: `'500ms'`, `'30s'`, `'10m'`, `'1h30m'`, `'2d'`, `'1w'`, or
   milliseconds. `parseDuration('1h30m')` → `5400000`; anything it does not understand throws (never a silent 0).
 

@@ -1,7 +1,7 @@
 # Events
 
-Events decouple "this happened" from "these things react to it". An event is a small typed class; listeners
-are `@inject()` classes discovered in `app/listeners/`.
+Events decouple "this happened" from "these things react to it". An event is a small typed class; listeners are
+`@inject()` classes in `app/listeners/`, or closures.
 
 ## Defining an event
 
@@ -19,14 +19,18 @@ import { Event } from '@cslug/core'
 export class OperatorVerified extends Event<{ operatorId: string }>('operator.verified') {}
 ```
 
+The name is dot.case and past tense: something that happened. `cslug make:event OperatorVerified` writes the file.
+`OperatorVerified['payload']` is the payload type, for listeners.
+
 ## Emitting
 
 ```ts
 await BookingDepositPaid.emit({ bookingId, amount })
 ```
 
-Inside a transaction, **queued** listeners wait for commit; synchronous listeners run immediately (inside the
-transaction, so they can roll it back by throwing).
+`emit` runs the listeners in order: closures, then listener classes. **Synchronous** listeners run right away, in
+the emitter's context and transaction: one that throws makes `emit` throw, so the transaction can roll back.
+**Queued** listeners wait for the transaction to commit and never run if it rolls back.
 
 ## Listening
 
@@ -47,27 +51,40 @@ export class UpdateReliabilityBadgeListener {
 }
 ```
 
-- `{ queued: true }` runs the listener as a job (with `tries`, `backoff`, `queue` options like a [job](./11-queues-and-jobs.md)).
-- One listener may listen to several events: `@listener([ClaimOpened, ClaimEscalated])`.
-- `cslug events` lists every event and its listeners.
+- `{ queued: true }` runs the listener as a job after COMMIT, with the job options `queue`, `tries` and `backoff`
+  (guide 11): `@listener(OperatorVerified, { queued: true, queue: 'badges', tries: 5 })`. Without `@cslug/queue`
+  installed, it runs in the same process after COMMIT, in a fresh scope, and an error is logged instead of retried.
+- Without `queued`, the listener is synchronous: keep it quick, and let it throw to refuse what happened
+  (`LoginAttempting` listeners refuse a login this way, guide 15).
+- One listener may listen to several events: `@listener([ClaimOpened, ClaimEscalated])`; `handle(payload, event)`
+  gets the event instance as its second argument to tell them apart (`event instanceof ClaimOpened`).
 - `@inject(...)` and `@listener(...)` can be written in either order; both register on the same class.
-- Listeners are discovered in `app/listeners/` (subfolders included).
+- `cslug make:listener UpdateReliabilityBadge` writes the class in `app/listeners/`, where workers load it.
 
 ## Closures (for small things)
 
 ```ts
 // app/providers/app-service-provider.ts → boot()
-BookingDepositPaid.on(({ bookingId }) => this.metrics.increment('deposits'))
+const off = BookingDepositPaid.on(({ bookingId }) => this.metrics.increment('deposits'))
+off()   // stop listening
 ```
+
+A closure is synchronous, like a listener class without `queued`.
 
 ## Framework events
 
-`app.booted`, `app.shutting_down`, `http.request.handled`, `queue.job.failed`, `schedule.run.finished`,
-`mail.sent`, `auth.login`, `auth.failed`, `db.query.slow`. Useful for metrics and alerts:
+Packages emit events where an app may want to react:
 
-```ts
-QueueJobFailed.on(({ job, error }) => this.alerts.staff(`Job ${job.name} failed: ${error.message}`))
-```
+| Event | Package | Payload | Use it to |
+|---|---|---|---|
+| `LoginAttempting` | auth | `email`, `ip` | refuse a login by throwing (lockout, maintenance) |
+| `LoginSucceeded`, `LoginFailed`, `LoggedOut` | auth | `userId`, `ip`; `LoginFailed`: `reason` (`credentials`, `two_factor`, `throttled`), `email` | alert on suspicious logins, record them |
+| `TwoFactorEnabled`, `TwoFactorDisabled`, `RecoveryCodesRegenerated` | auth | `userId` | tell the user by email |
+| `TokenCreated`, `TokenRevoked` | auth | `userId`, `tokenId`, `name`, `abilities` / `all` | audit API access |
+| `AccountLocked` | security | `email`, `userId?`, `ip`, `until` | tell the owner (guide 24) |
+| `AiBudgetAlert` | ai | `day`, `spentUsd`, `limitUsd` | warn someone before the AI budget runs out (guide 18) |
+
+Requests, jobs, queries and AI calls are not events: they are traced and measured (guide 23).
 
 ## Testing
 
@@ -75,4 +92,8 @@ QueueJobFailed.on(({ job, error }) => this.alerts.staff(`Job ${job.name} failed:
 const app = testApp({ fakes: ['events'] })
 await app.resolve(VerificationService).approve(operator.id)
 app.events.assertEmitted(OperatorVerified, (e) => e.payload.operatorId === operator.id)
+app.events.assertNotEmitted(OperatorSuspended)
 ```
+
+The events fake records emitted events instead of running their listeners. To test a listener, call its `handle`
+with a payload, or leave the fake out so it runs.
