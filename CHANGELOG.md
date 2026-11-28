@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### Fixes
+- **create-cslug:** a new app always gets the latest release. `bun create cslug` could run a `create-cslug` that Bun
+  had cached long ago (one user got 0.4.1), pinning the app to that old version; the scaffolder now asks npm for the
+  latest release and runs it instead when it is newer. `--no-update-check` skips this.
+
 ## 0.13.0 (2026-11-28)
 
 Each app renders its own errors: handlers in `app/exceptions/` (HTML and JSON) and error views by convention
