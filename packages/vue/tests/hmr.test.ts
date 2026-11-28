@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { FIXTURE, vueApp } from './support'
@@ -54,11 +54,25 @@ async function browser() {
       `--user-data-dir=${profile}`,
       'about:blank',
     ],
-    { stdout: 'ignore', stderr: 'ignore' },
+    { stdout: 'ignore', stderr: 'pipe' },
   )
-  const portFile = join(profile, 'DevToolsActivePort')
-  for (let i = 0; i < 100 && !existsSync(portFile); i++) await Bun.sleep(100)
-  const port = readFileSync(portFile, 'utf8').split('\n')[0]
+  // Chrome prints "DevTools listening on ws://127.0.0.1:<port>/…" once the protocol is up
+  let log = ''
+  const reader = (proc.stderr as ReadableStream<Uint8Array>).getReader()
+  const end = Date.now() + 30_000
+  while (!/DevTools listening on ws:\/\/[^:]+:(\d+)/.test(log)) {
+    const { value, done } = await Promise.race([
+      reader.read(),
+      Bun.sleep(Math.max(0, end - Date.now())).then(() => ({ value: undefined, done: true })),
+    ])
+    if (done) throw new Error(`Chrome did not start its DevTools endpoint:\n${log.slice(-2000)}`)
+    log += new TextDecoder().decode(value)
+  }
+  // keep draining stderr so Chrome never blocks on a full pipe
+  ;(async () => {
+    while (!(await reader.read()).done) {}
+  })().catch(() => {})
+  const port = /DevTools listening on ws:\/\/[^:]+:(\d+)/.exec(log)?.[1]
   const targets = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()) as {
     type: string
     webSocketDebuggerUrl: string
@@ -121,7 +135,7 @@ describe.skipIf(!chrome)('HMR under cslug dev (Chrome headless)', () => {
     root = fixtureCopy()
     server = await devServer(root, true)
     page = await browser()
-  })
+  }, 60_000)
   afterAll(() => {
     page?.close()
     server?.proc.kill()
