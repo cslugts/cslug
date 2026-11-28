@@ -2,8 +2,10 @@
 
 ## Storage
 
-Disks are configured once and injected as `Storage`. Drivers: `local` and `s3` (any S3-compatible service,
-via `Bun.s3`).
+Disks are configured once and injected as `Storage`. Drivers: `local` (files under a folder), `s3` (any
+S3-compatible service: AWS, R2, MinIO, RustFS…, via `Bun.s3`; credentials from `S3_ACCESS_KEY_ID` /
+`S3_SECRET_ACCESS_KEY` by default) and `memory` (tests, throwaway data). Without `config/storage.ts` there is one
+`local` disk at `storage/app`.
 
 ```ts
 // config/storage.ts
@@ -55,7 +57,18 @@ export class OperatorDocumentController {
 | `signedUrl(key, { expiresIn, download? })` | Private download (`download`: attachment file name) |
 | `signedUploadUrl(key, { expiresIn, type, maxSize? })` | Direct browser upload: `{ url, method: 'PUT', headers }` |
 | `verifyUpload(key, { maxSize?, types? })` | After a direct upload: size and type from the bytes; a refused file is deleted (422) |
-| `disk('local')` | A specific disk |
+| `disk('local')` | A specific disk (`storage.put` and the others use the default one) |
+
+```ts
+await this.storage.put(`exports/${id}.csv`, csv, { type: 'text/csv' })   // a string, bytes or a Blob
+const bytes = await this.storage.get(key)
+const { size, type } = await this.storage.stat(key)
+return new Response(await this.storage.stream(key), { headers: { 'content-type': type } })
+await this.storage.disk('s3').put('backups/db.sql.gz', dump)
+```
+
+Keys are relative paths; a leading `/`, `..` segments and backslashes are refused (`storage.bad_key`), so a key
+can never leave its disk.
 
 Uploaded files never live under `public/`. On S3, signed URLs are presigned by the service; on a local disk the app
 serves them itself at `/_storage/:disk` (signature and expiry checked with `APP_KEY`), so development works the same.
@@ -106,8 +119,9 @@ r.post('/webhooks/payments', [PaymentWebhookController, 'handle']).middleware(ve
 
 The middleware reads the **raw bytes** before any parsing, compares in constant time and returns `401` on mismatch.
 Providers with their own scheme can pass a function: `verifySignature((req, raw) => mySdk.verify(raw, req.headers))`.
-Signatures are hex by default (`encoding: 'base64'` otherwise). In tests, `signWebhook('payments', rawBody)`
-returns the headers the provider would send.
+Signatures are hex by default (`encoding: 'base64'` otherwise); `algorithm` is `sha256` (default), `sha1` or
+`sha512`. A request that fails is a 401 problem `webhook.bad_signature`. `request.raw()` is cached, so the handler
+can still call `request.body()`. Webhook routes live in `routes/api.ts` (no session, no CSRF).
 
 ### 2. The inbox (exactly-once processing)
 
@@ -153,3 +167,25 @@ inbox.process('payments', (eventId) => ProcessPaymentEventJob.dispatch({ eventId
 ```
 
 Old events can be pruned: `inbox.prune('90d')` (schedule it daily).
+
+## Testing
+
+```ts
+const t = testApp({ fakes: ['storage'] })   // every disk becomes a memory disk
+
+test('an operator uploads a licence', async () => {
+  await t.post(`/operators/${op.id}/documents`).actingAs(owner).form({ kind: 'licence', document: pdfFile, expiresOn })
+    .assertRedirect()
+  t.storage.assertExists(`operators/${op.id}/licence/`)    // a key ending in / matches any file under it
+})
+
+test('a signed payment webhook is processed once', async () => {
+  const event = { id: 'evt_1', type: 'hold.succeeded', bookingId, holdId: 'h_1', amount: 66_000 }
+  const headers = await signWebhook('payments', JSON.stringify(event))   // what the provider would send
+  await t.post('/webhooks/payments').headers(headers).json(event).assertOk()
+  await t.post('/webhooks/payments').headers(headers).json(event).assertOk()   // a replay: no effect
+  await t.assertDatabaseHas('cslug_webhook_inbox', { source: 'payments', externalId: 'evt_1' })
+})
+```
+
+`t.storage.assertMissing(key)` and `t.storage.keys()` complete the storage fake.

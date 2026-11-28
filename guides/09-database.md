@@ -305,8 +305,9 @@ cslug make:migration --from-tables     # diff app/tables/ against the database â
 cslug make:migration add_claims_index  # empty file for hand-written SQL
 cslug migrate                          # pending migrations; advisory-locked (concurrent runs execute once)
 cslug migrate:status
-cslug migrate:rollback --step 1
-cslug migrate:fresh --seed             # refused when APP_ENV=production
+cslug migrate:rollback --step 1        # the last batch by default; --force in production
+cslug migrate --seed                   # then run the seeders (--force too in production)
+cslug migrate:fresh --seed             # drop everything and migrate again; refused when APP_ENV=production
 cslug db:diff                          # show drift between tables and the database, write nothing
 cslug db:shell                         # psql on the app database (-c 'select â€¦' for one statement)
 ```
@@ -380,6 +381,57 @@ export default seeder(async () => {
   await OperatorFactory.state('verified').createMany(12)
 })
 ```
+
+`cslug db:seed` runs `database/seeders/database-seeder.ts`; `cslug db:seed pilot` runs `pilot-seeder.ts` (`--force`
+in production). `cslug make:table Claim`, `make:repository Claim`, `make:factory Claim` and `make:seeder Pilot` write
+the files with the right names and imports.
+
+## Errors from PostgreSQL
+
+Constraint violations become typed errors, so a duplicate is handled where it matters, without a racy
+`existsBy()` first:
+
+```ts
+import { UniqueViolationError } from '@cslug/database'
+
+try {
+  await this.operators.create(input)
+} catch (error) {
+  if (error instanceof UniqueViolationError && error.constraint === 'operators_email_key')
+    throw new ValidationError({ email: ['validation.unique'] })
+  throw error
+}
+```
+
+| Error | When | Fields |
+|---|---|---|
+| `QueryError` | Any failed statement | `sqlState`, `constraint`, the SQL text (never the values) in the message, the driver error as `cause` |
+| `UniqueViolationError` | `23505` | `constraint` (`<table>_<column>_key`) |
+| `SerializationError` | `40001` / `40P01` (serialization failure, deadlock) | retried by `transaction(fn, { retry: 3 })` |
+| `RowCountError` | `db.one()` got zero or several rows | |
+| `NotFoundError` | `findOrFail`, `findByOrFail`, `update`, `delete` of a missing id | 404 `<resource>.not_found` |
+
+## More on transactions
+
+```ts
+// an explicit handle instead of the ambient transaction
+await this.db.transaction(async (tx) => {
+  await this.claims.using(tx).create(input)
+  await tx.exec(sql`update ${bookings} set has_open_claim = true where ${bookings.c.id} = ${input.bookingId}`)
+})
+
+// something that must be written even if the transaction rolls back (an attempt log)
+await this.db.withoutTransaction(() => this.attempts.create({ bookingId, error: String(error) }))
+```
+
+Soft deletes: on a table with `...softDeletes()`, `delete(id)` sets `deletedAt` and queries skip those rows;
+`restore(id)` brings one back, `withTrashed()` / `onlyTrashed()` include them, `forceDelete(id)` really deletes.
+
+## Encrypted columns and key rotation
+
+`text().encrypted()` stores the value with AES-256-GCM under `APP_KEY`, decrypts it on read, and refuses it in
+`where` (a random IV per value makes it unsearchable: keep a separate hash column if you must look it up). After
+`APP_KEY` changes, `cslug db:reencrypt` rewrites every encrypted column with the new key (guide 26).
 
 ## Configuration
 

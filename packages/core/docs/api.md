@@ -168,7 +168,7 @@ Immutable; integer minor units (`bigint`) + ISO 4217 currency; no floating point
 | `@listener(X \| [X, Y], { queued?, queue?, tries?, backoff? })` | Class listener with `handle(payload, event)`, built by the container (scoped). Combine with `@inject(...)` in any order |
 | queued listeners | Run **after the transaction commits** (`afterCommit`), never on rollback. Without `@cslug/queue`: in-process in a fresh scope, errors logged. With it: `EventBus.dispatchQueued` sends them as jobs |
 | `afterCommit(fn)` | Run once the current transaction commits; outside a transaction, soon after the current task. `@cslug/database` provides the hook (`TransactionHooks`) |
-| `registeredListeners()` | For `cslug events` |
+| `registeredListeners()` | The listener classes registered so far, by event |
 
 ## Logger
 

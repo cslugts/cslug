@@ -43,13 +43,16 @@ test('group size over 12 is rejected', async () => {
 
 ```ts
 const app = testApp({
-  fakes: ['mail', 'queue', 'notify', 'events', 'storage', 'ai', 'workflows'],   // or 'all'
+  fakes: ['mail', 'queue', 'notify', 'events', 'storage', 'ai', 'workflows'],
   config: { 'payments.driver': 'fake' },
   database: 'transaction',                                         // default; see below
 })
 ```
 
-`testApp()` builds the app once per test file and registers `beforeEach` / `afterEach` hooks for isolation.
+`testApp()` builds the app once per test file and registers `beforeAll` / `beforeEach` / `afterEach` hooks for
+isolation, so call it at the top of the file, not inside a test. The app is `createApp()` from `bootstrap/app.ts`
+(`create: () => …` builds another), on the database of `.env.test`, which `bun test` loads. Each fake listed is
+reset before every test and typed on `app`.
 
 ## HTTP
 
@@ -70,7 +73,19 @@ Assertions: `assertOk`, `assertStatus`, `assertCreated`, `assertNoContent`, `ass
 
 Other helpers: `app.auth.check()` / `app.auth.user()` (state after the last request), `app.tokens.create(user,
 { abilities })` → `{ plainText }`, `app.db.find(table, id)`, `app.db.count(table, where)`,
-`app.mail.assertQueuedCount(Mailable, n)`.
+`app.assertDatabaseMissing(table, where)`, `app.actingAs(user)` (every request of this test), and
+`app.beforeRequest((r) => r.header('accept-language', 'fr'))`.
+
+Building a request: `.header(name, value)`, `.headers({…})`, `.withToken(plainText)`, `.actingAs(user)`,
+`.json(data)` (with the session's CSRF token, as an island sends it), `.form(data)` (nested keys, CSRF, Referer).
+Cookies carry over between the requests of a test, like a browser. Awaiting a request gives a `TestResponse`
+(`status`, `headers`, `body()`, `json()`, `session()`); `.follow()` makes the GET to the redirect location:
+
+```ts
+const res = await app.post('/login').form({ email, password }).assertRedirect('/dashboard')
+const { id } = await (await app.post('/api/v1/quotes').withToken(token).json(body)).json<{ id: string }>()
+await app.post('/register').form(data).follow().assertSee('Welcome')
+```
 
 ## Database isolation
 
@@ -112,8 +127,10 @@ All framework code (and app code that injects `Clock`) sees the fake time, inclu
 ## Concurrency tests (from the requirements)
 
 ```ts
+// tests/feature/escrow-concurrency.test.ts: its own file, with real commits
+const app = testApp({ database: 'truncate' })
+
 test('two concurrent releases of the same stage release once', async () => {
-  const app = testApp({ database: 'truncate' })
   const booking = await BookingFactory.create({ status: 'deposit_paid' })
   const escrow = () => app.resolve(EscrowService)
 
@@ -126,13 +143,43 @@ test('two concurrent releases of the same stage release once', async () => {
 
 ## Factories
 
-See [guide 09](./09-database.md#seeders-and-factories). In tests: `await OperatorFactory.state('verified').create()`,
-`BookingFactory.for(traveller).createMany(3)`.
+See [guide 09](./09-database.md#factories-and-seeders). In tests: `await OperatorFactory.state('verified').create()`,
+`BookingFactory.for({ travellerId: traveller.id }).createMany(3)`.
+
+## Unit tests
+
+Services are plain classes: build them with `new` and fakes, no app needed.
+
+```ts
+test('the deposit is 30 % of the total', () => {
+  const pricing = new PricingService(new FakeExchangeRates({ 'EUR:MGA': 4900 }), 8)
+  expect(pricing.deposit(Money.of(220_000n, 'EUR')).toDecimal()).toBe('660.00')
+})
+```
+
+`cslug make:test Pricing` writes a test file to start from.
 
 ## Running
 
 ```bash
-bun test                       # everything
+bun test                       # everything (the app's `test` script)
 bun test tests/feature/bookings
-cslug test --coverage          # wraps bun test; starts the test DB/Redis from docker compose if needed
+bun test -t 'concurrent'       # tests whose name matches
+bun test --coverage
+```
+
+The test database (`DATABASE_URL` in `.env.test`, a separate database such as `my_app_test`) is migrated once per
+run. Postgres and Redis must be running (`docker compose up -d`). In CI, start them as services:
+
+```yaml
+# .github/workflows/test.yml (the job)
+services:
+  postgres: { image: postgres:17, env: { POSTGRES_PASSWORD: postgres }, ports: ['5432:5432'] }
+  redis: { image: redis:7, ports: ['6379:6379'] }
+steps:
+  - uses: actions/checkout@v4
+  - uses: oven-sh/setup-bun@v2
+  - run: bun install --frozen-lockfile
+  - run: bun run typecheck && bun test
+    env: { DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_test, REDIS_URL: redis://localhost:6379 }
 ```

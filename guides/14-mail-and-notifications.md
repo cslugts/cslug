@@ -76,6 +76,33 @@ export class BookingService {
 `to()` accepts an address, `{ email, name }`, or any row with `email` (and `name`). Queued mail sent inside a
 transaction waits for commit.
 
+```ts
+await this.mailer
+  .to(traveller, 'travel-partner@example.com')        // several recipients
+  .cc(operator)
+  .bcc('archive@example.com')                          // in the envelope only
+  .locale(traveller.locale)                            // build() and the template run in this locale
+  .queue(new BookingConfirmedMail(booking, operator))  // queued even if the class is not; .sendNow() never queues
+```
+
+In `build()`, besides `subject`, `view` and `attach`:
+
+```ts
+build() {
+  return this
+    .subject(t('mail.claim_opened.subject'))
+    .from({ address: 'support@example.com', name: 'Support' })   // instead of mail.from
+    .replyTo(this.operator)                                       // replies go to the operator
+    .header('X-Entity-Ref-ID', this.claim.id)
+    .view(ClaimOpened, { claim: this.claim })
+    .text(t('mail.claim_opened.text', { ref: this.claim.ref }))   // instead of the text derived from the HTML
+    .attach(this.storage.disk().get(this.claim.photoKey), { name: 'photo.jpg', type: 'image/jpeg' })   // a promise is fine
+    .tag('claims')                                                // passed to the provider (Resend, Postmark…)
+}
+```
+
+`.html(string)` replaces the Vue template when the HTML comes from elsewhere.
+
 ### Transports
 
 ```ts
@@ -88,7 +115,8 @@ export default defineConfig({
     resend: { apiKey: env.RESEND_API_KEY },                                                       // HTTP API via fetch
     log: {},                                             // writes to the log; dev uses Mailpit via smtp
   },
-  queue: 'notifications',
+  queue: 'notifications',                               // the queue of queued mail (default 'default')
+  queued: true,                                         // queue every mail unless its class says static queued = false
 })
 ```
 
@@ -180,6 +208,21 @@ export class SlackChannel implements Channel {
 }
 this.app.resolve(Notifier).extend('slack', SlackChannel)   // in a provider's boot()
 ```
+
+### Reading database notifications
+
+The `database` channel writes rows to `cslug_notifications` (`recipient_id`, `type`, `data`, `read_at`,
+`created_at`); read them with the `sql` tag for an inbox or the admin console:
+
+```ts
+const unread = await this.db.many(sql<{ id: string; type: string; data: unknown; createdAt: Date }>`
+  select id, type, data, created_at from cslug_notifications
+  where recipient_id = ${user.id} and read_at is null order by created_at desc limit 20`)
+await this.db.exec(sql`update cslug_notifications set read_at = now() where id = ${id} and recipient_id = ${user.id}`)
+```
+
+`cslug_notification_deliveries` holds one row per channel and recipient, with its status: the "manual" ones are
+the staff's to-do list.
 
 ### Incoming replies
 

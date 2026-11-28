@@ -502,6 +502,36 @@ export default defineCslugConfig({
 })
 ```
 
+## Content Security Policy
+
+With `@cslug/security`, every response carries a CSP with a new nonce (guide 24). `<Assets>` puts the nonce on the
+tags it writes (the island script, the page data, component styles, the `cslug dev` client), so nothing else is
+needed. Your own inline `<script>` or `<style>` takes it from `useRequest()`:
+
+```vue
+<script setup lang="ts">
+import { useRequest } from '@cslug/vue'
+const { nonce } = useRequest()
+</script>
+
+<template>
+  <script :nonce="nonce" src="https://plausible.io/js/script.js" defer />
+</template>
+```
+
+Vue's `:style` bindings keep working (the default policy allows style attributes).
+
+## Rendering outside a request
+
+```ts
+import { renderPage } from '@cslug/vue'
+
+const { html, state } = await renderPage(InvoicePage, { invoice })   // a full document; state.islands, state.modules
+```
+
+For a PDF service, an HTML archive or a preview. Mail templates use the same renderer (guide 14). `onView((page,
+props, ctx) => …)` is told of every page `view()` renders; the test kit uses it for `assertView` (guide 19).
+
 ## The offline trip pack (MVP #6)
 
 `renderStandalone()` renders a view to one self-contained HTML file, with CSS and images inlined and no

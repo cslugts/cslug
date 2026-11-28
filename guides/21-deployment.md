@@ -132,15 +132,15 @@ anyway is not lost: its lease expires and another worker reclaims it (at-least-o
 
 ## Development
 
-`cslug dev` already runs everything in one terminal (web under `bun --watch`, asset watcher with HMR, worker, scheduler), using
-model 1. Use `cslug dev --isolated` to switch to model 2 when you want to reproduce production behaviour. You
-never need two terminals or two instances in development.
+`cslug dev` runs everything in one terminal: the processes of `cslug.config.ts` (model 2), each under `bun --watch`,
+plus the asset watcher with HMR. `cslug dev --web` (or `--worker`, `--scheduler`) runs only some roles. You never
+need two terminals or two instances in development.
 
 ## Choosing
 
 | Situation | Model |
 |---|---|
-| Development | `cslug dev` (model 1) |
+| Development | `cslug dev` |
 | MVP / staging on one Railway service, I/O-bound jobs | `cslug start` (model 2) |
 | Very small and memory-constrained | `cslug serve --with-worker --with-scheduler` (model 1) |
 | Production with traffic, or CPU-heavy jobs | Separate services (model 3) |
@@ -175,7 +175,7 @@ platform wants an image, write the Dockerfile you need around these commands.
 | Endpoint / command | Checks |
 |---|---|
 | `GET /health/live` | Process up |
-| `GET /health/ready` | Postgres and Redis reachable, migrations up to date; under `cslug start`, also that the worker and scheduler children are running |
+| `GET /health/ready` | Every registered check: Postgres and Redis reachable (and yours, guide 05); 503 when one fails |
 | `cslug queue:health` | Worker heartbeat recent, oldest waiting job under a threshold (for worker-only services) |
 
 ## Observability
@@ -201,8 +201,21 @@ platform wants an image, write the Dockerfile you need around these commands.
 3. `cslug db:reencrypt`: encrypted columns move to the new key (safe to run again).
 4. Once links signed before the rotation have expired, remove the old key from `APP_PREVIOUS_KEYS`.
 
+## Behind a load balancer or proxy
+
+The platform's proxy terminates HTTPS and forwards requests, so the app sees the proxy's address. List it in
+`http.trustedProxies` (exact addresses, or `'loopback'` when the proxy runs on the same machine): `X-Forwarded-For`
+is then read for `request.ip()`, which throttling, the audit log and `@cslug/security`'s IP filter and per-IP limit
+use. Without it, every visitor has the proxy's address.
+
+`APP_URL` must be the public `https://` URL: absolute links in mail, signed URLs and `statefulApi` use it. With
+`APP_ENV=production`, cookies are `Secure` and `securityHeaders()` sends HSTS.
+
 ## Production checklist
 
-`cslug about --production` checks: `APP_KEY` set, debug off, HTTPS URL, session cookie `Secure`, mail transport
-not `log`, payments driver not `fake`, queue worker reachable, scheduler heartbeat within 2 minutes, migrations
-current.
+- `APP_ENV=production`, `APP_URL` with `https://`, `APP_KEY` set (`cslug key:generate`), `http.trustedProxies` set.
+- `bun cslug build` ran, and `bun cslug migrate --force` runs before the new code serves traffic.
+- Mail transport not `log`; Redis and Postgres reachable from every role.
+- A worker runs (`cslug queue:health` from a cron or the platform's checks), and one scheduler.
+- `/health/ready` is the platform's health check.
+- `cslug about` shows the Bun and `@cslug/*` versions (they should all match).
