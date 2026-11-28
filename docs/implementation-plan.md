@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-28):** approved. Phase 0, the spikes, M1–M15 and M4c are done; 0.11.0 released (0.10.0: `@cslug/security`; 0.11.0: `states()` and `repo.transition()`, `@cslug/workflow`). Every planned milestone has shipped.
+> **Status (2026-11-28):** approved. Phase 0, the spikes, M1–M15 and M4c are done; 0.11.1 released (0.10.0: `@cslug/security`; 0.11.0: `states()` and `repo.transition()`, `@cslug/workflow`; 0.11.1: fixes, complete guides). Every planned milestone has shipped.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
