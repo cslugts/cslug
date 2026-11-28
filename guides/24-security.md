@@ -10,7 +10,7 @@ and 17). `@cslug/security` (`cslug add security`) adds what a public app needs n
 | **Per-IP limit** | one rate limit over every request from an address |
 | **IP filter** | allow or deny addresses and CIDR ranges (IPv4 and IPv6), globally or on a group |
 | **`security.txt`** | `/.well-known/security.txt` (RFC 9116), so researchers know where to report |
-| **Account lockout** | an account locks after repeated failed logins, and its owner is told |
+| **Account lockout** | an account locks after repeated failed logins (`AccountLocked` tells you, to tell its owner) |
 | **Breached passwords** | `notBreached()` refuses passwords found in public breaches |
 | **Audit log** | who did what, when, from where: logins and 2FA changes recorded automatically |
 
@@ -87,13 +87,26 @@ started; `canonical` to `app.url`'s. Also `encryption`, `acknowledgments`, `pref
 
 ## Account lockout
 
-After `attempts` failed passwords for one account within `decay`, `auth.attempt()` refuses that account for `decay`
-with 423 `security.account_locked`, even with the right password, and the user gets a `AccountLocked` notification
-(with `@cslug/notification`). It counts per account, not per IP, so it stops a slow guess spread over many
-addresses; `auth.throttle` still limits each IP. A successful login resets the count.
+After `attempts` failed passwords for one email within `decay`, `auth.attempt()` refuses it for `decay` with 423
+`security.account_locked` (`params.retryAfter` in seconds), even with the right password. It counts per email, not
+per IP, so it stops a slow guess spread over many addresses; `auth.throttle` still limits each IP. An unknown email
+locks the same way, so the answer tells nothing about which accounts exist. A successful login resets the count.
+Failures and locks live in the `Cache` (Redis with `@cslug/redis`, so every process sees them).
+
+Tell the owner from a listener (`userId` is there when the email is an account's):
 
 ```ts
-await lockout.unlock(user.id) // support unlocks an account
+@inject(Notifier, UserRepository)
+@listener(AccountLocked, { queued: true })
+export class SendAccountLockedMail {
+  constructor(private notifier: Notifier, private users: UserRepository) {}
+
+  async handle({ userId, until }: AccountLocked['payload']) {
+    if (userId) await this.notifier.send(await this.users.findOrFail(userId), new AccountLockedNotice(until))
+  }
+}
+
+await resolve(Lockout).unlock('ada@example.com') // support unlocks an account
 ```
 
 ## Breached passwords
@@ -117,18 +130,28 @@ export class RefundService {
 
   async refund(booking: Booking) {
     // …
-    await this.audit.record('booking.refunded', { subject: booking, data: { amount: booking.deposit } })
+    await this.audit.record('booking.refunded', {
+      subject: { type: 'booking', id: booking.id },
+      data: { amount: booking.deposit },
+    })
   }
 }
 ```
 
 An entry (`cslug_audit_log`, `cslug migrate` creates it) has the action, the user, the IP and the request id from
-the context, the subject's table and id, and `data` (redacted like logs). It is written in the current transaction,
-so a rolled-back change leaves no entry. Recorded on their own: logins (succeeded, failed, locked), logouts, 2FA
-turned on or off, recovery codes regenerated, API tokens created and revoked.
+the context, the subject's type and id, and `data` (secret-looking keys redacted, as in logs). It is written in the
+current transaction, so a rolled-back change leaves no entry. With `@cslug/auth`, its events are recorded on their
+own, named after the event: `auth.login_succeeded`, `auth.login_failed` (reason and email), `auth.logged_out`,
+`auth.two_factor_enabled`, `auth.two_factor_disabled`, `auth.recovery_codes_regenerated`, `auth.token_created` and
+`auth.token_revoked` (the token as subject), and `security.account_locked`. `audit: { auth: false }` turns that off.
 
-`audit.for(subject)` and `audit.byUser(id)` read it back; `cslug audit:prune` (scheduled daily) deletes entries older
-than `audit.keep`.
+`audit.for({ type: 'booking', id })` and `audit.byUser(id)` read it back, newest first. `cslug audit:prune` deletes
+entries older than `audit.keep`; schedule it:
+
+```ts
+// routes/schedule.ts
+s.call('audit:prune', ({ resolve }) => resolve(Audit).prune()).daily()
+```
 
 ## Dependency audit
 

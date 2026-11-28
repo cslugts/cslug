@@ -201,10 +201,22 @@
     "packages/security": {
       "name": "@cslug/security",
       "version": "0.9.0",
+      "devDependencies": {
+        "@cslug/auth": "workspace:*",
+        "@cslug/database": "workspace:*",
+        "@cslug/testing": "workspace:*",
+        "@cslug/validation": "workspace:*",
+      },
       "peerDependencies": {
+        "@cslug/auth": "workspace:*",
         "@cslug/core": "workspace:*",
+        "@cslug/database": "workspace:*",
         "@cslug/http": "workspace:*",
       },
+      "optionalPeers": [
+        "@cslug/auth",
+        "@cslug/database",
+      ],
     },
     "packages/storage": {
       "name": "@cslug/storage",

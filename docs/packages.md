@@ -22,7 +22,7 @@ installs `@cslug/ai`.
 | `@cslug/webhook` | `verifySignature()`, `WebhookInbox` (exactly-once receipt), replay command | http, database | Web Crypto |
 | `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake); stored conversations and run records; embedding drivers for search (Voyage, OpenAI-compatible) | core, validation · optional: queue, http, database (conversations, runs), search (embeddings, `searchTool`, recall) | `fetch` |
 | `@cslug/telemetry` | Records the spans and metrics packages report through core's `Tracer` / `Metrics`; OTLP/HTTP export of traces, metrics and logs, `/metrics` (Prometheus), sampling | core · optional: http | `fetch` |
-| `@cslug/security` | CSP nonces (`ctx.nonce`, which `<Assets>` uses), per-IP limit, IP filter, `security.txt`; planned (M13b, second PR): account lockout, breached-password check, audit log, on auth's events | core, http · planned optional: database, auth, notification | Web Crypto, `fetch` |
+| `@cslug/security` | CSP nonces (`ctx.nonce`, which `<Assets>` uses), per-IP limit, IP filter, `security.txt`, account lockout (on auth's events), breached-password check, audit log | core, http · optional: database (audit log), auth (lockout, auth events audited) | Web Crypto, `fetch` |
 | `@cslug/workflow` *(planned, M15)* | Durable execution (journaled steps, durable sleeps, waits for events and signals), workflows, sagas with compensations, `workflow:*` commands | core, database, queue | PostgreSQL, Redis Streams |
 | `@cslug/search` | Full-text search over tables (`searchable()`: weighted, per-row language, accent-insensitive; `search()`: ranked, highlights, typos), `searchIndex()` for other documents, `search:reindex`, semantic and hybrid search (pgvector) through an `Embedder` contract | core, database · optional (planned): queue | PostgreSQL full text, `unaccent`, `pg_trgm`, `pgvector` (opt in) |
 | `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `mcp:dev`, `dev`, `start` supervisor | core · optional: database (`mcp:dev` query) | `Bun.spawn` |
@@ -48,7 +48,7 @@ No package has a runtime dependency outside `@cslug/*`. The only third-party pac
 
   @cslug/mail ··► vue, queue (optional)        @cslug/notification ··► mail, queue, database (optional)
   @cslug/storage ··► http (optional)
-  @cslug/search ─► database, ··► queue (planned)        @cslug/telemetry ··► http        @cslug/security ─► http
+  @cslug/search ─► database, ··► queue (planned)        @cslug/telemetry ··► http        @cslug/security ─► http ··► database, auth
   @cslug/workflow ─► database, queue        @cslug/ai ··► database, search (planned)
   ─► required     ··► optional peer
 ```

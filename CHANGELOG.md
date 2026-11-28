@@ -10,6 +10,12 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - `ipFilter({ allow, deny })` with addresses and CIDR ranges (IPv4 and IPv6), globally or on a group; `ipInRange()`.
 - `ipLimit()`: one rate limit over every request from an IP (`limit: '600/min'`), health checks excepted.
 - `/.well-known/security.txt` (RFC 9116) from `securityTxt`.
+- Account lockout per email on `@cslug/auth`'s login events: 423 `security.account_locked`, `AccountLocked` event,
+  `Lockout.unlock()`.
+- `notBreached()` for `refineAsync`: HaveIBeenPwned's range API (k-anonymity, padded), fails open;
+  `BreachedPasswords.fake()` for tests.
+- Audit log (`cslug_audit_log`, `Audit.record()` in the ambient transaction, `for()`, `byUser()`), auth events
+  recorded, `cslug audit:prune`.
 - `cslug add security`. Guide 24.
 
 ### @cslug/http, @cslug/vue

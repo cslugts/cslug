@@ -86,8 +86,10 @@ export const graph: Record<string, PackageSpec> = {
     optional: ['http'],
   },
   security: {
-    description: 'Content-Security-Policy nonces, a per-IP limit, an IP filter and security.txt.',
+    description:
+      'Content-Security-Policy nonces, IP filter and per-IP limit, security.txt, account lockout, breached passwords, audit log.',
     requires: ['core', 'http'],
+    optional: ['database', 'auth'],
   },
   ai: {
     description: 'Agents, tools, structured output, conversations and MCP.',
