@@ -1,0 +1,15 @@
+import { defineConfig } from '@cslug/core'
+
+/**
+ * Content-Security-Policy (a nonce per request, which <Assets> puts on its tags), a per-IP limit, an IP filter and
+ * /.well-known/security.txt. Behind a load balancer, set http.trustedProxies, or every visitor shares its address.
+ */
+export default defineConfig({
+  csp: {
+    directives: { 'img-src': ["'self'", 'data:'] }, // add your CDN, analytics or image hosts here
+    reportOnly: false, // true: report what would be blocked, block nothing
+  },
+  limit: '600/min', // every request from one IP, assets included (health checks are not counted); false: off
+  ipFilter: { deny: [] }, // addresses and CIDR ranges; allow: [...] lets only those in
+  securityTxt: process.env.SECURITY_CONTACT ? { contact: process.env.SECURITY_CONTACT } : false,
+})

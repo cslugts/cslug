@@ -104,10 +104,11 @@ function assetsHtml(entry: string, state: RenderState, root: string): string {
   const token = state.http && !isMissing(state.http) ? state.http.session.token() : undefined
   if (token) out.push(`<meta name="csrf-token" content="${escapeAttr(token)}">`)
   const assets = manifest?.entries[entry]
+  const nonce = nonceAttr(state)
   for (const css of assets?.css ?? []) out.push(`<link rel="stylesheet" href="${escapeAttr(css)}">`)
   out.push(componentCss(state))
   if (state.islands.size) {
-    out.push('<style>cslug-island{display:contents}</style>')
+    out.push(`<style${nonce}>cslug-island{display:contents}</style>`)
     if (assets?.js) {
       const data = pageData(state, manifest as AssetManifest)
       out.push(
@@ -117,7 +118,7 @@ function assetsHtml(entry: string, state: RenderState, root: string): string {
         const chunk = manifest?.islands[island]
         if (chunk) out.push(`<link rel="modulepreload" href="${escapeAttr(chunk)}">`)
       }
-      out.push(`<script type="module" src="${escapeAttr(assets.js)}"></script>`)
+      out.push(`<script type="module" src="${escapeAttr(assets.js)}"${nonce}></script>`)
     } else if (state.dev) {
       out.push(
         `<!-- cslug: this page has islands but public/build/manifest.json has no "${entry}" entry: run cslug dev or cslug build -->`,
@@ -135,14 +136,18 @@ function assetsHtml(entry: string, state: RenderState, root: string): string {
 function componentCss(state: RenderState): string {
   const ids = [...state.modules].filter((m) => componentStyles.get(m))
   if (!ids.length) return ''
-  if (!liveConfig()) return `<style data-cslug>${ids.map((m) => componentStyles.get(m)).join('\n')}</style>`
-  return ids.map((m) => `<style data-cslug="${escapeAttr(m)}">${componentStyles.get(m)}</style>`).join('')
+  const nonce = nonceAttr(state)
+  if (!liveConfig()) return `<style data-cslug${nonce}>${ids.map((m) => componentStyles.get(m)).join('\n')}</style>`
+  return ids.map((m) => `<style data-cslug="${escapeAttr(m)}"${nonce}>${componentStyles.get(m)}</style>`).join('')
 }
+
+/** ` nonce="…"` when a CSP middleware gave this request a nonce (`csp()` from @cslug/security). */
+const nonceAttr = (state: RenderState) => (state.http?.nonce ? ` nonce="${escapeAttr(state.http.nonce)}"` : '')
 
 /** Under `cslug dev`: the live-reload and HMR client (live-client.ts), told which components the page rendered. */
 function devClient(state: RenderState): string {
   const live = liveConfig()
-  return live ? liveScript({ ...live, modules: [...state.modules] }) : ''
+  return live ? liveScript({ ...live, modules: [...state.modules], nonce: state.http?.nonce }) : ''
 }
 
 /** What islands need in the browser: locale, their translation namespaces, named routes, chunk URLs. */

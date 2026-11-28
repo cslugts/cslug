@@ -11,7 +11,9 @@ browser builds see the same input (see spikes/a-vue-islands). At render time:
 2. An island renders its component with the **serialized** props (what the browser will get) inside
    `<cslug-island data-island data-hydrate data-props>`, and records its `lang` namespaces.
 3. `<Assets>` was a placeholder. It becomes the CSRF meta tag, the entry CSS, the component CSS and, only if
-   the page has islands, the page data (`#cslug-data`), the island chunk preloads and the client script.
+   the page has islands, the page data (`#cslug-data`), the island chunk preloads and the client script. With a
+   CSP nonce on the request (`ctx.nonce`, set by `csp()` from `@cslug/security`), its `<script>` and `<style>` tags
+   and the `cslug dev` client carry it; `useRequest().nonce` gives it to your own inline tags.
 
 **In the browser**, `@cslug/vue` resolves to `src/client` (the `browser` export condition). `mountIslands()`
 imports each island's chunk when its `hydrate` condition is met and mounts it. `useT` formats ICU messages

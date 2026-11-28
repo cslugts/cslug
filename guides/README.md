@@ -31,3 +31,4 @@ Every snippet is meant to compile against the final framework; if one can't, the
 | 21 | [Deployment](./21-deployment.md) | Processes, Docker, health checks |
 | 22 | [Search](./22-search.md) | Full-text search over tables: languages, accents, ranking, highlights |
 | 23 | [Observability](./23-observability.md) | Logs, traces and metrics: OpenTelemetry export, `/metrics` |
+| 24 | [Security](./24-security.md) | CSP nonces, per-IP limit, IP filter, `security.txt`, lockout, breached passwords, audit log |

@@ -10,7 +10,7 @@
  *   page if it rendered the component; else nothing (another page's component).
  * When the server comes back after a restart, the page reloads.
  */
-export type LiveConfig = { url: string; hmr: boolean; modules: string[] }
+export type LiveConfig = { url: string; hmr: boolean; modules: string[]; nonce?: string }
 
 type Def = Record<string, unknown>
 type HmrRuntime = { rerender(id: string, render: unknown): void; reload(id: string, def: Def): void }
@@ -26,6 +26,7 @@ export function liveClient(config: LiveConfig): void {
     if (!el) {
       el = document.createElement('style')
       el.dataset.cslug = id
+      if (config.nonce) el.nonce = config.nonce
       document.head.append(el)
     }
     el.textContent = css
@@ -84,4 +85,4 @@ export function liveClient(config: LiveConfig): void {
 
 /** The inline `<script type="module">` that runs the client with `config`. */
 export const liveScript = (config: LiveConfig): string =>
-  `<script type="module">(${liveClient.toString()})(${JSON.stringify(config).replace(/</g, '\\u003c')})</script>`
+  `<script type="module"${config.nonce ? ` nonce="${config.nonce.replace(/[^\w+/=-]/g, '')}"` : ''}>(${liveClient.toString()})(${JSON.stringify(config).replace(/</g, '\\u003c')})</script>`

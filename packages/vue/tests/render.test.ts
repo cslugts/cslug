@@ -6,6 +6,7 @@ import { redirect } from '@cslug/http'
 import { session } from '@cslug/http/middleware'
 import { v } from '@cslug/validation'
 import { renderPage, renderStandalone, serialize, view } from '../src'
+import { liveScript } from '../src/live-client'
 import { FIXTURE, load, vueApp } from './support'
 
 let app: Application | undefined
@@ -77,6 +78,29 @@ describe('server rendering (guide 08)', () => {
     const without = (await renderPage(await load('views/itinerary'), { days: [] })).html
     expect(without).toContain('/build/client-cd34.css') // CSS always
     expect(without).not.toContain('<script') // no islands → no JS
+  })
+
+  test('with a CSP nonce (ctx.nonce, from csp() in @cslug/security), <Assets> puts it on its scripts and styles', async () => {
+    const Itinerary = await load('views/itinerary')
+    const h = await vueApp((r) => {
+      r.group({ middleware: [(ctx, next) => Object.assign(ctx, { nonce: 'n0nce+/=' }) && next()] }, (r) =>
+        r.get('/itinerary', () => view(Itinerary, { days })),
+      )
+    })
+    app = h.app
+    mkdirSync(`${FIXTURE}/public/build`, { recursive: true })
+    writeFileSync(
+      `${FIXTURE}/public/build/manifest.json`,
+      JSON.stringify({ entries: { client: { js: '/build/client-ab12.js' } }, islands: {} }),
+    )
+    const html = await (await h.call('/itinerary')).text()
+    expect(html).toContain('<script type="module" src="/build/client-ab12.js" nonce="n0nce+/="></script>')
+    expect(html).toContain('<style nonce="n0nce+/=">cslug-island{display:contents}</style>')
+    expect(html).toMatch(/<style data-cslug nonce="n0nce\+\/=">/)
+    expect(html).not.toMatch(/<(script|style)(?![^>]*nonce=)(?![^>]*application\/json)[^>]*>/)
+    expect(liveScript({ url: '/__cslug/live', hmr: true, modules: [], nonce: 'n0nce+/="x' })).toStartWith(
+      '<script type="module" nonce="n0nce+/=x">',
+    )
   })
 
   test('a page without layout or <Assets> still gets its CSS', async () => {

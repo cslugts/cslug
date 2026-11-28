@@ -25,7 +25,7 @@ on another domain is absolute; `signed` adds an HMAC (APP_KEY) checked by the `s
 ## `HttpContext`
 
 `request`, `params`, `response` (`header()`, `cookie()`, `status`), `app`, `scope`, `requestId`, `signal`, `log`,
-`locale`, `routeName`, `resolve(token)`. Packages augment it (`declare module '@cslug/http' { interface HttpContext { … } }`).
+`locale`, `routeName`, `nonce` (set by a CSP middleware such as `csp()` from `@cslug/security`), `resolve(token)`. Packages augment it (`declare module '@cslug/http' { interface HttpContext { … } }`).
 
 `HttpRequest`: `method`, `path`, `url`, `headers`, `header()`, `ip()` (X-Forwarded-For only from
 `http.trustedProxies`, `'loopback'` allowed), `query()`, `queryAll()`, `body()` (JSON; forms with `a[b]`/`a[]`

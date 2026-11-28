@@ -235,7 +235,7 @@ export const noIndex = (): Middleware => async (_ctx, next) => {
 |---|---|---|
 | `requestId()` | global | Accepts `X-Request-Id` or makes a UUIDv7; added to every log line |
 | `logRequests()` | global | One structured line per request |
-| `securityHeaders()` | global | CSP, HSTS (prod), frame, referrer, nosniff |
+| `securityHeaders()` | global | CSP, HSTS (prod), frame, referrer, nosniff (a CSP with nonces: `@cslug/security`, guide 24) |
 | `bodyLimit('1mb')` | global | Per route: `.middleware(bodyLimit('20mb'))` for uploads |
 | `session()`, `csrf()` | `web` group | Session in the `SessionStore` (Redis with `@cslug/redis`); 419 without the CSRF token (`_token` field or `X-CSRF-Token`). A failed form post redirects back with errors and old input automatically |
 | `cors(...)` | `api` group | From `config/http.ts` |
