@@ -5,6 +5,8 @@ A job is an `@inject()` class with a typed payload and a `handle` method. Jobs r
 
 ## Defining a job
 
+`cslug make:job SendCheckin` writes `app/jobs/send-checkin-job.ts` to start from.
+
 ```ts
 // app/jobs/send-checkin-job.ts
 import { inject } from '@cslug/core'

@@ -1,0 +1,13 @@
+import { id, type NewRow, type Row, table, text, timestamps, uuid } from '@cslug/database'
+import { users } from '#app/tables/user-table'
+
+export const {{ tableVar }} = table('{{ tableName }}', {
+  id: id(),
+  userId: uuid().references(() => users, { onDelete: 'cascade' }), // the owner
+  title: text(),
+  body: text().nullable(),
+  ...timestamps(),
+})
+
+export type {{ base }} = Row<typeof {{ tableVar }}>
+export type New{{ base }} = NewRow<typeof {{ tableVar }}>

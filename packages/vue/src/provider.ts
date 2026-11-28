@@ -2,6 +2,7 @@ import { ServiceProvider } from '@cslug/core'
 import { Router } from '@cslug/http'
 import { assetConfig, BuildCommand, TypecheckCommand } from './commands'
 import { liveRoute, startDev } from './dev'
+import { MakeComponentCommand, MakeViewCommand } from './generators'
 import { registerVueLoader } from './loader'
 
 /**
@@ -13,7 +14,7 @@ export class VueProvider extends ServiceProvider {
   private stopDev?: () => void
 
   register() {
-    this.commands([BuildCommand, TypecheckCommand])
+    this.commands([BuildCommand, TypecheckCommand, MakeViewCommand, MakeComponentCommand])
     registerVueLoader(this.app.rootDir, { production: this.app.config('app.env') === 'production' })
   }
 

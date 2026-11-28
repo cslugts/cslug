@@ -5,6 +5,9 @@
 
 ## Mailables
 
+`cslug make:mail BookingConfirmed` writes the class and its Vue template; `cslug make:notification CheckinDue` a
+notification.
+
 ```ts
 // app/mail/booking-confirmed-mail.ts
 import { Mailable } from '@cslug/mail'

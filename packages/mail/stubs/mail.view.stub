@@ -1,0 +1,17 @@
+<script setup lang="ts">
+import { useT } from '@cslug/vue'
+
+defineProps<{ name: string }>()
+const { t } = useT()
+</script>
+
+<template>
+  <div class="mail">
+    <h1>{{ t('mail.{{ snake }}.title', { name }) }}</h1>
+    <p>{{ t('mail.{{ snake }}.body') }}</p>
+  </div>
+</template>
+
+<style>
+.mail { font-family: system-ui, sans-serif; max-width: 36rem; margin: 0 auto; color: #111827; }
+</style>

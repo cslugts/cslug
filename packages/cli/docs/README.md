@@ -8,7 +8,7 @@ Where commands come from:
 
 | Source | How |
 |---|---|
-| built-in | `list`, `about`, `config:show`, `key:generate`, `add`, `describe`, `mcp:dev`, `agents:sync`, `repl`, `start`, `dev`, `make:command/provider/event/listener/service/test` |
+| built-in | `list`, `about`, `config:show`, `key:generate`, `add`, `describe`, `mcp:dev`, `agents:sync`, `repl`, `start`, `dev`, `make:command/provider/event/listener/service/test`, `make:crud` |
 | packages | their provider calls `this.commands([...])` in `register()`. @cslug/http: `serve`, `routes`, `make:controller/validator/middleware`. @cslug/database: `migrate`, `migrate:status/rollback/fresh`, `db:seed`, `make:migration/table/repository/factory/seeder` |
 | your app | classes exported from `app/commands/**/*-command.ts`, imported only when needed. A file that fails to import is skipped with a warning |
 

@@ -43,16 +43,41 @@ a command declares them.
 | `make:event OperatorVerified` / `make:listener UpdateBadge` | `app/events/…`, `app/listeners/…` |
 | `make:service Escrow` | `app/services/escrow-service.ts` |
 | `make:test Claims` | `tests/claims.test.ts` |
+| `make:job SendCheckin` | `app/jobs/send-checkin-job.ts` (with @cslug/queue) |
+| `make:mail BookingConfirmed` | `app/mail/booking-confirmed-mail.ts` and its template `resources/mail/booking-confirmed.vue` (with @cslug/mail) |
+| `make:notification CheckinDue` | `app/notifications/checkin-due-notification.ts` (with @cslug/notification) |
+| `make:policy Booking` | `app/policies/booking-policy.ts` (with @cslug/auth) |
+| `make:view bookings/show` / `make:component day-map` | `resources/views/bookings/show.vue` (a page with typed props) / `resources/components/day-map.vue` (with @cslug/vue) |
+| `make:agent OfferExtractor` / `make:tool FindOperators` | `app/agents/offer-extractor-agent.ts` / `app/tools/find-operators-tool.ts` (with @cslug/ai) |
+| `make:crud Claim` | A whole resource owned by the signed-in user (below) |
 
 ```bash
 cslug make:controller admin/Claim --resource  # a folder: app/controllers/admin/claim-controller.ts
 ```
 
+```bash
+$ cslug make:crud TripRequest
+✓ created app/tables/trip-request-table.ts                  # title, body, userId → users, timestamps
+✓ created database/migrations/20261128_124719_create_trip_requests.sql
+✓ created app/repositories/trip-request-repository.ts       # forUser(userId)
+✓ created app/validators/store-trip-request-validator.ts
+✓ created app/policies/trip-request-policy.ts               # only the owner sees, edits, deletes
+✓ created app/controllers/trip-request-controller.ts        # the seven resource actions
+✓ created resources/views/trip-requests/index.vue           # and show, create, edit (plain HTML forms)
+✓ created tests/feature/trip-requests.test.ts               # create, list, show, edit, delete, validation, access
+  Next:
+  1. routes/web.ts, in a group with auth():  r.resource('trip-requests', TripRequestController)
+  2. cslug migrate
+  3. bun test tests/feature/trip-requests.test.ts
+```
+
+`make:crud` needs the `--web` preset's packages and its `users` table. The result is a starting point that works
+and is tested: rename the columns, add yours to the table, then `cslug make:migration --from-tables`.
+
 Names are given in PascalCase (or kebab-case) and may include folders. Generators never overwrite without `--force`
 and print every file they write. To change what they write, put your own template in the app's `stubs/` folder
 under the same name (`stubs/service.stub`, `stubs/controller.stub` …): it wins over the package's. Templates use
-`{{ class }}`, `{{ base }}`, `{{ kebab }}`, `{{ snake }}` and `{{ camel }}`. Jobs, mailables, notifications, policies, views and components have no generator
-yet: they are one small file each (guides 11, 14, 15, 08).
+`{{ class }}`, `{{ base }}`, `{{ kebab }}`, `{{ snake }}` and `{{ camel }}`.
 
 ## Adding a package
 

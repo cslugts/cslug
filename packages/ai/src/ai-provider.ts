@@ -9,6 +9,7 @@ import { databaseStore } from './conversation-store'
 import { Conversations } from './conversations'
 import { embedderFor, type TextEmbedder } from './embedders'
 import { setFakeEmbedder } from './fake'
+import { MakeAgentCommand, MakeToolCommand } from './generators'
 import { asMcpTools, discoverTools, handleMcp, type McpCaller, type McpReply, mcpTools } from './mcp'
 import type { SearchableIndex } from './search-tools'
 
@@ -99,7 +100,14 @@ export class AiRecordCommand extends Command {
  */
 export class AiProvider extends ServiceProvider {
   register() {
-    this.commands([AiPromptsCommand, AiRecordCommand, AiEvalCommand, McpServeCommand])
+    this.commands([
+      AiPromptsCommand,
+      AiRecordCommand,
+      AiEvalCommand,
+      McpServeCommand,
+      MakeAgentCommand,
+      MakeToolCommand,
+    ])
     this.app.singleton(
       Ai,
       (c) => new Ai(this.app, this.app.config<AiConfig | undefined>('ai') ?? {}, c.resolve(Logger)),

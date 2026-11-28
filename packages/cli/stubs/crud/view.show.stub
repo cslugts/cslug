@@ -1,0 +1,24 @@
+<script setup lang="ts">
+import { route, useRequest } from '@cslug/vue'
+import type { {{ base }} } from '#app/tables/{{ kebab }}-table'
+import Layout from '#views/layouts/default.vue'
+
+const props = defineProps<{ {{ camel }}: {{ base }} }>()
+const { csrfToken } = useRequest()
+</script>
+
+<template>
+  <Layout :title="props.{{ camel }}.title">
+    <h1>{{ props.{{ camel }}.title }}</h1>
+    <p v-if="props.{{ camel }}.body">{{ props.{{ camel }}.body }}</p>
+    <p>
+      <a :href="route('{{ plural }}.edit', { {{ camel }}: props.{{ camel }}.id })">Edit</a> ·
+      <a :href="route('{{ plural }}.index')">All</a>
+    </p>
+    <form :action="route('{{ plural }}.destroy', { {{ camel }}: props.{{ camel }}.id })" method="post">
+      <input type="hidden" name="_token" :value="csrfToken" />
+      <input type="hidden" name="_method" value="DELETE" />
+      <button class="link">Delete</button>
+    </form>
+  </Layout>
+</template>

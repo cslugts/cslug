@@ -1,0 +1,11 @@
+import { inject } from '@cslug/core'
+import { Agent } from '@cslug/ai'
+import { v } from '@cslug/validation'
+
+@inject()
+export class {{ class }} extends Agent {
+  model = 'fast' // a role from config/ai.ts (models), or a model id
+  instructions = 'You are a helpful assistant.' // or prompt('{{ kebab }}') for resources/prompts/{{ kebab }}.md
+  output = v.object({ answer: v.string() }) // remove for plain text
+  // tools = [SomethingTool]
+}

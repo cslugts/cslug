@@ -191,7 +191,7 @@ on login when the parameters change.
 
 ## Policies
 
-One policy per resource, an `@inject()` class whose methods return `boolean` (or throw a typed error for a
+`cslug make:policy Booking` writes `app/policies/booking-policy.ts`. One policy per resource, an `@inject()` class whose methods return `boolean` (or throw a typed error for a
 specific message).
 
 ```ts

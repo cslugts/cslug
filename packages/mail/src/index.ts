@@ -3,6 +3,7 @@
  * queues, and transports: SMTP (own client), Resend, Postmark, Brevo, log, array.
  */
 export { installMailFake, MailFake, type SentMail } from './fake'
+export { MakeMailCommand } from './generators'
 export { htmlToText, inlineCss } from './html'
 export { Mailable, type MailableClass, type MailParts, PARTS } from './mailable'
 export { type MailConfig, Mailer, type Outgoing, PendingMail, renderMail } from './mailer'

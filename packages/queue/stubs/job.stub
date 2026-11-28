@@ -1,0 +1,17 @@
+import { inject } from '@cslug/core'
+import { Job } from '@cslug/queue'
+
+type Payload = { id: string }
+
+@inject()
+export class {{ class }} extends Job<Payload> {
+  // static queue = 'default'
+  // static tries = 3
+
+  async handle({ id }: Payload) {
+    // pass ids, not rows: load what you need here
+  }
+
+  /** After the last attempt fails (optional). */
+  async failed({ id }: Payload, error: Error) {}
+}

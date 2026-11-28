@@ -1,0 +1,11 @@
+import { inject } from '@cslug/core'
+import { Repository } from '@cslug/database'
+import { {{ tableVar }} } from '#app/tables/{{ kebab }}-table'
+
+@inject()
+export class {{ base }}Repository extends Repository({{ tableVar }}) {
+  /** A user's {{ plural }}, newest first. */
+  forUser(userId: string) {
+    return this.where({ userId }).orderBy('createdAt', 'desc').all()
+  }
+}

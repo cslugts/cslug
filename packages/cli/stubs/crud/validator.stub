@@ -1,0 +1,7 @@
+import { v } from '@cslug/validation'
+
+/** What the create and edit forms send. */
+export const Store{{ base }}Validator = v.object({
+  title: v.string().trim().min(1).max(200),
+  body: v.string().trim().max(5000).optional(),
+})

@@ -340,3 +340,43 @@ export const DESCRIBE = 'cslug.describe'
 
 /** One section of `cslug describe`: JSON-ready data about the app (routes, tables, jobs…). */
 export type DescribeSection = { name: string; collect: () => unknown }
+
+export type Names = ReturnType<typeof names>
+
+/** One file a generator writes: `stub` from the package's stubs folder (or the app's `stubs/`), to `target`. */
+export type GeneratedFile = { stub: string; target: string }
+
+/**
+ * A `make:<kind> Name` command for a package: `files(n)` says what to write, from `n` (the name's parts with
+ * `suffix`: `names(name, suffix)`); every `{{ var }}` of the stubs is filled from `n` and `vars(n)`. The app's
+ * `stubs/<stub>` wins over the package's. Never overwrites without `--force`; needs no booted app.
+ *
+ * ```ts
+ * defineGenerator({ kind: 'job', description: 'Create a job', stubs: STUBS,
+ *   files: (n) => [{ stub: 'job.stub', target: `app/jobs/${n.file}.ts` }] })
+ * ```
+ */
+export function defineGenerator(options: {
+  kind: string
+  description: string
+  stubs: string
+  /** The class name suffix (`job` → `SendCheckinJob`, `send-checkin-job.ts`); default `kind`, `''` for none. */
+  suffix?: string
+  files: (n: Names) => GeneratedFile[]
+  vars?: (n: Names) => Record<string, string>
+}): CommandClass {
+  const args = { name: arg.string().describe('e.g. Claim, or admin/Claim'), force: flag.boolean() }
+  return class extends Command {
+    static signature = `make:${options.kind}`
+    static description = options.description
+    static boot = false
+    static args = args
+    handle({ name, force }: Command.Args<{ args: typeof args }>) {
+      const n = names(name, options.suffix ?? options.kind)
+      const vars = { ...n, ...options.vars?.(n) }
+      let ok = true
+      for (const file of options.files(n)) ok = this.generate(options.stubs, file.stub, file.target, vars, force) && ok
+      return ok ? 0 : 1
+    }
+  }
+}

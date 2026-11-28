@@ -1,0 +1,14 @@
+import { inject } from '@cslug/core'
+import { Tool } from '@cslug/ai'
+import { v } from '@cslug/validation'
+
+@inject()
+export class {{ class }} extends Tool {
+  name = '{{ snake }}'
+  description = 'What this tool does, and when the model should use it.'
+  input = v.object({ id: v.string() })
+
+  async handle({ id }: v.infer<this['input']>) {
+    return { id }
+  }
+}

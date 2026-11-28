@@ -1,0 +1,16 @@
+import { type AuthUser, inject } from '@cslug/core'
+import { Policy } from '@cslug/auth'
+
+@inject()
+export class {{ class }} extends Policy {
+  /** Runs before every ability: true allows, false refuses, nothing goes on to the ability. */
+  before(user: AuthUser) {}
+
+  view(user: AuthUser, {{ camel }}: { id: string }) {
+    return false
+  }
+
+  update(user: AuthUser, {{ camel }}: { id: string }) {
+    return false
+  }
+}

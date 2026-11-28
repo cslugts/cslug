@@ -9,6 +9,7 @@ export { arg, Command, type CommandClass, ConsoleIO, flag, names } from '@cslug/
 export { ADDITIONS, AddCommand } from './commands/add'
 export { type AgentsSection, AgentsSyncCommand, agentsSections, mergeAgents } from './commands/agents-sync'
 export { generator, STUBS } from './commands/builtin'
+export { MakeCrudCommand } from './commands/crud'
 export { DescribeCommand } from './commands/describe'
 export { devTools, McpDevCommand } from './commands/mcp-dev'
 export { type Evaluated, evaluate, ReplCommand, replScope } from './commands/repl'

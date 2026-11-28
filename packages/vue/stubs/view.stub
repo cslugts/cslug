@@ -1,0 +1,12 @@
+<script setup lang="ts">
+import Layout from '#views/layouts/default.vue'
+
+// typed props: view({{ base }}Page, { title }) is checked against them by `cslug typecheck`
+const props = defineProps<{ title: string }>()
+</script>
+
+<template>
+  <Layout :title="props.title">
+    <h1>{{ props.title }}</h1>
+  </Layout>
+</template>

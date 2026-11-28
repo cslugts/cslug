@@ -4,6 +4,14 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### Generators
+- `make:job` (queue), `make:mail` with its Vue template (mail), `make:notification` (notification),
+  `make:policy` (auth), `make:view` and `make:component` (vue), `make:agent` and `make:tool` (ai).
+- `make:crud Claim` (cli): a resource owned by the signed-in user, from table and migration to repository,
+  validator, policy, resource controller, four views and a feature test; needs the `--web` preset.
+- core: `defineGenerator()`, so a package declares its generators from its own stubs.
+- `check:create` runs every generator in a scaffolded app, which must typecheck, build and pass its tests.
+
 ## 0.11.1 (2026-11-28)
 
 Fixes: listeners run in every process, `make:test` file names, the web template's 404 page; the guides are

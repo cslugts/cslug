@@ -1,0 +1,18 @@
+import { Notification, type Recipient } from '@cslug/notification'
+
+export class {{ class }} extends Notification {
+  constructor(private subjectId: string) {
+    super()
+  }
+
+  /** The channels for this recipient. */
+  via(to: Recipient) {
+    return to.email ? ['mail', 'database'] : ['database']
+  }
+
+  // toMail() { return new SomethingMail(…) }
+
+  toDatabase() {
+    return { subjectId: this.subjectId }
+  }
+}
