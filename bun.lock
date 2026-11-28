@@ -265,6 +265,7 @@
         "@cslug/validation": "workspace:*",
         "@cslug/vue": "workspace:*",
         "@cslug/webhook": "workspace:*",
+        "@cslug/workflow": "workspace:*",
       },
       "optionalPeers": [
         "@cslug/ai",
@@ -280,6 +281,7 @@
         "@cslug/validation",
         "@cslug/vue",
         "@cslug/webhook",
+        "@cslug/workflow",
       ],
     },
     "packages/validation": {
@@ -324,13 +326,18 @@
       "version": "0.10.0",
       "devDependencies": {
         "@cslug/redis": "workspace:*",
+        "@cslug/security": "workspace:*",
         "@cslug/testing": "workspace:*",
       },
       "peerDependencies": {
         "@cslug/core": "workspace:*",
         "@cslug/database": "workspace:*",
         "@cslug/queue": "workspace:*",
+        "@cslug/security": "workspace:*",
       },
+      "optionalPeers": [
+        "@cslug/security",
+      ],
     },
     "spikes/a-vue-islands": {
       "name": "spike-a-vue-islands",

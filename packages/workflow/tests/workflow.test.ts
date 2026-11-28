@@ -1,8 +1,18 @@
 import { afterAll, describe, expect, test } from 'bun:test'
+import { BasicTracer, type Command, ConsoleIO, DESCRIBE, type DescribeSection, runInContext, Tracer } from '@cslug/core'
 import { Database, sql } from '@cslug/database'
 import { testApp } from '@cslug/testing'
 import { SQL } from 'bun'
-import { findWorkflow, WorkflowResumeJob, Workflows } from '../src'
+import {
+  findWorkflow,
+  WorkflowCancelCommand,
+  WorkflowListCommand,
+  WorkflowPruneCommand,
+  WorkflowResumeJob,
+  WorkflowRetryCommand,
+  WorkflowShowCommand,
+  Workflows,
+} from '../src'
 import { fixtureApp } from './fixture/app'
 import { OrderPaid } from './fixture/app/events'
 import { BookingSaga, FlakyWorkflow, knobs, OrderWorkflow, saga } from './fixture/app/workflows/order-workflow'
@@ -23,7 +33,7 @@ describe.skipIf(!DATABASE_URL || !REDIS_URL)('workflows (guide 25)', () => {
       await admin?.unsafe(`create database "${name}"`)
       return fixtureApp(Object.assign(new URL(DATABASE_URL as string), { pathname: `/${name}` }).toString())
     },
-    fakes: ['queue'],
+    fakes: ['queue', 'workflows'],
     database: 'truncate', // runs commit for real (advisory lock, one transaction per step)
   })
 
@@ -271,5 +281,134 @@ describe.skipIf(!DATABASE_URL || !REDIS_URL)('workflows (guide 25)', () => {
     await workflows().store.insert('ghost', 'fixture.gone', {})
     await workflows().resume('ghost')
     expect((await run('ghost'))?.error).toMatchObject({ code: 'workflow.unknown' })
+  })
+
+  describe('operations', () => {
+    class Captured extends ConsoleIO {
+      out = ''
+      override write(text: string) {
+        this.out += text
+      }
+      override error(text: string) {
+        this.out += text
+      }
+    }
+    /** A command's handle() as the CLI runs it, with captured output. */
+    const command = async <C extends new () => Command>(cmd: C, args: Record<string, unknown>) => {
+      const io = new Captured()
+      t.swap(ConsoleIO, io)
+      const code = await runInContext({ app: t.app, scope: t.app.createScope() }, () =>
+        (new cmd() as unknown as { handle(a: unknown): unknown }).handle(args),
+      )
+      return { code: typeof code === 'number' ? code : 0, out: io.out }
+    }
+
+    test('retry: a failed run starts again from its failed step, with fresh attempts', async () => {
+      knobs.failures = 5
+      const { id } = await FlakyWorkflow.start({ tries: 2 })
+      await workflows().resume(id)
+      t.clock.advance('1m')
+      await workflows().resume(id)
+      expect((await run(id))?.status).toBe('failed')
+      knobs.failures = 0
+      const jobs = resumes().length
+      expect(await command(WorkflowRetryCommand, { id })).toMatchObject({ code: 0 })
+      expect(await run(id)).toMatchObject({ status: 'pending', error: null, finishedAt: null })
+      expect(resumes()).toHaveLength(jobs + 1)
+      await workflows().resume(id) // at once: a retried step has no wake-up time
+      expect(await run(id)).toMatchObject({ status: 'completed', output: 'ok' })
+      expect((await workflows().store.journal(id))[0]).toMatchObject({ status: 'completed', attempts: 1 })
+      expect((await command(WorkflowRetryCommand, { id })).code).toBe(1) // not failed any more
+    })
+
+    test('retry after a failed compensation: compensating again, then compensated', async () => {
+      saga.confirmFails = true
+      saga.refundFailures = 10
+      const { id } = await BookingSaga.start({ bookingId: 'b9' })
+      await workflows().resume(id)
+      await workflows().signal(id, 'go')
+      await t.workflows.runUntilIdle() // fast-forwards over the refund's retries
+      expect((await run(id))?.status).toBe('compensation_failed')
+      saga.refundFailures = 0
+      expect(await workflows().retry(id)).toBe(true)
+      expect((await run(id))?.status).toBe('compensating')
+      await t.workflows.runUntilIdle()
+      await t.workflows.assertStatus(id, 'compensated')
+      expect((await effects(id)).map((e) => e.name)).toEqual(['note', 'refund attempt c-h-b9', 'release h-b9'])
+    })
+
+    test('list, show, cancel and prune', async () => {
+      const a = await OrderWorkflow.start({ orderId: 'l1' }, { id: 'list:a' })
+      await FlakyWorkflow.start({ tries: 1 }, { id: 'list:b' })
+      expect((await workflows().list({ workflow: 'fixture.flaky' })).map((r) => r.id)).toEqual(['list:b'])
+      expect((await workflows().list({ status: 'pending' })).map((r) => r.id).sort()).toEqual(['list:a', 'list:b'])
+      const listed = await command(WorkflowListCommand, { status: 'pending', limit: 50, json: false })
+      expect(listed.out).toContain('list:a')
+      expect(listed.out).toContain('fixture.order')
+
+      await workflows().resume(a.id)
+      const shown = await command(WorkflowShowCommand, { id: a.id, json: false })
+      expect(shown.out).toContain('list:a  fixture.order  sleeping')
+      expect(shown.out).toMatch(/step\s+reserve\s+completed/)
+      expect((await command(WorkflowShowCommand, { id: 'nope', json: false })).code).toBe(1)
+
+      expect((await command(WorkflowCancelCommand, { id: a.id })).code).toBe(0)
+      await workflows().resume(a.id)
+      await workflows().resume('list:b')
+      expect((await command(WorkflowPruneCommand, { olderThan: '1d' })).out).toContain('Deleted 0')
+      t.clock.advance('2d')
+      expect((await command(WorkflowPruneCommand, { olderThan: '1d' })).out).toContain('Deleted 2')
+      expect(await run(a.id)).toBeNull()
+      expect(await workflows().store.journal(a.id)).toEqual([]) // the journal went with it
+    })
+
+    test('a span per step that runs (not per replay); audit entries for starts and ends', async () => {
+      const tracer = new BasicTracer()
+      t.swap(Tracer, tracer)
+      const recorded: string[] = []
+      const workflows_ = workflows()
+      workflows_.audit = { record: (action, { subject }) => recorded.push(`${action} ${subject.id}`) }
+      try {
+        knobs.failures = 1
+        const { id } = await FlakyWorkflow.start({ tries: 2 }, { id: 'traced' })
+        await t.workflows.runUntilIdle()
+        const spans = tracer.finished.filter((s) => s.name.startsWith('workflow.step'))
+        expect(spans.map((s) => [s.name, s.attributes['cslug.workflow.attempt'], s.status])).toEqual([
+          ['workflow.step flaky', 1, 'error'],
+          ['workflow.step flaky', 2, 'ok'],
+        ])
+        expect(spans[0]?.attributes['cslug.workflow.run_id']).toBe(id)
+        expect(recorded).toEqual(['workflow.started traced', 'workflow.completed traced'])
+      } finally {
+        workflows_.audit = undefined
+      }
+    })
+
+    test('WorkflowFake.runUntilIdle: sleeps and timeouts fast-forwarded; a run waiting without timeout is left', async () => {
+      const start = t.clock.now().getTime()
+      const { id } = await OrderWorkflow.start({ orderId: 'f1' })
+      await t.workflows.runUntilIdle()
+      await t.workflows.assertStatus(id, 'completed', { outcome: 'expired' })
+      expect(t.clock.now().getTime() - start).toBe(4 * 86_400_000) // 1 day asleep + 3 days waiting
+
+      saga.confirmFails = false
+      const waiting = await BookingSaga.start({ bookingId: 'f2' })
+      await t.workflows.runUntilIdle()
+      await t.workflows.assertStatus(waiting.id, 'waiting') // for "go", without a timeout
+      await t.workflows.signal(waiting.id, 'go')
+      await t.workflows.runUntilIdle()
+      await t.workflows.assertStatus(waiting.id, 'completed', 'done')
+      await expect(t.workflows.assertStatus(waiting.id, 'failed')).rejects.toThrow('to be failed, got completed')
+    })
+
+    test('cslug describe workflows', async () => {
+      const section = t.app.tagged<DescribeSection>(DESCRIBE).find((s) => s.name === 'workflows') as DescribeSection
+      const rows = (await section.collect()) as { name: string; class: string; waitsFor: string }[]
+      expect(rows.find((r) => r.name === 'fixture.order')).toEqual({
+        name: 'fixture.order',
+        class: 'OrderWorkflow',
+        waitsFor: 'order.paid',
+      })
+    })
   })
 })

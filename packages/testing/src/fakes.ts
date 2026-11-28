@@ -11,6 +11,8 @@ import type {
   QueueModule,
   StorageFake,
   StorageModule,
+  WorkflowFake,
+  WorkflowModule,
 } from './peers'
 
 /**
@@ -39,6 +41,7 @@ const lazy: Record<string, () => Promise<FakeInstaller>> = {
   storage: async () => (await importOptional<StorageModule>('@cslug/storage')).installStorageFake,
   notify: async () => (await importOptional<NotificationModule>('@cslug/notification')).installNotificationFake,
   ai: async () => (await importOptional<AiModule>('@cslug/ai')).installAiFake,
+  workflows: async () => (await importOptional<WorkflowModule>('@cslug/workflow')).installWorkflowFake,
 }
 
 /** The installer for `name`: registered, or loaded from its package. Undefined if neither. */
@@ -104,5 +107,6 @@ declare module './fakes' {
     storage: StorageFake
     notify: NotificationFake
     ai: AiFake
+    workflows: WorkflowFake
   }
 }

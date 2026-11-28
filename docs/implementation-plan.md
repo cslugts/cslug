@@ -27,7 +27,7 @@
 | M13 security | ✅ M13b: `@cslug/security` with `csp()` nonces, `ipFilter()`, a per-IP limit, `security.txt`, CI dependency audit, account lockout, `notBreached()`, audit log (**0.10.0**). Done before: M13a core `Encrypter` (encryption and signatures with `APP_KEY`, rotation through `APP_PREVIOUS_KEYS`) used by encrypted columns, signed URLs, magic links and two-factor secrets; `cslug key:rotate`, `cslug db:reencrypt`; auth events (**0.9.0**). Next: M13b `@cslug/security` (**→ 0.10.0**) |
 | M4c vue HMR | ✅ state-preserving HMR for islands in `cslug dev` over SSE (template → `rerender`, script → `reload`, component styles swapped, unrelated pages untouched), `--no-hmr`; server templates recompiled on save (they were stale until a restart); verified in headless Chrome over CDP. **→ 0.9.0**. See [M4c](#m4c-hmr-in-cslug-dev-1-pr) |
 | M14 state machine | ✅ `states()` in core (typed targets, `assert` → 409 `<name>.invalid_transition`, `onEnter` / `onLeave` hooks) and `repo.transition()` in database (lock, idempotent, hooks and callback in one transaction); guide 00 uses it. **→ 0.11.0** |
-| M15 workflows | 🟡 PR 1: `@cslug/workflow` durable execution (journal, steps with durable retries, sleeps, waits for events and signals, idempotent starts, D13); PR 2: sagas (`compensate`, compensating cancel). Next: operations and `WorkflowFake` (**→ 0.11.0**) |
+| M15 workflows | 🟡 PR 1: `@cslug/workflow` durable execution (journal, steps with durable retries, sleeps, waits for events and signals, idempotent starts, D13); PR 2: sagas (`compensate`, compensating cancel); PR 3: `workflow:*` commands, `describe`, step spans, audit entries, `WorkflowFake` (release **0.11.0** next) |
 
 ## Context
 

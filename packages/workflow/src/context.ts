@@ -1,4 +1,4 @@
-import { type AnyEventClass, type Clock, CslugError, type Duration, parseDuration } from '@cslug/core'
+import { type AnyEventClass, type Clock, CslugError, type Duration, parseDuration, type Tracer } from '@cslug/core'
 import type { Database } from '@cslug/database'
 import { type Backoff, backoffDelay, Job } from '@cslug/queue'
 import { Cancellation, CompensationFailedError, NondeterminismError, StepFailedError, Suspension } from './errors'
@@ -63,6 +63,7 @@ export class WorkflowContext {
     private readonly clock: Clock,
     /** Replaying a run being cancelled: the first call that has not run stops it. */
     private readonly cancelling = false,
+    private readonly tracer?: Tracer,
   ) {
     this.entries = new Map(journal.map((e) => [e.seq, e]))
   }
@@ -97,14 +98,16 @@ export class WorkflowContext {
       const entry = this.entries.get(seq)
       if (entry?.status === 'completed') continue
       if (entry?.status === 'failed') throw new CompensationFailedError(c.name, entry.error)
-      if (entry?.status === 'retrying' && !this.due(entry.wakeAt)) throw new Suspension('sleeping', entry.wakeAt)
+      if (this.waiting(entry)) throw new Suspension('sleeping', entry?.wakeAt ?? null)
       const attempts = (entry?.attempts ?? 0) + 1
       const base = { seq, name, kind: 'compensate' as const, attempts }
       try {
-        await this.db.transaction(async () => {
-          await withTimeout(Promise.resolve(c.options.compensate?.(c.result as never)), c.options.timeout, name)
-          await this.record({ ...base, status: 'completed', wakeAt: null })
-        })
+        await this.traced(name, attempts, () =>
+          this.db.transaction(async () => {
+            await withTimeout(Promise.resolve(c.options.compensate?.(c.result as never)), c.options.timeout, name)
+            await this.record({ ...base, status: 'completed', wakeAt: null })
+          }),
+        )
       } catch (error) {
         if (attempts < (c.options.tries ?? 3)) {
           const wakeAt = new Date(
@@ -121,6 +124,27 @@ export class WorkflowContext {
 
   private due(at: Date | null): boolean {
     return at !== null && this.clock.now().getTime() >= new Date(at).getTime()
+  }
+
+  /** A retry waits for its time (one without a time, after `workflow:retry`, runs now). */
+  private waiting(entry: JournalEntry | undefined): boolean {
+    return entry?.status === 'retrying' && entry.wakeAt !== null && !this.due(entry.wakeAt)
+  }
+
+  /** `fn` in a span `workflow.step <name>` (only when it runs, not when it is replayed; errors recorded). */
+  private traced<T>(name: string, attempt: number, fn: () => Promise<T>): Promise<T> {
+    if (!this.tracer?.enabled) return fn()
+    return this.tracer.span(
+      `workflow.step ${name}`,
+      {
+        attributes: {
+          'cslug.workflow.run_id': this.runId,
+          'cslug.workflow.step': name,
+          'cslug.workflow.attempt': attempt,
+        },
+      },
+      fn,
+    )
   }
 
   private async record(entry: Parameters<WorkflowStore['save']>[1]): Promise<void> {
@@ -141,14 +165,16 @@ export class WorkflowContext {
     const opts = options as StepOptions<never>
     if (entry?.status === 'completed') return this.finished(seq, name, entry.result as Json<Awaited<T>>, opts)
     if (entry?.status === 'failed') throw new StepFailedError(name, entry.error)
-    if (entry?.status === 'retrying' && !this.due(entry.wakeAt)) throw new Suspension('sleeping', entry.wakeAt)
+    if (this.waiting(entry)) throw new Suspension('sleeping', entry?.wakeAt ?? null)
     const attempts = (entry?.attempts ?? 0) + 1
     try {
-      const value = await this.db.transaction(async () => {
-        const value = toJson(await withTimeout(Promise.resolve(fn()), options.timeout, name))
-        await this.record({ seq, name, kind: 'step', status: 'completed', result: value, attempts, wakeAt: null })
-        return value as Json<Awaited<T>>
-      })
+      const value = await this.traced(name, attempts, () =>
+        this.db.transaction(async () => {
+          const value = toJson(await withTimeout(Promise.resolve(fn()), options.timeout, name))
+          await this.record({ seq, name, kind: 'step', status: 'completed', result: value, attempts, wakeAt: null })
+          return value as Json<Awaited<T>>
+        }),
+      )
       return this.finished(seq, name, value, opts)
     } catch (error) {
       if (error instanceof Suspension) throw error

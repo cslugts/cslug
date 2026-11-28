@@ -95,6 +95,7 @@ export const graph: Record<string, PackageSpec> = {
     description:
       'Durable workflows on PostgreSQL and the queue: journaled steps, sleeps, waits for events and signals.',
     requires: ['core', 'database', 'queue'],
+    optional: ['security'],
   },
   ai: {
     description: 'Agents, tools, structured output, conversations and MCP.',
@@ -122,6 +123,7 @@ export const graph: Record<string, PackageSpec> = {
       'storage',
       'webhook',
       'ai',
+      'workflow',
       'cli',
     ],
   },

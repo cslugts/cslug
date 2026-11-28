@@ -34,10 +34,17 @@
   "peerDependencies": {
     "@cslug/core": "workspace:*",
     "@cslug/database": "workspace:*",
-    "@cslug/queue": "workspace:*"
+    "@cslug/queue": "workspace:*",
+    "@cslug/security": "workspace:*"
   },
   "devDependencies": {
     "@cslug/redis": "workspace:*",
-    "@cslug/testing": "workspace:*"
+    "@cslug/testing": "workspace:*",
+    "@cslug/security": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@cslug/security": {
+      "optional": true
+    }
   }
 }
