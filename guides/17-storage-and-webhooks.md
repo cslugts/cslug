@@ -1,5 +1,17 @@
 # Storage & webhooks
 
+## Setup
+
+```bash
+cslug add storage          # bun add @cslug/storage; StorageProvider; config/storage.ts
+cslug add webhook          # bun add @cslug/webhook; WebhookProvider (after DatabaseProvider); config/webhooks.ts
+cslug migrate              # cslug_webhook_inbox
+```
+
+The `--full` preset has storage already. Settings: `config/storage.ts` (disks, [below](#storage)) and
+`config/webhooks.ts` (one entry per sender, [below](#1-signature-verification)). Command:
+`cslug webhooks:replay <source> <id>`.
+
 ## Storage
 
 Disks are configured once and injected as `Storage`. Drivers: `local` (files under a folder), `s3` (any
@@ -9,6 +21,8 @@ S3-compatible service: AWS, R2, MinIO, RustFS…, via `Bun.s3`; credentials from
 
 ```ts
 // config/storage.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   default: env.APP_ENV === 'production' ? 's3' : 'local',
   disks: {
@@ -22,6 +36,10 @@ export default defineConfig({
 
 ```ts
 // app/controllers/operator-document-controller.ts
+import { inject, t } from '@cslug/core'
+import { type HttpContext, redirect } from '@cslug/http'
+import { Storage } from '@cslug/storage'
+
 @inject(Storage, OperatorRepository, OperatorDocumentRepository)
 export class OperatorDocumentController {
   constructor(
@@ -79,6 +97,9 @@ Large files go from the browser straight to the disk. A presigned S3 PUT cannot 
 checks the file once the browser says it is done:
 
 ```ts
+import { ForbiddenError } from '@cslug/core'
+import type { HttpContext } from '@cslug/http'
+
 async uploadUrl({ params }: HttpContext) {
   const key = `operators/${params.operator}/licence/${Bun.randomUUIDv7()}.pdf`
   return { key, ...(await this.storage.signedUploadUrl(key, { expiresIn: '10m', type: 'application/pdf' })) }
@@ -101,6 +122,8 @@ The escrow partner, WhatsApp and SMS providers call us. cslug gives three buildi
 
 ```ts
 // config/webhooks.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   payments: {
     secret: env.PAYMENTS_WEBHOOK_SECRET,
@@ -114,6 +137,8 @@ export default defineConfig({
 ```
 
 ```ts
+import { verifySignature } from '@cslug/webhook'
+
 r.post('/webhooks/payments', [PaymentWebhookController, 'handle']).middleware(verifySignature('payments'))
 ```
 
@@ -142,6 +167,10 @@ Respond `200` fast; do the work in the job.
 ### 3. Processing
 
 ```ts
+import { inject } from '@cslug/core'
+import { Job } from '@cslug/queue'
+import { WebhookInbox } from '@cslug/webhook'
+
 @inject(WebhookInbox, EscrowService)
 export class ProcessPaymentEventJob extends Job.schema(v.object({ eventId: v.string() })) {
   static queue = 'payments'
@@ -171,6 +200,9 @@ Old events can be pruned: `inbox.prune('90d')` (schedule it daily).
 ## Testing
 
 ```ts
+import { testApp } from '@cslug/testing'
+import { signWebhook } from '@cslug/webhook'
+
 const t = testApp({ fakes: ['storage'] })   // every disk becomes a memory disk
 
 test('an operator uploads a licence', async () => {
@@ -189,3 +221,19 @@ test('a signed payment webhook is processed once', async () => {
 ```
 
 `t.storage.assertMissing(key)` and `t.storage.keys()` complete the storage fake.
+
+## Reference
+
+```ts
+import { Storage, Disk, FileNotFoundError, UploadRejectedError, StorageFake } from '@cslug/storage'
+import { verifySignature, signWebhook, checkSignature, WebhookInbox } from '@cslug/webhook'
+import { v } from '@cslug/validation'                                   // v.file() for uploads
+```
+
+| | |
+|---|---|
+| `Storage` | Injectable: `put`, `putFile`, `get`, `text`, `stream`, `stat`, `exists`, `delete`, `signedUrl`, `signedUploadUrl`, `verifyUpload`, `disk(name)` |
+| `verifySignature(source \| fn)` | Route middleware: 401 `webhook.bad_signature` |
+| `signWebhook(source, rawBody, { timestamp? })` | The headers a sender would send (tests) |
+| `WebhookInbox` | Injectable: `receive`, `process`, `payload`, `replay`, `prune` |
+| `StorageFake` | `fakes: ['storage']` → `t.storage` |

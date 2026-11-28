@@ -9,7 +9,7 @@ secrets that cannot be rotated. `@cslug/core` has a small, strict tool for each.
 floating point anywhere, and amounts in different currencies never mix by accident.
 
 ```ts
-import { Money } from '@cslug/core'
+import { minorDigits, Money } from '@cslug/core'
 
 const price = Money.of(220_000n, 'EUR')          // 2 200,00 € (minor units: cents)
 Money.of('220000', 'EUR'); Money.of(220000, 'EUR') // a digit string or a safe integer work too
@@ -154,3 +154,13 @@ for your own side effects. Outside a transaction it runs right after the current
 
 A status with rules (`requested → proposed → accepted`, never back) is a `states()` machine in core, and
 `repo.transition()` moves a row through it under a lock: guide 09 § State transitions and the tour (guide 00).
+
+## Reference
+
+```ts
+import { Money, minorDigits, Clock, FakeClock, parseDuration, type Duration, Encrypter, safeEqual, hmac,
+  afterCommit, states } from '@cslug/core'
+```
+
+All of it is in `@cslug/core`: nothing to install. `cslug key:generate` and `cslug key:rotate` manage `APP_KEY`;
+`cslug db:reencrypt` (with `@cslug/database`) moves encrypted columns to a new key.

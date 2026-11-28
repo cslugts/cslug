@@ -18,6 +18,8 @@ and 17). `@cslug/security` (`cslug add security`) adds what a public app needs n
 
 ```ts
 // config/security.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   csp: {
     directives: { 'img-src': ["'self'", 'data:', 'https://images.example.com'] }, // merged over the defaults
@@ -96,6 +98,10 @@ Failures and locks live in the `Cache` (Redis with `@cslug/redis`, so every proc
 Tell the owner from a listener (`userId` is there when the email is an account's):
 
 ```ts
+import { inject, listener, resolve } from '@cslug/core'
+import { Notifier } from '@cslug/notification'
+import { AccountLocked, Lockout } from '@cslug/security'
+
 @inject(Notifier, UserRepository)
 @listener(AccountLocked, { queued: true })
 export class SendAccountLockedMail {
@@ -113,6 +119,7 @@ await resolve(Lockout).unlock('ada@example.com') // support unlocks an account
 
 ```ts
 import { notBreached } from '@cslug/security'
+import { v } from '@cslug/validation'
 
 password: v.string().min(12).refineAsync(notBreached(), { message: 'validation.password_breached' })
 ```
@@ -124,6 +131,9 @@ is down or slow (2 s), the password is accepted and a warning is logged. In test
 ## Audit log
 
 ```ts
+import { inject } from '@cslug/core'
+import { Audit } from '@cslug/security'
+
 @inject(Audit)
 export class RefundService {
   constructor(private audit: Audit) {}
@@ -150,6 +160,8 @@ entries older than `audit.keep`; schedule it:
 
 ```ts
 // routes/schedule.ts
+import { Audit } from '@cslug/security'
+
 s.call('audit:prune', ({ resolve }) => resolve(Audit).prune()).daily()
 ```
 
@@ -161,3 +173,13 @@ CI runs `bun audit` on every pull request; a high or critical advisory fails the
 
 `testApp()` runs with this package like with the others: every response has the CSP header, and the per-IP limit
 counts in the in-memory `RateLimiter`. Requests made by the test client come from `127.0.0.1`.
+
+## Reference
+
+```ts
+import { csp, ipFilter, ipLimit, ipInRange, notBreached, BreachedPasswords, Lockout, AccountLocked,
+  AccountLockedError, Audit, SecurityProvider } from '@cslug/security'
+```
+
+Setup: `cslug add security` (`SecurityProvider` after `HttpProvider`, `config/security.ts`), then `cslug migrate`
+for the audit log. Command: `cslug audit:prune`.

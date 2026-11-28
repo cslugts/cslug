@@ -142,6 +142,8 @@ Commands boot the providers (database, Redis …) before `handle`. A command tha
 Packages contribute commands from their provider:
 
 ```ts
+import { ServiceProvider } from '@cslug/core'
+
 export class PaymentsProvider extends ServiceProvider {
   register() {
     this.commands([ReconcilePaymentsCommand])

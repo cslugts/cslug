@@ -4,6 +4,12 @@ Four contracts live in `@cslug/core`: `Cache`, `Lock`, `RateLimiter` and `Sessio
 drivers (fine for one process and for tests); with `RedisProvider` listed (`@cslug/redis`, in every preset), Redis
 drivers replace them, shared by every process. Your code injects the contract and works with either.
 
+## Setup
+
+Nothing to install for the in-memory drivers: they are in `@cslug/core`. For Redis (every preset), `RedisProvider`
+in `bootstrap/providers.ts` reads `config/redis.ts` (connections, prefix) and `config/cache.ts` (which store),
+[below](#configuration), and adds the `redis` check to `/health/ready`. `REDIS_URL` comes from `.env`.
+
 ## Cache
 
 ```ts
@@ -84,6 +90,8 @@ transaction; Redis locks are for "don't do this twice at once" work like API cal
 As middleware ([guide 05](./05-routing-and-middleware.md)):
 
 ```ts
+import { throttle } from '@cslug/http/middleware'
+
 r.post('/trip-request', [TripRequestController, 'store']).middleware(throttle('5/min'))
 r.post('/login/link', …).middleware(throttle('3/10min', async ({ request }) => String(await request.input('email'))))
 ```
@@ -147,6 +155,8 @@ connection for blocking commands; `RedisConnections.get('name')` reaches another
 
 ```ts
 // config/redis.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   connections: { default: { url: env.REDIS_URL } },
   prefix: 'app:',                         // every key of this app starts with it (several apps on one Redis)
@@ -162,3 +172,14 @@ export default defineConfig({
 
 Boot pings Redis and fails if it does not answer; `/health/ready` includes a `redis` check. In tests, `testApp()`
 gives each test fresh in-memory stores (rate limits, locks, cache, sessions) unless the app uses Redis ones.
+
+## Reference
+
+```ts
+import { Cache, Lock, RateLimiter, SessionStore, LockTimeoutError, TooManyRequestsError, parseRate,
+  MemoryCache, MemoryLock, MemoryRateLimiter, MemorySessionStore } from '@cslug/core'
+import { Redis, RedisConnections } from '@cslug/redis'
+import { throttle } from '@cslug/http/middleware'
+```
+
+Inject the contracts (`@inject(Cache, Lock, RateLimiter)`); the provider decides which driver they are.

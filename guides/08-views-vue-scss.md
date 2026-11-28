@@ -10,6 +10,21 @@ controller ── view(ShowCircuit, props) ──► vue/server-renderer renders
 browser ──────────────────────────────────► @cslug/vue mounts only the islands, each when its condition is met
 ```
 
+## Setup
+
+The `--web` and `--full` presets install `@cslug/vue` (with `vue`, `sass` and `vue-tsc`), list `VueProvider`, and
+write `resources/` (a layout, views, `client.ts`, `styles/app.scss`) and `bunfig.toml` (which preloads
+`@cslug/vue/register` so tests can import `.vue` files). An `--api` app adds it with `bun add @cslug/vue vue sass`,
+`VueProvider` in `bootstrap/providers.ts` and the `assets` section of `cslug.config.ts`.
+
+| Configuration | |
+|---|---|
+| `cslug.config.ts` → `assets` | `entries` (default `{ client: 'resources/client.ts' }`), `scss`, `tailwind` ([below](#the-asset-pipeline)) |
+| `config/vue.ts` → `routes` | Name prefixes of the routes sent to the browser for `route()` in islands (default: all named routes) |
+
+Generators: `cslug make:view bookings/show` (a page with typed props) and `cslug make:component day-map`. Commands:
+`cslug build`, `cslug typecheck`, and `cslug dev` for live reload with HMR.
+
 ## Where things live
 
 ```
@@ -75,6 +90,7 @@ Rendered by a controller:
 
 ```ts
 import { view } from '@cslug/vue'
+import type { HttpContext } from '@cslug/http'
 import ShowCircuit from '#views/circuits/show.vue'
 
 async show({ params }: HttpContext) {
@@ -315,6 +331,9 @@ const form = useForm<v.input<typeof StoreTripRequestValidator>>(
 code serves the plain form and the island.
 
 ```ts
+import { t } from '@cslug/core'
+import { type HttpContext, redirect } from '@cslug/http'
+
 async store({ request }: HttpContext) {
   const data = await request.validate(StoreTripRequestValidator)        // 422 JSON for the island, redirect back otherwise
   const trip = await this.tripRequests.create(data)
@@ -329,6 +348,8 @@ usual. A controller that returns JSON instead (`return { ref: trip.ref }`) fills
 ### `useForm()` reference
 
 ```ts
+import { useForm } from '@cslug/vue'
+
 const form = useForm<Fields, Response>(initial, callbacks?)   // initial may be {} for button-only actions
 
 form.data                        // reactive fields (File values are sent as multipart, with upload progress)
@@ -529,6 +550,10 @@ exception handler (guide 06). Apps made with `bun create cslug --web` do it for 
 
 ```ts
 // app/providers/app-service-provider.ts
+import { NotFoundError } from '@cslug/core'
+import { ExceptionHandler } from '@cslug/http'
+import { view } from '@cslug/vue'
+
 boot() {
   this.app.resolve(ExceptionHandler).render((error, ctx) => {
     if (error instanceof NotFoundError && !ctx.request.wantsJson())
@@ -556,6 +581,8 @@ props, ctx) => …)` is told of every page `view()` renders; the test kit uses i
 JavaScript:
 
 ```ts
+import { download, type HttpContext } from '@cslug/http'
+import { renderStandalone } from '@cslug/vue'
 import TripPack from '#views/trip-pack/show.vue'
 
 async tripPack({ params, auth }: HttpContext) {
@@ -564,3 +591,30 @@ async tripPack({ params, auth }: HttpContext) {
   return download(await renderStandalone(TripPack, await this.tripPacks.props(booking)), `trip-pack-${booking.ref}.html`)
 }
 ```
+
+## Reference
+
+```ts
+// server and browser (views, components, islands)
+import { useT, useRequest, useForm, http, csrfHeaders, route, defineStore, formatMoney, formatDate, formatDuration,
+  serialize, type Serialized } from '@cslug/vue'
+// server only (controllers, mail)
+import { view, renderPage, renderStandalone, onView, Assets, readManifest } from '@cslug/vue'
+// the browser entry (resources/client.ts)
+import { mountIslands } from '@cslug/vue'
+// build tooling and the test preload
+import { buildAssets, findIslands } from '@cslug/vue/build'
+import '@cslug/vue/register'                                             // bunfig.toml preload
+```
+
+| | |
+|---|---|
+| `view(Page, props, { status?, headers? })` | A page response from a controller |
+| `useRequest()` | `locale`, `user`, `csrfToken`, `errors`, `old`, `flash`, `url`, `alternates`, `nonce` (server only) |
+| `useT()` | `t`, `tr`, `locale`, `formatMoney`, `formatDate` in the current locale |
+| `useForm(initial, options?)`, `http`, `csrfHeaders()` | Forms and requests from islands ([above](#useform-reference)) |
+| `defineStore(name, init, { persist? })` | State shared by a page's islands |
+| `serialize(value)`, `Serialized<T>` | What an island's props become (bigint and Date as strings) |
+| `renderPage`, `renderStandalone`, `onView` | Rendering outside `view()` |
+| `<Assets entry="client" />` | In the layout's `<head>` |
+| `mountIslands({ setup? })` | Hydrates the page's islands in the browser |

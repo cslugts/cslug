@@ -30,6 +30,9 @@ The list says **what** to inject, and the constructor says **where**. They must 
 **`tsc` checks it**:
 
 ```ts
+import { inject } from '@cslug/core'
+import { Database } from '@cslug/database'
+
 @inject(Database)                       // ✗ PaymentGateway is missing
 export class EscrowService {
   constructor(private db: Database, private gateway: PaymentGateway) {}
@@ -49,6 +52,8 @@ it to the list too.
 ### No dependencies
 
 ```ts
+import { inject } from '@cslug/core'
+
 @inject()
 export class SlugGenerator {}
 ```
@@ -58,6 +63,10 @@ export class SlugGenerator {}
 They are all the same: list the constructor's dependencies.
 
 ```ts
+import { inject } from '@cslug/core'
+import { Notifier } from '@cslug/notification'
+import { Job } from '@cslug/queue'
+
 @inject(BookingRepository, EscrowService)
 export class BookingController {
   constructor(private bookings: BookingRepository, private escrow: EscrowService) {}
@@ -72,7 +81,7 @@ export class SendCheckinJob extends Job<Payload> {
 ### Values: tokens
 
 ```ts
-import { token, inject } from '@cslug/core'
+import { config, inject, token } from '@cslug/core'
 
 export const COMMISSION_PERCENT = token<number>('payments.commission_percent')
 
@@ -93,6 +102,8 @@ Prefer `config()` for plain settings. Tokens are for values a provider computes.
 TypeScript interfaces vanish at runtime, so an abstract class is the token:
 
 ```ts
+import { inject, Money } from '@cslug/core'
+
 export abstract class PaymentGateway {
   abstract createHold(input: HoldInput): Promise<Hold>
   abstract release(holdId: string, amount: Money, payee: Payee): Promise<Transfer>
@@ -114,6 +125,8 @@ Field initialisers run inside the container's construction, so a base class can 
 without forcing every subclass to pass them through `super(...)`:
 
 ```ts
+import { Clock, inject, Logger, resolve } from '@cslug/core'
+
 export abstract class AdminController {
   protected log = resolve(Logger).child({ area: 'admin' })
   protected clock = resolve(Clock)
@@ -131,6 +144,8 @@ logger. That is why a repository with only table-based methods needs nothing mor
 ### Unit tests: plain `new`
 
 ```ts
+import { Logger } from '@cslug/core'
+
 const escrow = new EscrowService(fakeDb, new FakePaymentGateway(), Logger.null())
 ```
 
@@ -143,6 +158,8 @@ const escrow = new EscrowService(fakeDb, new FakePaymentGateway(), Logger.null()
 | **transient** | New instance each time | `@inject.transient(...)` or `app.bind(X, factory)` |
 
 ```ts
+import { Logger } from '@cslug/core'
+
 @inject.singleton(Logger)                 // one per app: holds a connection, a cache, a rate table
 export class ExchangeRates {
   constructor(private log: Logger) {}
@@ -162,6 +179,9 @@ When the scope ends, instances that implement `Symbol.asyncDispose` (or `Symbol.
 first, so a per-request resource closes itself:
 
 ```ts
+import { inject } from '@cslug/core'
+import { Storage } from '@cslug/storage'
+
 @inject(Storage)
 export class UploadSession {
   private temp: string[] = []
@@ -179,6 +199,8 @@ Your own code rarely makes scopes; scripts and tests can: `const scope = app.cre
 ## `resolve()` outside a constructor
 
 ```ts
+import { resolve } from '@cslug/core'
+
 const escrow = resolve(EscrowService)      // uses the current request/job scope
 ```
 
@@ -189,6 +211,8 @@ For base classes, route closures, the REPL and scripts.
 Providers (guide 03) bind what the container cannot build on its own:
 
 ```ts
+import { config, Logger } from '@cslug/core'
+
 this.app.singleton(PaymentGateway, MangopayGateway)                   // a class (built with its @inject list)
 this.app.singleton(PaymentGateway, (c) => new MangopayGateway(config('payments.mangopay'), c.resolve(Logger)))
 this.app.scoped(CurrentOperator, (c) => c.resolve(OperatorResolver).current())   // one per request
@@ -210,6 +234,8 @@ const checks = this.app.tagged<ComplianceCheck>('compliance.checks')
 ## Swapping in tests
 
 ```ts
+import { testApp } from '@cslug/testing'
+
 const app = testApp()
 app.swap(PaymentGateway, new FakePaymentGateway({ failNextRelease: true }))   // until the end of the test
 ```
@@ -250,6 +276,9 @@ compiler-emitted metadata:
 
 ```ts
 // legacy (not used)                          // standard (cslug)
+import { inject } from '@cslug/core'
+import { Database } from '@cslug/database'
+
 @inject()                                      @inject(Database, PaymentGateway)
 export class EscrowService {                   export class EscrowService {
   constructor(                                   constructor(
@@ -268,3 +297,10 @@ export class EscrowService {                   export class EscrowService {
 | Hidden behaviour | Emitted metadata + a shim | **None** |
 | Same result in every tool | No (esbuild, for one, emits no metadata) | **Yes** |
 | Direction of the language | Legacy, maintained | **The standard** |
+
+## Reference
+
+```ts
+import { inject, token, resolve, Container, Application, type Token, BindingNotFoundError, CircularDependencyError,
+  ScopeViolationError } from '@cslug/core'
+```

@@ -8,6 +8,8 @@ What a running app tells you: logs, traces and metrics. Logs work out of the box
 `config/log.ts` sets the level, the format and the destinations:
 
 ```ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   level: env.LOG_LEVEL, // debug, info, warn, error
   format: env.LOG_FORMAT ?? (env.APP_ENV === 'production' ? 'json' : 'pretty'),
@@ -44,6 +46,8 @@ operation and table; their values never leave the app.
 
 ```ts
 // config/telemetry.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   sampleRate: 0.2, // a fifth of new traces; failed requests are always exported
   otlp: { logs: 'warn' }, // OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS
@@ -77,3 +81,13 @@ The same numbers are exported over OTLP every minute when an endpoint is set.
 ## Health
 
 `/health/live` and `/health/ready` (guide 21) stay the checks for a load balancer; metrics and traces are for people.
+
+## Reference
+
+```ts
+import { Logger, Tracer, Metrics, BasicTracer, BasicMetrics, parseTraceparent } from '@cslug/core'
+import { TelemetryProvider, Telemetry } from '@cslug/telemetry'
+```
+
+Logs need nothing: `Logger` is in core, configured by `config/log.ts`. Traces and metrics: `cslug add telemetry`
+(`TelemetryProvider`, listed **first** in `bootstrap/providers.ts` so it shuts down last; `config/telemetry.ts`).

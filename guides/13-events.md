@@ -90,6 +90,8 @@ Requests, jobs, queries and AI calls are not events: they are traced and measure
 ## Testing
 
 ```ts
+import { testApp } from '@cslug/testing'
+
 const app = testApp({ fakes: ['events'] })
 await app.resolve(VerificationService).approve(operator.id)
 app.events.assertEmitted(OperatorVerified, (e) => e.payload.operatorId === operator.id)
@@ -98,3 +100,18 @@ app.events.assertNotEmitted(OperatorSuspended)
 
 The events fake records emitted events instead of running their listeners. To test a listener, call its `handle`
 with a payload, or leave the fake out so it runs.
+
+## Reference
+
+```ts
+import { Event, listener, EventBus, afterCommit, loadListeners, registeredListeners, type EventClass } from '@cslug/core'
+// framework events
+import { LoginAttempting, LoginSucceeded, LoginFailed, LoggedOut, TwoFactorEnabled, TwoFactorDisabled,
+  RecoveryCodesRegenerated, TokenCreated, TokenRevoked } from '@cslug/auth'
+import { AccountLocked } from '@cslug/security'
+import { AiBudgetAlert } from '@cslug/ai'
+```
+
+Events are in core: nothing to install. Generators: `cslug make:event OperatorVerified`, `cslug make:listener
+UpdateReliabilityBadge`. In tests, `testApp({ fakes: ['events'] })` gives `t.events` (`assertEmitted`,
+`assertNotEmitted`, `assertNothingEmitted`, `of`, `emitted`).

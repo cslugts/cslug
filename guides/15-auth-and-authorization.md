@@ -3,10 +3,20 @@
 **Authentication** answers "who is this?" (guards). **Authorization** answers "may they do this?" (policies
 and gates).
 
+## Setup
+
+The `--web` and `--full` presets install `@cslug/auth` and write the `users` table, `config/auth.ts`, the login,
+registration and two-factor controllers and views, and their tests. An `--api` app adds it with
+`bun add @cslug/auth`, `AuthProvider` in `bootstrap/providers.ts` (after `DatabaseProvider`), a `config/auth.ts`
+naming the users repository, and `cslug migrate`, which creates `cslug_access_tokens` and `cslug_two_factor`.
+Generator: `cslug make:policy Booking`.
+
 ## Users and guards
 
 ```ts
 // app/tables/user-table.ts
+import { id, type Row, table, text, timestamp } from '@cslug/database'
+
 export const users = table('users', {
   id: id(),
   email: text().unique(),
@@ -22,6 +32,8 @@ export type User = Row<typeof users>
 
 ```ts
 // config/auth.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   users: () => import('#app/repositories/user-repository').then((m) => m.UserRepository),
   passwords: { algorithm: 'argon2id', rehashOnLogin: true },   // also memoryCost, timeCost (argon2), cost (bcrypt)
@@ -44,6 +56,11 @@ before the handler runs. `ctx.auth.guard` says which one was used.
 **Travellers: magic link** (no password for a one-off booking).
 
 ```ts
+import { MagicLinks } from '@cslug/auth'
+import { inject, t } from '@cslug/core'
+import { type HttpContext, redirect, route } from '@cslug/http'
+import { Mailer } from '@cslug/mail'
+
 @inject(UserRepository, MagicLinks, Mailer)
 export class MagicLinkController {
   constructor(private users: UserRepository, private links: MagicLinks, private mailer: Mailer) {}
@@ -69,6 +86,9 @@ export class MagicLinkController {
 **Staff and operators: password**, with a second factor for those who turn it on.
 
 ```ts
+import { redirect, route } from '@cslug/http'
+import { ValidationError } from '@cslug/validation'
+
 const user = await auth.attempt(email, password)    // throttled, constant-time, logs failures without the password
 if (!user) throw new ValidationError({ email: ['auth.failed'] })
 if (auth.twoFactorPending) return redirect().to(route('two-factor'))   // not signed in until the code
@@ -80,6 +100,12 @@ return redirect().intended('/dashboard')
 The codes of Google Authenticator, 1Password, Authy… (RFC 6238). `TwoFactor` is injectable:
 
 ```ts
+import { TwoFactor } from '@cslug/auth'
+import { inject } from '@cslug/core'
+import { type HttpContext, redirect } from '@cslug/http'
+import { ValidationError } from '@cslug/validation'
+import { view } from '@cslug/vue'
+
 @inject(TwoFactor)
 export class TwoFactorController {
   constructor(private twoFactor: TwoFactor) {}
@@ -154,6 +180,8 @@ accepted after a key rotation while the old key is in `APP_PREVIOUS_KEYS`).
 throws refuses the attempt:
 
 ```ts
+import { LoginFailed } from '@cslug/auth'
+
 LoginFailed.on(({ reason, userId, ip }) => log.warn('login failed', { reason, userId, ip }))
 ```
 
@@ -173,6 +201,10 @@ declare module '@cslug/core' {
 **Hashing passwords.** `Hash` (argon2id through `Bun.password`) is injectable:
 
 ```ts
+import { Hash } from '@cslug/auth'
+import { inject } from '@cslug/core'
+import { type HttpContext, redirect, route } from '@cslug/http'
+
 @inject(UserRepository, Hash)
 export class RegisterController {
   constructor(private users: UserRepository, private hash: Hash) {}
@@ -198,6 +230,7 @@ specific message).
 // app/policies/booking-policy.ts
 import { inject } from '@cslug/core'
 import { Policy } from '@cslug/auth'
+import { view } from '@cslug/vue'
 import type { User } from '#app/tables/user-table'
 import type { Booking } from '#app/tables/booking-table'
 import { OperatorRepository } from '#app/repositories/operator-repository'
@@ -241,6 +274,8 @@ if (await auth.can(BookingPolicy, 'release', booking)) { … }
 In views and islands, pass permissions as props rather than duplicating the logic:
 
 ```ts
+import { view } from '@cslug/vue'
+
 return view(ShowBooking, { booking, canCancel: await auth.can(BookingPolicy, 'cancel', booking) })
 ```
 
@@ -248,11 +283,15 @@ return view(ShowBooking, { booking, canCancel: await auth.can(BookingPolicy, 'ca
 
 ```ts
 // app/providers/auth-service-provider.ts → boot()
+import { gate } from '@cslug/auth'
+
 gate.define('admin.access', (user) => user.role === 'admin' || user.role === 'staff')
 gate.define('operators.verify', (user) => user.role === 'admin')
 ```
 
 ```ts
+import { auth, can, gate } from '@cslug/auth'
+
 r.group({ prefix: '/admin', middleware: [auth(), can('admin.access')] }, …)
 await auth.authorize('operators.verify')                // throws ForbiddenError
 if (await auth.cannot('operators.verify')) { … }
@@ -264,6 +303,8 @@ Guests are never allowed: `can()` and `authorize()` refuse them before calling t
 ## Testing
 
 ```ts
+import { testApp } from '@cslug/testing'
+
 const app = testApp()
 app.actingAs(await UserFactory.create({ role: 'admin' }))       // requests of this test are signed in
 await app.get('/admin').assertOk()
@@ -273,3 +314,22 @@ await app.get('/api/quotes').withToken(plainText).assertOk()
 ```
 
 `totpCode(secret, new Date())` computes the current code of a secret, to test the two-factor step.
+
+## Reference
+
+```ts
+import { auth, guest, can, ability, authenticate, gate, Gate, Policy, Hash, Tokens, MagicLinks, TwoFactor,
+  MagicLinkError, totpCode, verifyTotp, otpauthUri, type AuthConfig } from '@cslug/auth'
+import type { AuthUser } from '@cslug/core'                              // your user type, through module augmentation
+```
+
+| | |
+|---|---|
+| `auth(guard?)`, `guest()`, `can(gate)`, `ability(...)` | Route middleware |
+| `ctx.auth` | `user()`, `userOrNull()`, `check()`, `attempt()`, `login()`, `logout()`, `beginLogin()`, `completeTwoFactor()`, `can()`, `cannot()`, `authorize()`, `tokenCan()`, `guard`, `token` |
+| `Policy` | Base class of policies (`before(user)`, abilities) |
+| `gate` / `Gate` | `gate.define(name, fn)`, `gate.allows(user, name, ...args)` |
+| `Hash` | `make`, `verify`, `needsRehash` |
+| `Tokens` | `create`, `verify`, `list`, `revoke`, `revokeAll` |
+| `MagicLinks` | `create(user, { redirect?, lifetime? })`, `consume(token)` |
+| `TwoFactor` | `enable`, `confirm`, `enabled`, `verify`, `regenerateRecoveryCodes`, `remainingRecoveryCodes`, `disable` |
