@@ -9,25 +9,28 @@ and gates).
 // app/tables/user-table.ts
 export const users = table('users', {
   id: id(),
-  email: text().notNull().unique(),
-  name: text().notNull(),
-  passwordHash: text(),                                  // null for magic-link-only travellers
-  role: text({ enum: ['traveller', 'operator', 'staff', 'admin'] }).notNull().default('traveller'),
-  locale: text({ enum: ['fr', 'en', 'it'] }).notNull().default('en'),
-  emailVerifiedAt: timestamp(),
+  email: text().unique(),
+  name: text(),
+  passwordHash: text().nullable(),                       // null for magic-link-only travellers
+  role: text().oneOf(['traveller', 'operator', 'staff', 'admin']).default('traveller'),
+  locale: text().oneOf(['fr', 'en', 'it']).default('en'),
+  emailVerifiedAt: timestamp().nullable(),
   ...timestamps(),
 })
+export type User = Row<typeof users>
 ```
 
 ```ts
 // config/auth.ts
 export default defineConfig({
   users: () => import('#app/repositories/user-repository').then((m) => m.UserRepository),
-  passwords: { algorithm: 'argon2id', rehashOnLogin: true },
+  passwords: { algorithm: 'argon2id', rehashOnLogin: true },   // also memoryCost, timeCost (argon2), cost (bcrypt)
   magicLinks: { lifetime: '30m', singleUse: true },
   throttle: '5/min',                                     // auth.attempt(), per email + IP
   loginRoute: 'login',                                   // where auth() sends guests (HTML requests)
   home: '/',                                             // where guest() sends signed-in users
+  fields: { email: 'email', password: 'passwordHash' },  // the user row's field names (these are the defaults)
+  twoFactor: { issuer: 'My app', window: 1, recoveryCodes: 8, challengeLifetime: '10m' },
 })
 ```
 
@@ -83,14 +86,14 @@ export class TwoFactorController {
 
   async enable({ auth }: HttpContext) {                                 // settings page, signed in
     const { secret, uri } = await this.twoFactor.enable(auth.user(), auth.user().email)
-    return view('settings/two-factor', { secret, uri })                 // show `uri` as a QR code, or the secret
+    return view(TwoFactorSettings, { secret, uri })                     // show `uri` as a QR code, or the secret
   }
 
   async confirm({ request, auth }: HttpContext) {
     const { code } = await request.validate(v.object({ code: v.string() }))
     const recoveryCodes = await this.twoFactor.confirm(auth.user(), code)   // on from now on
     if (!recoveryCodes) throw new ValidationError({ code: ['auth.two_factor_failed'] })
-    return view('settings/recovery-codes', { recoveryCodes })           // shown once: ask the user to keep them
+    return view(RecoveryCodes, { recoveryCodes })                       // shown once: ask the user to keep them
   }
 
   async challenge({ request, auth }: HttpContext) {                     // POST /two-factor, after the password
@@ -118,9 +121,17 @@ export class TwoFactorController {
 **API tokens** for operator integrations:
 
 ```ts
-const { plainText } = await tokens.create(user, { name: 'quote-bot', abilities: ['quotes:write'], expiresIn: '90d' })
+const { plainText, token } = await tokens.create(user, { name: 'quote-bot', abilities: ['quotes:write'], expiresIn: '90d' })
+// show plainText once: only its SHA-256 is stored
 // requests: Authorization: Bearer <plainText>   routes: .middleware(auth('token'), ability('quotes:write'))
+
+await tokens.list(user)              // the user's tokens (name, abilities, last used, expiry): a settings page
+await tokens.revoke(token.id)        // one
+await tokens.revokeAll(user)         // all of them ("sign out everywhere" for integrations)
 ```
+
+In a handler, `auth.guard` is `'web'` or `'token'`, `auth.token` the token used, and `auth.tokenCan('quotes:write')`
+checks an ability in code (session users pass, like `ability()`). Abilities are free-form strings; `'*'` grants all.
 
 The app's own pages can call the same API routes with the session instead of a token: `http.api.stateful: true`
 gives `routes/api.ts` the session and CSRF for requests from `app.url`'s origin (see [guide 08](./08-views-vue-scss.md#requests-that-are-not-forms)).
@@ -243,5 +254,22 @@ gate.define('operators.verify', (user) => user.role === 'admin')
 
 ```ts
 r.group({ prefix: '/admin', middleware: [auth(), can('admin.access')] }, …)
-await auth.authorize('operators.verify')
+await auth.authorize('operators.verify')                // throws ForbiddenError
+if (await auth.cannot('operators.verify')) { … }
+gate.allows(user, 'admin.access')                       // for a user other than the signed-in one (a job)
 ```
+
+Guests are never allowed: `can()` and `authorize()` refuse them before calling the policy or the gate.
+
+## Testing
+
+```ts
+const app = testApp()
+app.actingAs(await UserFactory.create({ role: 'admin' }))       // requests of this test are signed in
+await app.get('/admin').assertOk()
+expect(app.auth.check()).toBe(true)                             // who the last response left signed in
+const { plainText } = await app.tokens.create(user, { abilities: ['quotes:read'] })
+await app.get('/api/quotes').withToken(plainText).assertOk()
+```
+
+`totpCode(secret, new Date())` computes the current code of a secret, to test the two-factor step.
