@@ -11,14 +11,14 @@ bun create cslug my-app             # --api (no views, no Vue), --full (+ queue,
 cd my-app
 docker compose up -d                 # postgres, redis (and mailpit with --full)
 cslug migrate                        # .env was written with a fresh APP_KEY
-cslug dev                            # app (bun --hot) + asset watcher + queue worker + scheduler, one terminal
+cslug dev                            # app (bun --watch) + asset watcher + HMR + queue worker + scheduler, one terminal
 ```
 
 `cslug dev` prints:
 
 ```
   cslug  dev
-  ➜ app       http://localhost:3000   (live reload on)
+  ➜ app       http://localhost:3000   (HMR on)
   ➜ assets    watching resources/  (3 islands, app.scss)
   ➜ worker    queues: default, notifications, payments
   ➜ schedule  4 entries (next: dispatch-daily-checkins in 3m)

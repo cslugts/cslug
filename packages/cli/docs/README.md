@@ -14,7 +14,8 @@ Where commands come from:
 
 `cslug start` runs each role as a child process (`serve`, `queue:work`, `schedule:work`), restarts crashed
 ones with backoff, forwards SIGTERM and exits 0 once they have all drained. `cslug dev` runs the same processes
-under `bun --watch`. Roles whose command is not installed are skipped with a warning.
+under `bun --watch` with `CSLUG_DEV=1`; islands are hot-updated when `.vue` files change (`--no-hmr` sets
+`CSLUG_HMR=0`: pages reload instead). Roles whose command is not installed are skipped with a warning.
 
 ## `cslug add`
 

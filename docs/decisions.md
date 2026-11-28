@@ -11,7 +11,7 @@ Each decision lists what was **decided** or **proposed**, the **alternatives**, 
 Feedback received so far: name the app (the name stays private) ✅ · use **Vue islands**, not Inertia ✅ · typed tables
 and repositories **without Drizzle** ✅ · **almost zero dependencies** ✅ · **scoped `@cslug/*` packages** ✅ · **static shortcuts are fine** ✅ · **folders by type, `booking-repository.ts` naming** ✅ ·
 **standard decorators** ✅ · **islands rendered on the server by default** ✅ · **queue on Redis Streams** ✅ ·
-**Vue as the server template language** ✅.
+**Vue as the server template language** ✅ · **HMR for islands in `cslug dev`, over SSE** (reopened 2026-11-28) ✅.
 
 ---
 
@@ -177,8 +177,12 @@ defineProps<{ booking: Booking }>()
 ```
 
 **Assets:** `Bun.build` with cslug plugins for `.vue` (via `vue/compiler-sfc`), `.scss` (via `sass`) and
-Tailwind (via `bun-plugin-tailwind`). No Vite. In development: rebuild on change + live reload. Vue state-preserving
-HMR is not in v1.
+Tailwind (via `bun-plugin-tailwind`). No Vite. In development: rebuild on change + live reload over SSE.
+**Reopened 2026-11-28 ✅:** state-preserving HMR for island `.vue` files under `cslug dev` (on by default, `--no-hmr`
+turns it off), over the existing SSE channel: no WebSockets. A changed SFC is compiled alone and swapped in through
+Vue's `__VUE_HMR_RUNTIME__` (`rerender` for template-only edits, `reload` otherwise). Stylesheets are swapped without a
+reload (as before); other changes, server-only templates and failures still reload the page; server code still
+restarts the process. Never in `cslug start` or with `app.env=production`: it needs Vue's development build.
 
 **No built-in components** apart from `<Assets>`: no `<Head>`, `<Form>`, `<Field>` or mail components. Layout
 slots, plain markup and `useRequest()` cover them, and apps make their own components when a pattern repeats.
@@ -290,7 +294,7 @@ policies and gates. No JWT, no OAuth server.
 
 ORM relations with lazy loading · databases other than Postgres · GraphQL · websockets · admin panel generator ·
 plugin marketplace · payment-provider SDKs (the escrow partner is app code behind an abstract `PaymentGateway`) ·
-SPA mode · Vue state-preserving HMR.
+SPA mode. (Vue state-preserving HMR was here until 2026-11-28: see D5.)
 
 ---
 

@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-27):** approved. Phase 0, the spikes and M1–M12 are done; 0.8.0 released (0.7.x: AJAX forms, two-factor logins in scaffolded apps; 0.8.0: logger targets and request → job origin, `Tracer` / `Metrics` in core, `@cslug/telemetry`). Next: M13–M15 (security, state machine, workflows), planned below.
+> **Status (2026-11-28):** approved. Phase 0, the spikes and M1–M12 are done; 0.8.0 released (0.7.x: AJAX forms, two-factor logins in scaffolded apps; 0.8.0: logger targets and request → job origin, `Tracer` / `Metrics` in core, `@cslug/telemetry`). M13a and M4c (HMR in `cslug dev`) are merged. Next: M13b–M15 (security, state machine, workflows), planned below.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
@@ -24,7 +24,8 @@
 | M10 search | ✅ M10a database primitives (generated and hidden columns, index methods and operator classes, `orderBySql` / `selectSql`) and `@cslug/search` full text over tables (`searchable()`: weights, per-row language, accents; `search()`: ranked, highlights, typos); M10b `searchIndex()` (documents in `cslug_search_documents`, ranked paged search, metadata filters) and `cslug search:reindex`; M10c semantic and hybrid search on indexes (pgvector, opt in; `Embedder` contract, `FakeEmbedder`, reciprocal rank fusion; CI on `pgvector/pgvector:pg17`). `@cslug/ai` embedding drivers (`ai.embeddings`: Voyage, OpenAI-compatible; budget; faked in tests). M10d `searchTool()` and conversation recall (`ai.recall`, `recallTool()`, owner-scoped). See [M10](#m10-cslugsearch) |
 | M11 logger | ✅ Log targets (stdout, stderr, daily files, custom) with their own level and format, `LOG_LEVEL` / `LOG_FORMAT`, the process role, `originRequestId` from job envelopes, `config/log.ts` in new apps. See [M11–M15](#m11m15-logger-telemetry-security-state-machine-workflows) |
 | M12 telemetry | ✅ M12a `Tracer` / `Metrics` contracts in core (no-op by default, `BasicTracer` / `BasicMetrics`, W3C `traceparent`); http, queue, database and ai instrumented. M12b `@cslug/telemetry`: OTLP/HTTP JSON export of traces, metrics and logs (batched, bounded, flushed at shutdown; `OTEL_EXPORTER_OTLP_*`), sampling that keeps failed spans, `/metrics` in Prometheus format (loopback, token or CIDR list), `cslug add telemetry`, guide 23. **→ 0.8.0** |
-| M13 security | 🟡 M13a core `Encrypter` (encryption and signatures with `APP_KEY`, rotation through `APP_PREVIOUS_KEYS`) used by encrypted columns, signed URLs, magic links and two-factor secrets; `cslug key:rotate`, `cslug db:reencrypt`; auth events. Next: M13b `@cslug/security` |
+| M13 security | 🟡 M13a core `Encrypter` (encryption and signatures with `APP_KEY`, rotation through `APP_PREVIOUS_KEYS`) used by encrypted columns, signed URLs, magic links and two-factor secrets; `cslug key:rotate`, `cslug db:reencrypt`; auth events. Next: M13b `@cslug/security`, after M4c |
+| M4c vue HMR | ✅ state-preserving HMR for islands in `cslug dev` over SSE (template → `rerender`, script → `reload`, component styles swapped, unrelated pages untouched), `--no-hmr`; server templates recompiled on save (they were stale until a restart); verified in headless Chrome over CDP. See [M4c](#m4c-hmr-in-cslug-dev-1-pr) |
 | M14 state machine | ⬜ planned (core) |
 | M15 workflows | ⬜ planned (`@cslug/workflow`) |
 
@@ -210,6 +211,26 @@ placeholder publish and its trusted publisher before its first release.
   or an IP list); sampling that keeps errors; exceptions recorded through the error handler's `report()` hook;
   `config/telemetry.ts`, `cslug add telemetry`.
 - Depends on core · optional: http, auth.
+
+### M4c HMR in `cslug dev`, 1 PR
+
+Added on 2026-11-28, before M13b (reopens "Vue state-preserving HMR is not in v1", D5 / D12). `cslug dev` already
+rebuilds on change, swaps stylesheets and reloads pages over SSE (`/__cslug/live`); `cslug start` never watches.
+
+- **Islands:** when a `.vue` file under `resources/` changes, compile it alone (client output, `vue` external, with its
+  `__hmrId`) and send `event: vue` `{ id, url, kind }` on the SSE channel; the browser imports the module and calls
+  `__VUE_HMR_RUNTIME__.rerender` (template-only change) or `.reload` (script change), keeping island state where Vue
+  can. The full bundle is still rebuilt so a later reload is consistent.
+- **Fallback to a reload:** components not mounted as islands (server-only templates), plain `.ts` changes on the
+  client, compile errors, or a client that misses an update. Stylesheets keep the in-place swap. Server code keeps
+  restarting the process (`bun --watch`).
+- **Switch:** on by default under `cslug dev`, `cslug dev --no-hmr` keeps plain live reload (`CSLUG_HMR=0` for the
+  children). Never enabled by `cslug start` or when `app.env` is `production`.
+- **No WebSockets:** updates only flow server → browser, so SSE is enough; no new package.
+- **Docs:** guide 08 (asset pipeline), `packages/vue/docs`, `packages/cli/docs`; guides 01 and 21 say the web
+  process runs with `bun --hot` but the supervisor uses `--watch`: bring them in line.
+- **Done when:** editing an island's template in a running `cslug dev` updates it in headless Chrome without losing
+  its local state; a server-only template change reloads; `--no-hmr` reloads; `cslug start` serves no `/__cslug/live`.
 
 ### M13 `@cslug/security`, 2–3 PRs
 

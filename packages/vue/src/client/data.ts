@@ -11,8 +11,6 @@ export type PageData = {
   appUrl?: string
   /** Island id → chunk URL. */
   islands: Record<string, string>
-  /** Development: the live-reload endpoint. */
-  live?: string
 }
 
 let cached: PageData | undefined

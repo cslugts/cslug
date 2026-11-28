@@ -146,8 +146,37 @@ export function compileSfc(filename: string, options: CompileOptions): CompiledS
 
   const scoped = descriptor.styles.some((s) => s.scoped)
   const scopeId = `data-v-${hash}`
+  // development in the browser: the render function stays separate from setup, so a template-only change can be
+  // swapped in without losing the component's state (HMR)
+  const hot = !options.ssr && !options.production
   let code: string
-  if (descriptor.script || descriptor.scriptSetup) {
+  if ((descriptor.script || descriptor.scriptSetup) && hot) {
+    const script = compileScript(descriptor, {
+      id: hash,
+      inlineTemplate: false,
+      genDefaultAs: '_sfc_main',
+      isProd: false,
+      fs: { fileExists: existsSync, readFile: (f) => readFileSync(f, 'utf8') },
+    })
+    code = script.content
+    if (descriptor.template) {
+      const lang = descriptor.scriptSetup?.lang ?? descriptor.script?.lang
+      const t = compileTemplate({
+        source: descriptor.template.content,
+        filename,
+        id: hash,
+        scoped,
+        compilerOptions: {
+          scopeId: scoped ? scopeId : undefined,
+          bindingMetadata: script.bindings,
+          isTS: lang === 'ts',
+          expressionPlugins: lang === 'ts' ? ['typescript'] : [],
+        },
+      })
+      if (t.errors.length) throw new Error(`${filename}: ${t.errors.join('; ')}`)
+      code += `\n${t.code.replace(/^export function render/m, 'function render')}\n_sfc_main.render = render`
+    }
+  } else if (descriptor.script || descriptor.scriptSetup) {
     code = compileScript(descriptor, {
       id: hash,
       inlineTemplate: true,
@@ -188,6 +217,10 @@ export function compileSfc(filename: string, options: CompileOptions): CompiledS
     `_sfc_main.__cslugId = ${JSON.stringify(id)}`,
     scoped ? `_sfc_main.__scopeId = ${JSON.stringify(scopeId)}` : '',
     options.production ? '' : `_sfc_main.__file = ${JSON.stringify(filename)}`,
+    // HMR: Vue tracks instances by __hmrId; the registry holds the first definition loaded on the page, the one
+    // every instance (and every later hot module importing this component) shares
+    hot ? `_sfc_main.__hmrId = ${JSON.stringify(id)}` : '',
+    hot ? `;(globalThis.__cslug_components ??= {})[${JSON.stringify(id)}] ??= _sfc_main` : '',
   ]
   // server: record that this component rendered (its CSS goes into the page) and which namespaces islands need
   if (options.ssr) {
@@ -203,14 +236,19 @@ export function compileSfc(filename: string, options: CompileOptions): CompiledS
 
 /** Compiled results by file, reused while the file is unchanged. */
 export class SfcCache {
-  private readonly entries = new Map<string, { mtime: number; result: CompiledSfc }>()
+  private readonly entries = new Map<string, { mtime: number; size: number; result: CompiledSfc }>()
+  /** Forget every result (development: a stylesheet a component `@use`s changed). */
+  clear(): void {
+    this.entries.clear()
+  }
   get(filename: string, options: CompileOptions): CompiledSfc {
     const key = `${options.ssr ? 's' : 'c'}:${filename}`
-    const mtime = statSync(filename).mtimeMs
+    // the size too: a file written twice within the same millisecond (truncate, then write) keeps its mtime
+    const { mtimeMs: mtime, size } = statSync(filename)
     const hit = this.entries.get(key)
-    if (hit && hit.mtime === mtime) return hit.result
+    if (hit && hit.mtime === mtime && hit.size === size) return hit.result
     const result = compileSfc(filename, options)
-    this.entries.set(key, { mtime, result })
+    this.entries.set(key, { mtime, size, result })
     return result
   }
 }

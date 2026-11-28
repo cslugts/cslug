@@ -16,6 +16,15 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
   `LoginFailed`, `LoggedOut`, `TwoFactorEnabled`, `TwoFactorDisabled`, `RecoveryCodesRegenerated`, `TokenCreated`,
   `TokenRevoked`.
 
+### @cslug/vue, @cslug/cli
+- HMR under `cslug dev`: editing an island's template re-renders it in place with its state kept; a script change
+  remounts just that component; component styles and stylesheets are swapped without a reload; pages that did not
+  render the changed component are left alone. Over the existing SSE channel (no WebSockets). `cslug dev --no-hmr`
+  reloads pages instead. Production builds are unchanged.
+- Fixed: under `cslug dev`, an edited server template (view, layout) kept rendering the old version until the
+  process restarted (`bun --watch` does not see `.vue` files); it is now recompiled on save. Idle live-reload
+  connections get a heartbeat so they are not dropped (which reloaded the page).
+
 ### @cslug/cli, create-cslug
 - `cslug key:rotate [--write]`. New apps declare `APP_PREVIOUS_KEYS` (a secret) and pass it as
   `app.previousKeys`.

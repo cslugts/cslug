@@ -459,16 +459,30 @@ No Vite. `cslug dev` and `cslug build` use `Bun.build` with cslug's plugins:
 
 | File | Handled by |
 |---|---|
-| `.vue` (server) | cslug's runtime loader: `vue/compiler-sfc` with SSR output, cached, reloaded on change |
+| `.vue` (server) | cslug's runtime loader: `vue/compiler-sfc` with SSR output, cached; under `cslug dev`, recompiled on change |
 | `.vue` (browser, islands only) | cslug's `Bun.build` plugin: `vue/compiler-sfc` client output |
 | `.ts` | Bun |
 | `.scss` | cslug plugin using `sass` (optional peer) |
 | `.css` + Tailwind | Bun CSS bundler + `bun-plugin-tailwind` (optional) |
 | images, fonts | Bun, hashed |
 
-- **`cslug dev`**: builds the assets at start, rebuilds them when `resources/` changes, and **live-reloads**
-  the page over SSE; CSS changes swap the stylesheet without a reload. A server-side change restarts the
-  process (`bun --watch`) and open pages reload when it is back. (Vue state-preserving HMR is not in v1.)
+- **`cslug dev`**: builds the assets at start, rebuilds them when `resources/` changes, and updates open pages
+  over SSE (`/__cslug/live`, no WebSockets):
+
+  | You change | Open pages |
+  |---|---|
+  | an island's `<template>` (or a component inside an island) | **hot update**: re-rendered in place, state kept |
+  | an island's `<script>` | **hot update**: that component remounts (its own state resets), the page stays |
+  | a component's `<style>` | its CSS is replaced, no reload |
+  | a `.scss` / `.css` file | stylesheets swapped (and component styles that `@use` it), no reload |
+  | a server-only template (a view, a layout) | the server recompiles it, the pages that rendered it reload |
+  | a client `.ts` file in `resources/` | reload |
+  | server code (`app/`, `config/`, `routes/` …) | the process restarts (`bun --watch`), pages reload when it is back |
+
+  Pages that did not render the changed component are left alone. `cslug dev --no-hmr` turns hot updates off
+  (pages reload instead). A hot module is the changed component alone; `vue`, `@cslug/vue` and the components it
+  imports come from the page, but plain `.ts` modules it imports are a fresh copy, so module-level state belongs
+  in `defineStore()`. `cslug start` and `app.env=production` never watch files or serve `/__cslug/live`.
 - **`cslug build`**: minified, hashed output in `public/build/` plus `manifest.json`. Run it before deploying
   (the build command of your host does: see guide 21). Files in `public/` are served for GET requests no route matches; hashed build files
   are cached for a year. Server templates are compiled on first use (a few ms each) and cached.

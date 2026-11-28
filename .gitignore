@@ -14,3 +14,5 @@ coverage/
 
 # the vue test fixture imports @cslug/vue like an app (a committed relative symlink)
 !packages/vue/tests/fixture/node_modules/
+# copies of the fixture the HMR test edits
+packages/vue/tests/.hmr-*/
