@@ -1,5 +1,7 @@
 APP_ENV=development
 APP_URL=http://localhost:3000
+# TLS_CERT=storage/certs/dev.pem          # local HTTPS: `cslug dev:cert myapp.test` writes these
+# TLS_KEY=storage/certs/dev-key.pem
 APP_KEY=                                  # `cslug key:generate --write`
 DATABASE_URL=postgres://cslug:cslug@localhost:5432/{{db}}
 REDIS_URL=redis://localhost:6379

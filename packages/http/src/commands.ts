@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { arg, COMMANDS, Command, type CommandClass, defineGenerator, flag, names, parseArgs } from '@cslug/core'
-import { HttpKernel } from './kernel'
+import { HttpKernel, type TlsFiles } from './kernel'
 import { Router } from './router'
 
 const STUBS = join(import.meta.dir, '../stubs')
@@ -14,11 +14,26 @@ export class ServeCommand extends Command {
     port: flag.number().optional().describe('Port (default: config http.port, PORT, or 3000)'),
     host: flag.string().optional().describe('Interface to bind (default: all)'),
     reusePort: flag.boolean().describe('Share the port between several processes (cslug start with web instances > 1)'),
+    tlsCert: flag.string().optional().describe('HTTPS: certificate (PEM; default: config http.tls.cert, TLS_CERT)'),
+    tlsKey: flag.string().optional().describe('HTTPS: private key (PEM; default: config http.tls.key, TLS_KEY)'),
     withWorker: flag.boolean().describe('Also run queue:work in this process (needs @cslug/queue)'),
     withScheduler: flag.boolean().describe('Also run schedule:work in this process (needs ScheduleProvider)'),
   }
 
-  async handle({ port, host, reusePort, withWorker, withScheduler }: Command.Args<typeof ServeCommand>) {
+  async handle({
+    port,
+    host,
+    reusePort,
+    tlsCert,
+    tlsKey,
+    withWorker,
+    withScheduler,
+  }: Command.Args<typeof ServeCommand>) {
+    const tls = tlsFiles(this.app.config<Partial<TlsFiles> | undefined>('http.tls'), { cert: tlsCert, key: tlsKey })
+    if (typeof tls === 'string') {
+      this.error(tls)
+      return 1
+    }
     // http does not import the queue: the other roles run through their own commands, found by signature
     const roles = [withWorker && 'queue:work', withScheduler && 'schedule:work'].filter((r): r is string => !!r)
     const found = this.app.taggedTokens(COMMANDS) as CommandClass[]
@@ -31,7 +46,7 @@ export class ServeCommand extends Command {
       }
     }
     const envPort = process.env.PORT ? Number(process.env.PORT) : undefined
-    const server = this.app.resolve(HttpKernel).listen({ port: port ?? envPort, hostname: host, reusePort })
+    const server = this.app.resolve(HttpKernel).listen({ port: port ?? envPort, hostname: host, reusePort, tls })
     this.log.info('http.listening', { url: server.url.toString() })
     if (process.stdout.isTTY) this.info(`Listening on ${server.url}`)
     for (const signature of roles) {
@@ -41,6 +56,29 @@ export class ServeCommand extends Command {
     }
     return 0
   }
+}
+
+/**
+ * The certificate for `serve`: the flags, else `http.tls`, else `TLS_CERT` / `TLS_KEY` (written by `cslug dev:cert`).
+ * The first source that names either file must name both; otherwise the returned string is the error.
+ */
+export function tlsFiles(
+  config: Partial<TlsFiles> | undefined,
+  flags: { cert?: string; key?: string } = {},
+  env: Record<string, string | undefined> = process.env,
+): TlsFiles | string | undefined {
+  const sources = [
+    ['--tls-cert / --tls-key', flags.cert, flags.key],
+    ['http.tls', config?.cert, config?.key],
+    ['TLS_CERT / TLS_KEY', env.TLS_CERT, env.TLS_KEY],
+  ] as const
+  for (const [where, cert, key] of sources) {
+    if (!cert && !key) continue
+    if (!cert || !key)
+      return `HTTPS needs a certificate and a key: ${where} gives only the ${cert ? 'certificate' : 'key'}`
+    return { cert, key }
+  }
+  return undefined
 }
 
 /** `cslug routes`: every route with its name and middleware. */

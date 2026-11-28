@@ -1,6 +1,8 @@
+import { existsSync } from 'node:fs'
 import {
   type Application,
   BadRequestError,
+  CslugError,
   currentContext,
   HEALTH_CHECKS,
   type HealthCheck,
@@ -307,14 +309,16 @@ export class HttpKernel {
     return isTrusted && forwarded ? forwarded : socketIp
   }
 
-  /** Serve over HTTP. */
-  listen(options: { port?: number; hostname?: string; reusePort?: boolean } = {}) {
+  /** Serve over HTTP, or HTTPS with `tls` (paths to a PEM certificate and its key). */
+  listen(options: { port?: number; hostname?: string; reusePort?: boolean; tls?: TlsFiles } = {}) {
     this.compile()
     const port = options.port ?? this.app.config<number | undefined>('http.port') ?? 3000
+    const tls = options.tls ? tlsOptions(options.tls) : undefined
     this.server = Bun.serve({
       port,
       hostname: options.hostname ?? this.app.config<string | undefined>('http.host'),
       reusePort: options.reusePort,
+      tls,
       maxRequestBodySize: this.app.config<number | undefined>('http.maxBodyBytes') ?? 10 * 1024 * 1024,
       fetch: (req, server) => this.handle(req, { ip: server.requestIP(req)?.address }),
     })
@@ -348,6 +352,19 @@ export class HttpKernel {
     const ok = results.every(([, r]) => r === 'ok')
     return json({ status: ok ? 'ok' : 'unavailable', checks: Object.fromEntries(results) }, { status: ok ? 200 : 503 })
   }
+}
+
+/** A certificate and its private key, as paths to PEM files (`http.tls`, `TLS_CERT` / `TLS_KEY`). */
+export type TlsFiles = { cert: string; key: string }
+
+const tlsOptions = ({ cert, key }: TlsFiles) => {
+  for (const [what, path] of [
+    ['certificate', cert],
+    ['key', key],
+  ] as const) {
+    if (!existsSync(path)) throw new CslugError('http.tls_missing', `TLS ${what} not found: ${path}`)
+  }
+  return { cert: Bun.file(cert), key: Bun.file(key) }
 }
 
 const isClass = (v: unknown): v is new (...a: never[]) => unknown =>

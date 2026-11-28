@@ -138,6 +138,52 @@ anyway is not lost: its lease expires and another worker reclaims it (at-least-o
 plus the asset watcher with HMR. `cslug dev --web` (or `--worker`, `--scheduler`) runs only some roles. You never
 need two terminals or two instances in development.
 
+### HTTPS in development
+
+To work on `https://myapp.test` (or any local domain) without the browser's "Not secure" warning, the server
+needs a certificate the browser trusts. `cslug dev:cert` creates one with [mkcert](https://github.com/FiloSottile/mkcert),
+which installs a local certificate authority into the system and browser trust stores:
+
+```bash
+sudo apt install mkcert libnss3-tools     # macOS: brew install mkcert nss · Windows: choco install mkcert
+cslug dev:cert myapp.test,*.myapp.test    # comma-separated hosts; localhost and 127.0.0.1 are always added
+```
+
+It runs `mkcert -install` (once per machine; it may ask for your password), writes the certificate and key to
+`storage/certs/` (git-ignored), and sets three lines in `.env`:
+
+```bash
+TLS_CERT=storage/certs/dev.pem
+TLS_KEY=storage/certs/dev-key.pem
+APP_URL=https://myapp.test:3000     # the first host; the port of the previous APP_URL is kept
+```
+
+Then point the host at your machine (`127.0.0.1 myapp.test` in `/etc/hosts`, or your local DNS) and restart
+`cslug dev`: the web process listens over HTTPS and prints `https://…`. HMR keeps working (it uses the same origin).
+`--no-install` skips `mkcert -install`; `--no-app-url` leaves `APP_URL` alone. A wildcard directly under the
+top-level domain (`*.test`) is refused: browsers reject it, so name the hosts or go one level down (`*.myapp.test`).
+
+The certificate is taken from, in order: `cslug serve --tls-cert=… --tls-key=…`, the `http.tls` config, then
+`TLS_CERT` / `TLS_KEY`. Each source must give both files.
+
+```ts
+// config/http.ts
+import { defineConfig } from '@cslug/core'
+
+export default defineConfig({
+  port: 443,
+  tls: { cert: 'storage/certs/dev.pem', key: 'storage/certs/dev-key.pem' },
+})
+```
+
+To serve on port 443 (`https://myapp.test` with no port), Linux needs permission for Bun to bind it:
+`sudo setcap cap_net_bind_service=+ep $(which bun)` (again after each Bun upgrade). Or keep port 3000, or put a
+local proxy in front (Caddy with `tls internal` and `reverse_proxy localhost:3000`, then set
+`http.trustedProxies: ['loopback']`).
+
+This is for development. In production the platform or its proxy terminates TLS (Let's Encrypt), and the app
+serves plain HTTP behind it ([below](#behind-a-load-balancer-or-proxy)).
+
 ## Choosing
 
 | Situation | Model |
