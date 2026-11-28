@@ -23,6 +23,7 @@ my-app/
 │   ├── repositories/                      # booking-repository.ts, operator-repository.ts
 │   ├── tables/                            # table definitions + row types: booking-table.ts
 │   ├── enums/                             # plain TS: booking-status.ts (states + transitions)
+│   ├── exceptions/                        # error handlers: payment-declined-handler.ts (own pages and JSON)
 │   ├── jobs/                              # send-checkin-job.ts
 │   ├── workflows/                         # booking-deposit-workflow.ts (@cslug/workflow)
 │   ├── events/                            # booking-deposit-paid.ts

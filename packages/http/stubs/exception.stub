@@ -1,0 +1,21 @@
+import { inject } from '@cslug/core'
+import { ErrorHandler, type HttpContext } from '@cslug/http'
+
+/**
+ * How {{ base }} errors are shown. `handles` lists error classes and/or statuses (403, '4xx', '5xx', '*'). A
+ * method that is missing or returns undefined leaves the error to the next handler, then to the default page.
+ */
+@inject()
+export class {{ class }} extends ErrorHandler {
+  static handles = [403]
+
+  /** For browsers: a Response, or view(Page, props, { status }) from @cslug/vue. */
+  html(error: unknown, ctx: HttpContext) {
+    return undefined
+  }
+
+  /** For API clients: a plain object is sent as JSON with the error's status. */
+  json(error: unknown, ctx: HttpContext) {
+    return { code: 'forbidden', requestId: ctx.requestId }
+  }
+}

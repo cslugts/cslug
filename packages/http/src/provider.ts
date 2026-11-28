@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { Logger, ServiceProvider } from '@cslug/core'
 import { httpCommands, routeRows } from './commands'
-import { ExceptionHandler } from './errors'
+import { ExceptionHandler, isErrorHandlerClass } from './errors'
 import { HttpKernel } from './kernel'
 import { bodyLimit, cors, csrf, securityHeaders, session, statefulApi } from './middleware'
 import { type GroupOptions, type Middleware, type RouteRegistrar, Router } from './router'
@@ -57,6 +57,7 @@ export class HttpProvider extends ServiceProvider {
     const config = this.app.config<HttpConfig | undefined>('http') ?? {}
     const kernel = this.app.resolve(HttpKernel)
     const router = this.app.resolve(Router)
+    await this.loadErrorHandlers()
     if (config.public !== false)
       kernel.publicDir = join(this.app.rootDir, typeof config.public === 'string' ? config.public : 'public')
     kernel.global.push(securityHeaders(), bodyLimit(config.bodyLimit ?? '1mb'), ...(config.middleware ?? []))
@@ -104,6 +105,19 @@ export class HttpProvider extends ServiceProvider {
       router.load(mod.default, group)
     }
     kernel.compile()
+  }
+
+  /** Import `app/exceptions/**` (not `*.test.ts`) and register its `ErrorHandler` classes, in file order. */
+  private async loadErrorHandlers() {
+    const dir = join(this.app.rootDir, 'app/exceptions')
+    if (!existsSync(dir)) return
+    const handler = this.app.resolve(ExceptionHandler)
+    const files = (readdirSync(dir, { recursive: true }) as string[])
+      .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.endsWith('.d.ts'))
+      .sort()
+    for (const file of files)
+      for (const value of Object.values((await import(join(dir, file))) as Record<string, unknown>))
+        if (isErrorHandlerClass(value)) handler.use(value)
   }
 
   async shutdown() {

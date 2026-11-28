@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { arg, COMMANDS, Command, type CommandClass, flag, names, parseArgs } from '@cslug/core'
+import { arg, COMMANDS, Command, type CommandClass, defineGenerator, flag, names, parseArgs } from '@cslug/core'
 import { HttpKernel } from './kernel'
 import { Router } from './router'
 
@@ -126,8 +126,18 @@ export class MakeMiddlewareCommand extends Command {
   }
 }
 
+/** `cslug make:exception PaymentDeclined` → `app/exceptions/payment-declined-handler.ts`. */
+export const MakeExceptionCommand = defineGenerator({
+  kind: 'exception',
+  description: 'Create an error handler (app/exceptions/): its own page and JSON for some errors',
+  stubs: STUBS,
+  suffix: 'handler',
+  files: (n) => [{ stub: 'exception.stub', target: `app/exceptions/${n.file}.ts` }],
+})
+
 export const httpCommands = [
   ServeCommand,
+  MakeExceptionCommand,
   RoutesCommand,
   MakeControllerCommand,
   MakeValidatorCommand,

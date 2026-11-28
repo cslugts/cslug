@@ -4,6 +4,16 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### Error pages and handlers
+- **http:** error handlers in `app/exceptions/` (found at boot): `ErrorHandler` classes with `static handles`
+  (error classes, statuses, `'4xx'`, `'5xx'`, `'*'`; the nearest class wins) and `html()` / `json()` / `report()`;
+  a form's `ValidationError` still goes back to the form. `ExceptionHandler.use()`, `pages()`, public `problem()`.
+  `cslug make:exception`.
+- **vue:** error views by convention: `resources/views/errors/<status>.vue`, else `4xx.vue` / `5xx.vue`, for
+  browsers, with `status`, `code`, `title`, `requestId` (and `detail` / `stack` for 5xx in development).
+- **create-cslug:** `--web` apps ship `errors/404.vue`, `403.vue` and `500.vue`, rendered by the convention (the
+  hand-written 404 hook is gone).
+
 ## 0.12.0 (2026-11-28)
 
 Every generator the guides describe: `make:job`, `make:mail`, `make:notification`, `make:policy`, `make:view`,
