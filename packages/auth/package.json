@@ -1,6 +1,6 @@
 {
   "name": "@cslug/auth",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Session and token guards, password hashing, magic links, policies and gates.",
   "license": "MIT",
   "type": "module",

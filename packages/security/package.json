@@ -1,6 +1,6 @@
 {
   "name": "@cslug/security",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Content-Security-Policy nonces, IP filter and per-IP limit, security.txt, account lockout, breached passwords and an audit log for cslug apps.",
   "license": "MIT",
   "type": "module",
