@@ -156,20 +156,42 @@ cslug workflow:cancel deposit:b1
 cslug workflow:prune --older-than=90d    # finished runs and their journals
 ```
 
-Each step is a span in traces (guide 23), and with `@cslug/security` each run's start, end and failure is in the audit
-log. `cslug describe workflows` lists the registered workflows.
+`workflow:retry` works on `failed` and `compensation_failed` runs: the failed step (or compensation) runs again at
+once with fresh attempts, and the run carries on from there. Deploy the fix first.
+
+Each step or compensation that runs is a span `workflow.step <name>` in traces (guide 23), with the run id and the
+attempt; a replay adds none. With `@cslug/security`, each run's start and end (`workflow.started`,
+`workflow.completed`, `workflow.failed`, `workflow.compensated`, …) is in the audit log, with the run as subject.
+`cslug describe workflows` lists the registered workflows and the events they wait for. Schedule the pruning:
+
+```ts
+// routes/schedule.ts
+s.call('workflow:prune', ({ resolve }) => resolve(Workflows).prune('90d')).daily()
+```
 
 ## Testing
 
 ```ts
-const t = testApp({ fakes: ['workflow'] })
+const t = testApp({ fakes: ['workflows', 'queue'], database: 'truncate' })
 
 test('an unpaid deposit expires after 3 days', async () => {
   const run = await BookingDepositWorkflow.start({ bookingId: booking.id })
   await t.workflows.runUntilIdle()          // runs steps now; sleeps and timeouts are fast-forwarded
-  expect(await t.workflows.find(run.id)).toMatchObject({ status: 'completed', output: { outcome: 'expired' } })
+  await t.workflows.assertStatus(run.id, 'completed', { outcome: 'expired' })
+})
+
+test('the operator approves', async () => {
+  const run = await BookingDepositWorkflow.start({ bookingId: booking.id })
+  await t.workflows.runUntilIdle({ fastForward: false }) // now waiting for DepositPaid (no time passes)
+  await DepositPaid.emit({ bookingId: booking.id, amount: 66_000n })
+  await t.workflows.signal(run.id, 'operator.decision', { approved: true }) // kept until the run asks for it
+  await t.workflows.runUntilIdle() // the 1-day sleep is skipped, the signal is there
+  await t.workflows.assertStatus(run.id, 'completed', { outcome: 'approved' })
 })
 ```
 
-`WorkflowFake` runs workflows synchronously on the test's database, fast-forwards sleeps and timeouts on the test
-clock, and delivers signals and events as they are sent.
+`t.workflows` (`WorkflowFake`) resumes every run that can move, on the test's database, and when none can, moves
+`t.clock` to the earliest wake-up (a sleep, a retry, a timeout) and goes on. It stops when the runs left wait for
+a signal or an event without a timeout. `find`, `journal` and `signal` are there too. Use `database: 'truncate'`:
+runs commit for real (a lock and a transaction per step). The resume jobs the queue fake records can be ignored;
+do not `t.queue.drain()` them, as it runs a sleeping run's wake-up before its time, over and over.

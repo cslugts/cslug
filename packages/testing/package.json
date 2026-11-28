@@ -41,7 +41,8 @@
     "@cslug/storage": "workspace:*",
     "@cslug/webhook": "workspace:*",
     "@cslug/ai": "workspace:*",
-    "@cslug/cli": "workspace:*"
+    "@cslug/cli": "workspace:*",
+    "@cslug/workflow": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@cslug/validation": {
@@ -81,6 +82,9 @@
       "optional": true
     },
     "@cslug/cli": {
+      "optional": true
+    },
+    "@cslug/workflow": {
       "optional": true
     }
   }

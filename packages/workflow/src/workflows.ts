@@ -3,10 +3,12 @@ import {
   type Application,
   Clock,
   currentContext,
+  type Duration,
   EventBus,
   Logger,
   NotFoundError,
   resolve,
+  Tracer,
 } from '@cslug/core'
 import { Database } from '@cslug/database'
 import { Job, Outbox } from '@cslug/queue'
@@ -38,9 +40,16 @@ export class WorkflowResumeJob extends Job<{ runId: string; wakeAt?: string }> {
  * Starts, resumes, signals, finds and cancels workflow runs (guide 25). Runs are rows in `cslug_workflow_runs`; their
  * journals in `cslug_workflow_steps`.
  */
+/** What `Workflows` needs of @cslug/security's `Audit` (set by `WorkflowProvider` when it is there). */
+export type WorkflowAudit = {
+  record(action: string, options: { subject: { type: string; id: string }; data: Record<string, unknown> }): unknown
+}
+
 export class Workflows {
   readonly store: WorkflowStore
   private readonly watched = new Set<AnyEventClass>()
+  /** With @cslug/security: starts and ends of runs go to its audit log. */
+  audit?: WorkflowAudit
 
   constructor(private readonly app: Application) {
     this.store = new WorkflowStore(() => app.resolve(Database))
@@ -51,8 +60,51 @@ export class Workflows {
     this.register(workflow)
     const id = options.id ?? Bun.randomUUIDv7()
     const created = await this.store.insert(id, workflowName(workflow), toJson(input))
-    if (created) await this.wake(id, undefined, true)
+    if (created) {
+      await this.wake(id, undefined, true)
+      await this.audited(id, workflowName(workflow), 'started')
+    }
     return { id, created }
+  }
+
+  /** Runs, newest first (`cslug workflow:list`). */
+  list(filter: { status?: RunStatus; workflow?: string; limit?: number } = {}): Promise<WorkflowRun[]> {
+    return this.store.list(filter)
+  }
+
+  /**
+   * Run a `failed` or `compensation_failed` run again from where it failed (`cslug workflow:retry`): its failed
+   * step (or compensation) gets fresh attempts. False for any other run.
+   */
+  async retry(runId: string): Promise<boolean> {
+    if (!(await this.store.retry(runId))) return false
+    await this.wake(runId)
+    return true
+  }
+
+  /** Delete runs that finished more than `olderThan` ago, with their journals (`cslug workflow:prune`). */
+  prune(olderThan: Duration): Promise<number> {
+    return this.store.prune(this.app.resolve(Clock).subtract(olderThan))
+  }
+
+  /** An audit entry `workflow.<what>` (with @cslug/security); a failure to record is logged, not thrown. */
+  private async audited(runId: string, workflow: string, what: string): Promise<void> {
+    if (!this.audit) return
+    try {
+      await this.audit.record(`workflow.${what}`, { subject: { type: 'workflow_run', id: runId }, data: { workflow } })
+    } catch (error) {
+      this.app.resolve(Logger).error('workflow.audit_failed', { runId, error })
+    }
+  }
+
+  private async finish(
+    runId: string,
+    workflow: string,
+    status: RunStatus,
+    values: { output?: unknown; error?: unknown },
+  ) {
+    await this.store.finish(runId, status, values)
+    await this.audited(runId, workflow, status)
   }
 
   /** Send a signal to a run: `ctx.waitForSignal(name)` returns `data`. Kept until the run asks for it. */
@@ -118,7 +170,7 @@ export class Workflows {
       if (!run || FINISHED.includes(run.status)) return
       const workflow = findWorkflow(run.workflow)
       if (!workflow) {
-        await this.store.finish(runId, 'failed', {
+        await this.finish(runId, run.workflow, 'failed', {
           error: { name: 'CslugError', code: 'workflow.unknown', message: `No workflow named ${run.workflow}` },
         })
         return
@@ -133,6 +185,7 @@ export class Workflows {
         db,
         this.app.resolve(Clock),
         cancelling,
+        this.app.resolve(Tracer),
       )
       const scope = currentContext()?.scope ?? this.app
       const suspend = async (s: Suspension, status = s.status as RunStatus) => {
@@ -146,7 +199,7 @@ export class Workflows {
       try {
         const instance = scope.resolve(workflow as never) as { run(c: WorkflowContext, input: unknown): unknown }
         const output = await instance.run(ctx, run.input)
-        if (!cancelling) return await this.store.finish(runId, 'completed', { output: toJson(output) })
+        if (!cancelling) return await this.finish(runId, run.workflow, 'completed', { output: toJson(output) })
       } catch (error) {
         if (error instanceof Suspension) return await suspend(error)
         if (!(error instanceof Cancellation)) failure = error
@@ -156,16 +209,16 @@ export class Workflows {
         this.app.resolve(Logger).error('workflow.failed', { runId, workflow: run.workflow, error: failure })
       const error = cancelling || failure === undefined ? undefined : errorJson(failure)
       if (!ctx.hasCompensations || failure instanceof NondeterminismError)
-        return await this.store.finish(runId, cancelling ? 'cancelled' : 'failed', { error })
+        return await this.finish(runId, run.workflow, cancelling ? 'cancelled' : 'failed', { error })
       try {
         if (!cancelling) await this.store.setStatus(runId, 'compensating')
         await ctx.compensate()
-        await this.store.finish(runId, cancelling ? 'cancelled' : 'compensated', { error })
+        await this.finish(runId, run.workflow, cancelling ? 'cancelled' : 'compensated', { error })
       } catch (compensation) {
         if (compensation instanceof Suspension)
           return await suspend(compensation, cancelling ? 'cancelling' : 'compensating')
         this.app.resolve(Logger).error('workflow.compensation_failed', { runId, error: compensation })
-        await this.store.finish(runId, 'compensation_failed', { error: errorJson(compensation) })
+        await this.finish(runId, run.workflow, 'compensation_failed', { error: errorJson(compensation) })
       }
     })
   }

@@ -90,6 +90,38 @@ export class WorkflowStore {
     return n > 0
   }
 
+  /** Runs, newest first, filtered by status and workflow name. */
+  list(filter: { status?: RunStatus; workflow?: string; limit?: number } = {}): Promise<WorkflowRun[]> {
+    const where = [
+      filter.status ? sql`status = ${filter.status}` : sql`true`,
+      filter.workflow ? sql`workflow = ${filter.workflow}` : sql`true`,
+    ]
+    return this.db().many<WorkflowRun>(sql`select * from cslug_workflow_runs where ${where[0]} and ${where[1]}
+      order by created_at desc, id desc limit ${filter.limit ?? 50}`)
+  }
+
+  /**
+   * Make a failed run runnable again: its failed journal entries retry at once with fresh attempts; the run is
+   * `pending` (`compensating` after a failed compensation). False unless it was `failed` or `compensation_failed`.
+   */
+  async retry(id: string): Promise<boolean> {
+    const run = await this.find(id)
+    if (!run || (run.status !== 'failed' && run.status !== 'compensation_failed')) return false
+    await this.db().exec(sql`update cslug_workflow_steps set status = 'retrying', attempts = 0, wake_at = null,
+      updated_at = now() where run_id = ${id} and status = 'failed'`)
+    const status: RunStatus = run.status === 'failed' ? 'pending' : 'compensating'
+    await this.db().exec(sql`update cslug_workflow_runs set status = ${status}, error = null, finished_at = null,
+      updated_at = now() where id = ${id}`)
+    return true
+  }
+
+  /** Delete finished runs (and their journals and signals) that finished before `before`. */
+  prune(before: Date): Promise<number> {
+    return this.db().exec(sql`delete from cslug_workflow_runs
+      where status in ('completed', 'failed', 'cancelled', 'compensated', 'compensation_failed')
+        and finished_at < ${before}`)
+  }
+
   async journal(runId: string): Promise<JournalEntry[]> {
     return this.db().many<JournalEntry>(sql`select seq, name, kind, status, result, error, attempts, wake_at
       from cslug_workflow_steps where run_id = ${runId} order by seq`)

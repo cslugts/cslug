@@ -50,3 +50,22 @@ kept) or, on a compensation's last try, `compensation_failed` (that error). With
 `cancel(id)` sets `cancelling` and queues a resume. That replay runs in cancel mode: the first `ctx` call whose
 entry is not completed throws `Cancellation`; the finished steps are compensated the same way, and the run ends
 `cancelled` (or `compensation_failed`).
+
+## Operations
+
+`Workflows.list({ status, workflow, limit })`, `retry(id)` (a `failed` run back to `pending`, a
+`compensation_failed` one to `compensating`; its failed journal entries become `retrying` with no wake-up time and
+zero attempts, so they run at once), `prune(olderThan)` (finished runs, with their journals and signals, by
+`finished_at`). Commands: `workflow:list [--status] [--workflow] [--limit] [--json]`, `workflow:show <id> [--json]`,
+`workflow:retry <id>`, `workflow:cancel <id>`, `workflow:prune [--older-than=90d]`. `cslug describe workflows`: name,
+class and events waited for.
+
+Traces: a span `workflow.step <name>` (attributes `cslug.workflow.run_id`, `.step`, `.attempt`) around each step or
+compensation that runs, failed ones recorded. Audit (with `@cslug/security`, loaded at runtime): `workflow.started`
+in `start()`, and `workflow.<final status>` when a run ends, subject `{ type: 'workflow_run', id }`, data
+`{ workflow }`; `Workflows.audit` can be set to any `{ record(action, options) }`.
+
+## Testing
+
+`testApp({ fakes: ['workflows'] })` → `t.workflows`, a `WorkflowFake`: `runUntilIdle({ max?, fastForward? })`,
+`assertStatus(id, status, output?)`, `find`, `journal`, `signal`. See guide 25 § Testing.

@@ -13,7 +13,14 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 - Sagas: `step(name, fn, { compensate })`; when a run fails, the finished steps' compensations run last first, each
   once and retried (`compensating` → `compensated` or `compensation_failed`). `cancel()` compensates the same way
   (`cancelling` → `cancelled`).
+- Operations: `workflow:list`, `workflow:show`, `workflow:retry` (from the failed step or compensation),
+  `workflow:cancel`, `workflow:prune`; `cslug describe workflows`; a span per step that runs; audit entries with
+  `@cslug/security`.
 - `cslug add workflow`.
+
+### @cslug/testing
+- `fakes: ['workflows']` → `t.workflows` (`WorkflowFake`): `runUntilIdle()` resumes runs and fast-forwards the test
+  clock over sleeps, retries and timeouts; `assertStatus()`.
 
 ### @cslug/core
 - `states(transitions, { name, onEnter, onLeave })`: a state machine in plain TypeScript (`values`, `type`, `is`,

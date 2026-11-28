@@ -16,3 +16,5 @@ export type StorageFake = import('@cslug/storage').StorageFake
 export type NotificationFake = import('@cslug/notification').NotificationFake
 export type AiModule = typeof import('@cslug/ai')
 export type AiFake = import('@cslug/ai').AiFake
+export type WorkflowModule = typeof import('@cslug/workflow')
+export type WorkflowFake = import('@cslug/workflow').WorkflowFake

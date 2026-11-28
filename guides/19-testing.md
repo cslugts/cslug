@@ -43,7 +43,7 @@ test('group size over 12 is rejected', async () => {
 
 ```ts
 const app = testApp({
-  fakes: ['mail', 'queue', 'notify', 'events', 'storage', 'ai'],   // or 'all'
+  fakes: ['mail', 'queue', 'notify', 'events', 'storage', 'ai', 'workflows'],   // or 'all'
   config: { 'payments.driver': 'fake' },
   database: 'transaction',                                         // default; see below
 })
@@ -95,6 +95,8 @@ app.notify.assertSentTo(traveller, CheckinDueNotification, { channel: 'whatsapp'
 app.events.assertEmitted(BookingDepositPaid)
 app.storage.assertExists(`operators/${operatorId}/licence/`)          // a file under it (generated name)
 app.swap(PaymentGateway, new FakePaymentGateway({ failNextRelease: true }))
+await app.workflows.runUntilIdle()                                    // workflows (guide 25), sleeps fast-forwarded
+await app.workflows.assertStatus(runId, 'completed', { outcome: 'expired' })
 ```
 
 ## Time
