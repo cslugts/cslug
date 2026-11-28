@@ -64,6 +64,8 @@ Schemas are **immutable**: every method returns a new schema, so a base schema c
 ### Modifiers on every schema
 
 ```ts
+import { v } from '@cslug/validation'
+
 v.string().optional()                 // string | undefined; in an object the key becomes optional (key?:)
 v.string().nullable()                 // string | null
 v.int().default(1)                    // used when the input is undefined; the output is never undefined
@@ -105,6 +107,8 @@ Traveller.shape.email                 // the field schemas, to reuse one
 ### Types
 
 ```ts
+import { v } from '@cslug/validation'
+
 type Traveller = v.infer<typeof Traveller>   // after parsing (defaults applied, transforms run)
 type TravellerForm = v.input<typeof Traveller> // before parsing: what a form holds (optional where a default is)
 ```
@@ -115,6 +119,8 @@ type TravellerForm = v.input<typeof Traveller> // before parsing: what a form ho
 dates), so `v.int()` works on `?page=2`. Outside a request, use the explicit coercing builders:
 
 ```ts
+import { v } from '@cslug/validation'
+
 v.coerce.int()       // '42' → 42
 v.coerce.boolean()   // '1', 'on', 'true', 'yes' → true; '0', 'off', 'false', 'no', '' and absent → false
 v.coerce.date()      // an ISO string, a Date or epoch ms → Date
@@ -182,6 +188,8 @@ await Coupon.parseAsync(input)                                  // needed when a
 Throw a validation error yourself (a 422 with that field's message, like any other):
 
 ```ts
+import { ValidationError } from '@cslug/validation'
+
 if (!(await auth.attempt(email, password))) throw new ValidationError({ email: ['auth.failed'] })
 ```
 
@@ -269,3 +277,13 @@ StoreTripRequestValidator.toJSONSchema()      // draft 2020-12: used by `cslug d
 Schema (Zod, Valibot, ArkType), but `v` is the documented default.
 
 The reference is [`packages/validation/docs/api.md`](../packages/validation/docs/api.md).
+
+## Reference
+
+```ts
+import { v, Validator, validate, ValidationError, type Fail, type Issue, formatMessage, interpolate, configure } from '@cslug/validation'
+```
+
+`v` holds every builder (`v.string()`, `v.object()`, `v.coerce.int()` …, the table above); `v.infer` and `v.input`
+are its types. `@cslug/core` re-exports `v` and `ValidationError`, so `import { v } from '@cslug/core'` works too.
+Generator: `cslug make:validator StoreClaim` → `app/validators/store-claim-validator.ts`.

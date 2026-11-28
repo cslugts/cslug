@@ -5,6 +5,12 @@ Routes are declared in `routes/web.ts` (HTML pages: session, CSRF) and `routes/a
 loads `routes/schedule.ts` (guide 12). More files (`routes/admin.ts`) are imported from one of these and mounted
 with a group: `r.group({ … }, admin.routes)`.
 
+## Setup
+
+`@cslug/http` is in every preset; `HttpProvider` in `bootstrap/providers.ts` loads `routes/web.ts` and `routes/api.ts`.
+Its settings are `config/http.ts` ([below](#configuration)), sessions `config/session.ts`. Generators:
+`cslug make:controller Claim [--resource]` and `cslug make:middleware RequireVerifiedOperator`.
+
 ## Routes
 
 ```ts
@@ -160,6 +166,10 @@ r.group({ domain: ':operator.example.com', as: 'operator-site' }, (r) => {
 ```
 
 ```ts
+import { inject } from '@cslug/core'
+import type { HttpContext } from '@cslug/http'
+import { view } from '@cslug/vue'
+
 @inject(OperatorRepository)
 export class OperatorSiteController {
   constructor(private operators: OperatorRepository) {}
@@ -180,6 +190,8 @@ Hard-coded hosts break on `localhost` and staging, so put them in config:
 
 ```ts
 // config/http.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   domains: {
     app: env.APP_DOMAIN,                    // 'example.com'          | 'localhost'
@@ -190,6 +202,8 @@ export default defineConfig({
 ```
 
 ```ts
+import { config } from '@cslug/core'
+
 r.group({ domain: config('http.domains.api'), prefix: '/v1' }, …)
 r.group({ domain: `:operator.${config('http.domains.app')}` }, …)
 ```
@@ -211,6 +225,8 @@ without editing `/etc/hosts`.
 `route()` knows each route's domain. A route on another host comes back as an absolute URL:
 
 ```ts
+import { route } from '@cslug/http'
+
 route('api.quotes.index')                                        // 'https://api.example.com/v1/quotes'
 route('operator-site.home', { operator: 'ravinala-tours' })      // 'https://ravinala-tours.example.com/'
 ```
@@ -239,6 +255,8 @@ A signed URL carries an HMAC of itself (made with `APP_KEY`), so it cannot be ch
 an expiry. Links in emails ("download your trip pack", "confirm your address") use them instead of a login:
 
 ```ts
+import { route } from '@cslug/http'
+
 const url = route('bookings.trip-pack', { booking: id }, { absolute: true, signed: true, expiresIn: '7d' })
 ```
 
@@ -367,6 +385,8 @@ register() {
 
 ```ts
 // config/http.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   port: env.PORT,                       // default 3000
   host: '0.0.0.0',
@@ -396,3 +416,23 @@ GET     //api.example.com/v1/quotes           api.quotes.index       QuoteContro
 
 `cslug routes booking` keeps the routes whose path or name contains `booking`; `--json` prints them as data, and
 `cslug describe routes` is the same list for scripts and AI agents.
+
+## Reference
+
+```ts
+import { defineRoutes, route, urlFor, verifySignedUrl, Router, type RouteRegistrar, type Middleware, type Next } from '@cslug/http'
+import { securityHeaders, bodyLimit, session, csrf, cors, statefulApi, throttle, locale, timeout, signed } from '@cslug/http/middleware'
+import { auth, guest, can, ability } from '@cslug/auth'                    // guide 15
+import { verifySignature } from '@cslug/webhook'                          // guide 17
+import { csp, ipFilter, ipLimit } from '@cslug/security'                  // guide 24
+import { HEALTH_CHECKS, healthCheck } from '@cslug/core'
+```
+
+| | |
+|---|---|
+| `defineRoutes((r) => …)` | The default export of a routes file |
+| `r.get/post/put/patch/delete/options(path, action)`, `r.group(options, fn)`, `r.resource(name, Controller)` | Routes; `.name()`, `.middleware()`, `.where()`, `.validates()` on each |
+| `route(name, params?, { absolute?, query?, signed?, expiresIn? })` | A URL from a route name (also in `@cslug/vue` for views and islands) |
+| `urlFor(router, appUrl, key, name, params?, options?)`, `verifySignedUrl(url, key)` | The same without an app context |
+| `Middleware`, `Next` | Types for your own middleware |
+| `WEB_MIDDLEWARE`, `API_MIDDLEWARE` | Tags for packages adding group middleware |

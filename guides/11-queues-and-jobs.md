@@ -3,9 +3,20 @@
 A job is an `@inject()` class with a typed payload and a `handle` method. Jobs run in a worker process
 (`cslug queue:work`), on cslug's own Redis Streams queue (no dependency).
 
-## Defining a job
+## Setup
 
-`cslug make:job SendCheckin` writes `app/jobs/send-checkin-job.ts` to start from.
+```bash
+cslug add queue            # bun add @cslug/queue; QueueProvider and ScheduleProvider; config/queue.ts;
+                           # routes/schedule.ts; a worker and the scheduler in cslug.config.ts
+cslug migrate              # with @cslug/database: the cslug_queue_outbox table (durable dispatch)
+```
+
+The `--full` preset has it already. The queue needs Redis (`@cslug/redis`, `RedisProvider` before
+`QueueProvider`). Settings are in `config/queue.ts` ([below](#configuration)); the worker processes in
+`cslug.config.ts` (guide 21). Generator: `cslug make:job SendCheckin` → `app/jobs/send-checkin-job.ts`. Commands:
+`queue:work`, `queue:failed`, `queue:retry`, `queue:forget`, `queue:clear`, `queue:stats`, `queue:health`.
+
+## Defining a job
 
 ```ts
 // app/jobs/send-checkin-job.ts
@@ -71,6 +82,8 @@ Payloads are JSON (bigint and Date are supported). Pass **IDs, not rows**: the r
 For jobs fed by outside data (webhooks, AI), declare a schema; the payload is checked on dispatch and again on run:
 
 ```ts
+import { Job } from '@cslug/queue'
+
 export class ProcessPaymentEventJob extends Job.schema(v.object({ eventId: v.string() })) { … }
 ```
 
@@ -114,6 +127,8 @@ async handle({ bookingId, stage }: Payload) {
 ## Chains and batches
 
 ```ts
+import { Queue } from '@cslug/queue'
+
 await Queue.chain([
   VerifyDocumentsJob.with({ operatorId }),
   ComputeBadgeJob.with({ operatorId }),
@@ -154,6 +169,8 @@ A renamed job class can keep its stored name with `static jobName = 'OldName'`.
 
 ```ts
 // config/queue.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   connection: 'default',             // redis connection name
   queues: {
@@ -171,8 +188,24 @@ export default defineConfig({
 ## Testing
 
 ```ts
+import { testApp } from '@cslug/testing'
+
 const app = testApp({ fakes: ['queue'] })
 await app.post(`/bookings/${id}/accept`).assertRedirect()
 app.queue.assertPushed(SendCheckinJob, (j) => j.payload.milestone === 'pickup' && j.delay === undefined)
 await app.queue.drain()            // run everything pushed, including jobs pushed by those jobs
 ```
+
+## Reference
+
+```ts
+import { Job, Queue, PendingDispatch, backoffDelay, JobTimeoutError, QueueFake, type JobSettings,
+  type Backoff } from '@cslug/queue'
+```
+
+| | |
+|---|---|
+| `Job<Payload>` | The base class: `handle(payload)`, optional `failed(payload, error)`; statics `queue`, `tries`, `backoff`, `timeout`, `jobName`; `Job.dispatch(payload)`, `Job.with(payload)`, `Job.schema(schema)`, `Job.exponential(base, options)` |
+| `PendingDispatch` | What `dispatch()` returns: `.delay()`, `.at()`, `.onQueue()`, `.priority()`, `.unique()`, `.tries()`, `.durable()`, `.immediately()` |
+| `Queue` | Injectable: `dispatch(Job, payload)`; `Queue.chain([...])`, `Queue.batch([...])` |
+| `QueueFake` | `testApp({ fakes: ['queue'] })` → `t.queue` |

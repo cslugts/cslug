@@ -6,6 +6,7 @@ or `cslug schedule:run` (single tick, for an external cron).
 ```ts
 // routes/schedule.ts
 import { defineSchedule } from '@cslug/queue'
+import { Cache } from '@cslug/core'
 import { DispatchDailyCheckinsJob } from '#app/jobs/dispatch-daily-checkins-job'
 import { RecheckVisaPageJob } from '#app/jobs/recheck-visa-page-job'
 import { PilotMetricsReportJob } from '#app/jobs/pilot-metrics-report-job'
@@ -29,6 +30,13 @@ export default defineSchedule((s) => {
   s.cron('0 */6 * * *', 'db:vacuum-webhook-inbox', VacuumWebhookInboxJob)
 })
 ```
+
+## Setup
+
+`cslug add queue` installs the scheduler with the queue: `ScheduleProvider` (after `QueueProvider`) loads
+`routes/schedule.ts`, and `cslug.config.ts` runs one scheduler process (`processes.scheduler: true`). Its time zone
+is `schedule.timezone` (default UTC). Commands: `schedule:work`, `schedule:run`, `schedule:list`,
+`schedule:history`, `schedule:test`.
 
 ## Guarantees
 
@@ -69,6 +77,9 @@ cslug schedule:test dispatch-daily-checkins     # run now, once, ignoring the sc
 A scheduled job should find the work and dispatch one job per item, so each item retries independently:
 
 ```ts
+import { Clock, inject } from '@cslug/core'
+import { Job } from '@cslug/queue'
+
 @inject(BookingRepository, Clock)
 export class DispatchDailyCheckinsJob extends Job {
   constructor(private bookings: BookingRepository, private clock: Clock) { super() }
@@ -86,8 +97,19 @@ export class DispatchDailyCheckinsJob extends Job {
 ## Testing
 
 ```ts
+import { testApp } from '@cslug/testing'
+
 const app = testApp({ fakes: ['queue'] })
 app.clock.travelTo('2027-05-15T05:00:00Z')          // 08:00 in Antananarivo
 await app.schedule.runDue()
 app.queue.assertPushed(DispatchDailyCheckinsJob)
 ```
+
+## Reference
+
+```ts
+import { defineSchedule, Cron, localTime, type ScheduleBuilder, type ScheduleEntry } from '@cslug/queue'
+```
+
+`defineSchedule((s) => …)` is the default export of `routes/schedule.ts`; `s.job(Job, payload?)`,
+`s.call(name, fn)` and `s.cron(expression, name, Job)` add entries, then the frequency helpers above.

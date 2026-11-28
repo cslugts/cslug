@@ -43,6 +43,8 @@ request-bound cache) is safe.
 ## The context
 
 ```ts
+import type { HttpContext } from '@cslug/http'
+
 async show({ request, params, auth, session, response, locale, signal, log }: HttpContext) {}
 ```
 
@@ -101,6 +103,8 @@ These are merged into whatever the action returns (a header the returned respons
 In `routes/web.ts` routes (the `session()` middleware; `@cslug/redis` stores it in Redis):
 
 ```ts
+import { t } from '@cslug/core'
+
 session.put('cart', cart)
 session.get<Cart>('cart')
 session.has('cart'); session.forget('cart'); session.pull('cart')   // pull: get and forget
@@ -154,6 +158,9 @@ return sse(this.importer.progress(importId))
 ### Redirects
 
 ```ts
+import { t } from '@cslug/core'
+import { redirect, route } from '@cslug/http'
+
 return redirect().route('bookings.show', { booking: id })   // to a named route
 return redirect().to('/bookings')                           // a local path
 return redirect().away(checkoutUrl)                         // another site
@@ -209,6 +216,7 @@ The exception handler picks the format:
 ```ts
 // app/providers/app-service-provider.ts
 import { ExceptionHandler } from '@cslug/http'
+import { view } from '@cslug/vue'
 
 boot() {
   const handler = this.app.resolve(ExceptionHandler)
@@ -226,6 +234,9 @@ boot() {
 When a controller has one job, name it after the job and implement `handle`:
 
 ```ts
+import { inject } from '@cslug/core'
+import type { HttpContext } from '@cslug/http'
+
 @inject(EscrowService)
 export class ReleaseStageController {
   constructor(private escrow: EscrowService) {}
@@ -242,6 +253,8 @@ is just a typed mapper:
 
 ```ts
 // app/transformers/operator-transformer.ts
+import type { HttpContext } from '@cslug/http'
+
 export const operatorTransformer = (o: Operator) => ({
   id: o.id,
   name: o.displayName,
@@ -259,3 +272,17 @@ async index({ request }: HttpContext) {
 
 API routes live in `routes/api.ts`: no session or CSRF; clients authenticate with API tokens (guide 15), and
 islands with the session when `http.api.stateful` is on (guide 05).
+
+## Reference
+
+```ts
+import { type HttpContext, HttpRequest, redirect, Redirect, json, created, accepted, noContent, download, stream, sse,
+  ExceptionHandler, type Responsable } from '@cslug/http'
+import { view } from '@cslug/vue'                                         // guide 08
+import { AppError, NotFoundError, ForbiddenError, UnauthorizedError, ConflictError, BadRequestError,
+  TooManyRequestsError, t } from '@cslug/core'
+import { ValidationError } from '@cslug/validation'
+```
+
+Generator: `cslug make:controller Claim` (`--resource` for the seven REST actions); `cslug make:crud Claim` writes a
+whole resource around one (guide 20).

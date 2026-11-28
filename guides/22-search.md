@@ -13,6 +13,9 @@ Searching a table needs nothing else; documents that are not rows go in an [inde
 
 ```ts
 // app/tables/circuit-table.ts
+import { boolean, id, table, text } from '@cslug/database'
+import { searchable } from '@cslug/search'
+
 export const circuits = table('circuits', {
   id: id(),
   locale: text().oneOf(['fr', 'en', 'it']),
@@ -33,6 +36,9 @@ row is stemmed in its own language, and accents are ignored: `foret` finds `for√
 ## Searching
 
 ```ts
+import type { HttpContext } from '@cslug/http'
+import { search } from '@cslug/search'
+
 async index({ request }: HttpContext) {
   const { q, page } = await request.validate(v.object({ q: v.string().max(100), page: v.int().min(1).default(1) }))
   return search(this.circuits, q, { highlight: ['summary'], typos: ['title'] })
@@ -53,6 +59,9 @@ Help pages from a CMS, PDFs, WhatsApp transcripts: what is not a table row goes 
 
 ```ts
 // app/search/help-search-index.ts
+import { resolve } from '@cslug/core'
+import { searchIndex } from '@cslug/search'
+
 export const helpIndex = searchIndex<{ url: string }>('help', {
   languages: ['french', 'english'],
   documents: async function* () {
@@ -77,6 +86,8 @@ semantic index finds it by meaning:
 
 ```ts
 // config/search.ts: vectors: true (needs pgvector on the server; then cslug migrate)
+import { searchIndex } from '@cslug/search'
+
 export const helpIndex = searchIndex('help', { languages: ['french', 'english'], semantic: true, documents })
 
 await helpIndex.search('louer une voiture')     // hybrid: words and meaning, a page like paginate()
@@ -93,3 +104,13 @@ Tests with `fakes: ['ai']` use a `FakeEmbedder` instead, so they never call the 
 
 An agent searches an index with `searchTool(helpIndex)`, and recalls a user's earlier conversations with
 `recallTool()`: see [guide 18](./18-ai.md#searching-from-an-agent).
+
+## Reference
+
+```ts
+import { searchable, search, searchIndex, SearchIndex, Embedder, FakeEmbedder } from '@cslug/search'
+import { searchTool, recallTool } from '@cslug/ai'                       // agents searching (guide 18)
+```
+
+Setup: `cslug add search` (`SearchProvider`, `config/search.ts`), then `cslug migrate`. Command:
+`cslug search:reindex [index]`.

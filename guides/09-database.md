@@ -4,6 +4,16 @@ PostgreSQL only, through `Bun.sql`. Tables are TypeScript, row types are inferre
 small typed builder, everything else is tagged SQL with typed results. Migrations are SQL files. Transactions
 are ambient. **No ORM, no dependency.**
 
+## Setup
+
+`@cslug/database` is in every preset. `DatabaseProvider` (first in `bootstrap/providers.ts`) connects from
+`config/database.ts` ([below](#configuration)), pings at boot, and adds the `database` check to `/health/ready`.
+`DATABASE_URL` comes from `.env` (`.env.test` for `bun test`).
+
+Generators: `cslug make:table Claim`, `make:repository Claim`, `make:migration [name] [--from-tables]`,
+`make:factory Claim`, `make:seeder Pilot`; `make:crud Claim` for a whole resource (guide 20). Commands: `migrate`,
+`migrate:status`, `migrate:rollback`, `migrate:fresh`, `db:seed`, `db:diff`, `db:shell`, `db:reencrypt`.
+
 ## Tables
 
 ```ts
@@ -79,6 +89,8 @@ Modifiers: `.nullable()`, `.default(v)`, `.defaultSql(sql\`now()\`)`, `.unique()
 Columns PostgreSQL computes, and indexes beyond btree:
 
 ```ts
+import { custom, id, integer, numeric, table, text } from '@cslug/database'
+
 export const products = table('products', {
   id: id(),
   name: text(),
@@ -186,6 +198,8 @@ Keys of `where` are checked against the table's columns, and values against the 
 `.selectSql('rank', sql<number>\`…\`)` a computed value on each row (typed, still paginated):
 
 ```ts
+import { sql } from '@cslug/database'
+
 const q = sql`websearch_to_tsquery('simple', ${term})`
 await this.products.query()
   .whereSql(sql`${products.c.search} @@ ${q}`)
@@ -197,6 +211,8 @@ await this.products.query()
 ## The `sql` tag (everything else)
 
 ```ts
+import { sql } from '@cslug/database'
+
 const rows = await this.db.many(sql<{ day: string; bookings: number; revenue: bigint }>`
   select date_trunc('day', ${bookings.c.createdAt})::date as day,
          count(*)::int as bookings,
@@ -241,6 +257,7 @@ const rows = await preload(list, {
 
 ```ts
 import { Database } from '@cslug/database'
+import { inject } from '@cslug/core'
 
 @inject(Database, ClaimRepository, BookingRepository)
 export class ClaimService {
@@ -270,6 +287,9 @@ A status column with rules (`requested → proposed → accepted`, never back) i
 `transition()` moves a row through it safely:
 
 ```ts
+import { states } from '@cslug/core'
+import { table } from '@cslug/database'
+
 export const ClaimStatus = states({ open: ['escalated', 'resolved'], escalated: ['resolved'], resolved: [] }, {
   name: 'claim',
   onEnter: { escalated: ({ row }) => ClaimEscalated.emit({ claimId: (row as Claim).id }) },
@@ -376,6 +396,8 @@ picks, `passwordHash(plain)`) with a seeded RNG, so tests are deterministic.
 
 ```ts
 // database/seeders/pilot-seeder.ts
+import { seeder } from '@cslug/database'
+
 export default seeder(async () => {
   await CircuitFactory.create({ slug: 'tana-isalo' })
   await OperatorFactory.state('verified').createMany(12)
@@ -393,6 +415,7 @@ Constraint violations become typed errors, so a duplicate is handled where it ma
 
 ```ts
 import { UniqueViolationError } from '@cslug/database'
+import { ValidationError } from '@cslug/validation'
 
 try {
   await this.operators.create(input)
@@ -415,6 +438,8 @@ try {
 
 ```ts
 // an explicit handle instead of the ambient transaction
+import { sql } from '@cslug/database'
+
 await this.db.transaction(async (tx) => {
   await this.claims.using(tx).create(input)
   await tx.exec(sql`update ${bookings} set has_open_claim = true where ${bookings.c.id} = ${input.bookingId}`)
@@ -437,9 +462,37 @@ Soft deletes: on a table with `...softDeletes()`, `delete(id)` sets `deletedAt` 
 
 ```ts
 // config/database.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   url: env.DATABASE_URL,
   pool: { max: 20, idleTimeout: '30s', connectTimeout: '5s' },
   slowQueryMs: 200,             // logged with request ID and the query's call site
 })
 ```
+
+## Reference
+
+```ts
+import {
+  Database, Repository, table, sql, preload, belongsTo, hasMany,
+  id, uuid, text, varchar, integer, bigint, numeric, boolean, date, timestamp, jsonb, custom, amount, currency,
+  shortCode, translated, timestamps, softDeletes,
+  eq, ne, gt, gte, lt, lte, between, inList, notIn, like, ilike, isNull, notNull, not,
+  factory, seeder, addMigrations,
+  QueryError, UniqueViolationError, SerializationError, RowCountError,
+  type Row, type NewRow, type Table, type Transaction,
+} from '@cslug/database'
+import { states } from '@cslug/core'                                    // state machines for repo.transition()
+```
+
+| | |
+|---|---|
+| `table(name, columns, { indexes? })`, the column builders | Tables ([above](#column-builders)) |
+| `Repository(table)` | The base class of a repository ([built-in methods](#built-in-methods)) |
+| `Database` | Injectable: `many`, `one`, `maybeOne`, `value`, `exec`, `transaction`, `withoutTransaction`, `advisoryLock`, `idempotent` |
+| `sql` | The tagged template, with `sql.join`, `sql.ident`, `sql.raw`, `sql.json` |
+| the operators | `where({ … })` conditions |
+| `preload`, `belongsTo`, `hasMany` | Relations in one query each |
+| `factory`, `seeder` | Test data and seeders |
+| `addMigrations(dir)` | For packages that ship migrations |

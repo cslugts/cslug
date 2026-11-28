@@ -42,6 +42,8 @@ test('group size over 12 is rejected', async () => {
 ## The app
 
 ```ts
+import { testApp } from '@cslug/testing'
+
 const app = testApp({
   fakes: ['mail', 'queue', 'notify', 'events', 'storage', 'ai', 'workflows'],
   config: { 'payments.driver': 'fake' },
@@ -128,6 +130,8 @@ All framework code (and app code that injects `Clock`) sees the fake time, inclu
 
 ```ts
 // tests/feature/escrow-concurrency.test.ts: its own file, with real commits
+import { testApp } from '@cslug/testing'
+
 const app = testApp({ database: 'truncate' })
 
 test('two concurrent releases of the same stage release once', async () => {
@@ -151,6 +155,8 @@ See [guide 09](./09-database.md#factories-and-seeders). In tests: `await Operato
 Services are plain classes: build them with `new` and fakes, no app needed.
 
 ```ts
+import { Money } from '@cslug/core'
+
 test('the deposit is 30 % of the total', () => {
   const pricing = new PricingService(new FakeExchangeRates({ 'EUR:MGA': 4900 }), 8)
   expect(pricing.deposit(Money.of(220_000n, 'EUR')).toDecimal()).toBe('660.00')
@@ -183,3 +189,14 @@ steps:
   - run: bun run typecheck && bun test
     env: { DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_test, REDIS_URL: redis://localhost:6379 }
 ```
+
+## Reference
+
+```ts
+import { testApp, TestResponse, PendingRequest, EventFake, registerFake } from '@cslug/testing'
+import { test, expect, describe, beforeEach } from 'bun:test'
+```
+
+`@cslug/testing` is a dev dependency of every preset. Fakes come from their packages and are named in
+`testApp({ fakes })`: `events`, `queue`, `mail`, `notify`, `storage`, `ai`, `workflows`. Generator:
+`cslug make:test Claims` → `tests/claims.test.ts`.

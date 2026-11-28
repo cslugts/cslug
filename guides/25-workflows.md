@@ -8,12 +8,23 @@ worker, waits for events and people, and picks up where it stopped after a deplo
 `@cslug/workflow` (`cslug add workflow`) is built on what the app already has: PostgreSQL for the journal, the queue
 for wake-ups, core events for waiting. No other server.
 
+## Setup
+
+```bash
+cslug add queue,workflow   # the queue first: wake-ups are jobs
+cslug migrate              # cslug_workflow_runs, cslug_workflow_steps, cslug_workflow_signals
+```
+
+`WorkflowProvider` (after `DatabaseProvider` and `QueueProvider`) loads `app/workflows/` in every process. There is
+no config file. Commands: `workflow:list`, `workflow:show`, `workflow:retry`, `workflow:cancel`, `workflow:prune`.
+
 ## A workflow
 
 ```ts
 // app/workflows/booking-deposit-workflow.ts
 import { inject } from '@cslug/core'
 import { Workflow, type WorkflowContext } from '@cslug/workflow'
+import { Notifier } from '@cslug/notification'
 
 type Input = { bookingId: string }
 
@@ -94,6 +105,10 @@ For a deeper change, keep the old class for the runs in flight and start new run
 ## Signals, status and cancelling
 
 ```ts
+import { inject } from '@cslug/core'
+import { type HttpContext, redirect } from '@cslug/http'
+import { Workflows } from '@cslug/workflow'
+
 @inject(Workflows)
 export class ReviewController {
   constructor(private workflows: Workflows) {}
@@ -166,12 +181,16 @@ attempt; a replay adds none. With `@cslug/security`, each run's start and end (`
 
 ```ts
 // routes/schedule.ts
+import { Workflows } from '@cslug/workflow'
+
 s.call('workflow:prune', ({ resolve }) => resolve(Workflows).prune('90d')).daily()
 ```
 
 ## Testing
 
 ```ts
+import { testApp } from '@cslug/testing'
+
 const t = testApp({ fakes: ['workflows', 'queue'], database: 'truncate' })
 
 test('an unpaid deposit expires after 3 days', async () => {
@@ -195,3 +214,17 @@ test('the operator approves', async () => {
 a signal or an event without a timeout. `find`, `journal` and `signal` are there too. Use `database: 'truncate'`:
 runs commit for real (a lock and a transaction per step). The resume jobs the queue fake records can be ignored;
 do not `t.queue.drain()` them, as it runs a sleeping run's wake-up before its time, over and over.
+
+## Reference
+
+```ts
+import { Workflow, type WorkflowContext, Workflows, type WorkflowRun, type StepOptions, WorkflowFake,
+  StepFailedError, CompensationFailedError, NondeterminismError, isSuspension } from '@cslug/workflow'
+```
+
+| | |
+|---|---|
+| `Workflow<Input, Output>` | The base class: `run(ctx, input)`; statics `workflowName`, `waitsFor`; `Workflow.start(input, { id? })` |
+| `WorkflowContext` | `step`, `sleep`, `sleepUntil`, `waitFor`, `waitForSignal`, `now`, `uuid`, `runId` |
+| `Workflows` | Injectable: `start`, `signal`, `find`, `list`, `cancel`, `retry`, `prune` |
+| `WorkflowFake` | `fakes: ['workflows']` → `t.workflows` (`runUntilIdle`, `assertStatus`, `find`, `journal`, `signal`) |

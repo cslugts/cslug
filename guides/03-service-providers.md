@@ -70,6 +70,8 @@ A provider is also how a module adds `cslug` commands and a section to `cslug de
 scripts and AI agents):
 
 ```ts
+import { ServiceProvider } from '@cslug/core'
+
 export class PaymentServiceProvider extends ServiceProvider {
   register() {
     this.commands([PaymentsReconcileCommand, PaymentsRefundCommand])   // `cslug payments:reconcile`, …
@@ -104,6 +106,8 @@ and workers do this). `app.isRunning` tells whether it started.
 provider for every binding:
 
 ```ts
+import { config, ServiceProvider } from '@cslug/core'
+
 export class AppServiceProvider extends ServiceProvider {
   register() {
     this.app.singleton(WhatsappClient, () => new WhatsappClient(config('whatsapp')))
@@ -112,3 +116,11 @@ export class AppServiceProvider extends ServiceProvider {
 ```
 
 Split it into domain providers once it grows past a screen.
+
+## Reference
+
+```ts
+import { ServiceProvider, Application, type ProviderHooks, HEALTH_CHECKS, healthCheck } from '@cslug/core'
+```
+
+Generator: `cslug make:provider Payments` → `app/providers/payments-provider.ts`.

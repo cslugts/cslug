@@ -3,6 +3,20 @@
 **Mail** sends one email. **Notifications** send one message to a person over the channels that suit them
 (mail, WhatsApp, SMS, the database for the admin console). Mail templates are Vue SFCs, like views.
 
+## Setup
+
+```bash
+cslug add mail             # bun add @cslug/mail; MailProvider; config/mail.ts
+cslug add notification     # bun add @cslug/notification; NotificationProvider; config/notification.ts
+cslug migrate              # cslug_notifications and cslug_notification_deliveries (with @cslug/database)
+```
+
+The `--full` preset has mail already (and Mailpit in `docker-compose.yml` to read what development sends). Mail
+templates are Vue files, so `@cslug/vue` renders them. With `@cslug/queue`, queued mail and notifications are jobs;
+list `MailProvider` and `NotificationProvider` after `QueueProvider`. Settings: `config/mail.ts`
+([transports](#transports)), `config/notification.ts` ([channels](#channels)). Generators: `cslug make:mail
+BookingConfirmed` (the class and its template), `cslug make:notification CheckinDue`. Command: `cslug mail:preview`.
+
 ## Mailables
 
 `cslug make:mail BookingConfirmed` writes the class and its Vue template; `cslug make:notification CheckinDue` a
@@ -12,9 +26,9 @@ notification.
 // app/mail/booking-confirmed-mail.ts
 import { Mailable } from '@cslug/mail'
 import { renderStandalone } from '@cslug/vue'
+import { t } from '@cslug/core'
 import BookingConfirmed from '#resources/mail/booking-confirmed.vue'
 import TripPack from '#views/trip-pack/show.vue'
-import { t } from '@cslug/core'
 import type { Booking } from '#app/tables/booking-table'
 import type { Operator } from '#app/tables/operator-table'
 
@@ -65,6 +79,7 @@ layout: a table-based shell with a `<style>` block. When sending, cslug **inline
 
 ```ts
 import { Mailer } from '@cslug/mail'
+import { inject } from '@cslug/core'
 
 @inject(Mailer)
 export class BookingService {
@@ -91,6 +106,8 @@ await this.mailer
 In `build()`, besides `subject`, `view` and `attach`:
 
 ```ts
+import { t } from '@cslug/core'
+
 build() {
   return this
     .subject(t('mail.claim_opened.subject'))
@@ -110,6 +127,8 @@ build() {
 
 ```ts
 // config/mail.ts
+import { defineConfig } from '@cslug/core'
+
 export default defineConfig({
   from: { address: 'bonjour@example.com', name: 'My app' },
   transport: env.MAIL_TRANSPORT,                         // 'smtp' | 'resend' | 'log'
@@ -180,6 +199,8 @@ A **recipient** is any object; cslug reads `id`, `email`, `whatsapp` (or else `p
 from it. Set them explicitly with `recipient(row, fn)`:
 
 ```ts
+import { recipient } from '@cslug/notification'
+
 const to = recipient(traveller, (t) => ({ whatsapp: t.whatsappOptIn ? t.phone : undefined }))
 await this.notifier.send(to, new CheckinDueNotification(booking, 'mid_trip'))
 ```
@@ -201,6 +222,9 @@ WhatsApp failure retries without re-sending the email. Inside a transaction they
 
 ```ts
 // config/notification.ts
+import { defineConfig, inject } from '@cslug/core'
+import { type Channel, Notifier, type Recipient } from '@cslug/notification'
+
 export default defineConfig({ queue: 'notifications', whatsapp: { driver: 'manual' } })
 
 // A custom channel: the message comes from the notification's toSlack(to)
@@ -218,6 +242,8 @@ The `database` channel writes rows to `cslug_notifications` (`recipient_id`, `ty
 `created_at`); read them with the `sql` tag for an inbox or the admin console:
 
 ```ts
+import { sql } from '@cslug/database'
+
 const unread = await this.db.many(sql<{ id: string; type: string; data: unknown; createdAt: Date }>`
   select id, type, data, created_at from cslug_notifications
   where recipient_id = ${user.id} and read_at is null order by created_at desc limit 20`)
@@ -235,7 +261,26 @@ WhatsApp replies (check-in "all good" / "problem") arrive as webhooks; route the
 ## Testing
 
 ```ts
+import { testApp } from '@cslug/testing'
+
 const app = testApp({ fakes: ['mail', 'notify'] })
 app.mail.assertQueued(BookingConfirmedMail, (m) => m.to === traveller.email)
 app.notify.assertSentTo(traveller, CheckinDueNotification, { channel: 'whatsapp' })
 ```
+
+## Reference
+
+```ts
+import { Mailable, Mailer, PendingMail, renderMail, MailFake, type Message } from '@cslug/mail'
+import { Notification, Notifier, recipient, type Recipient, type Channel, type Delivery, NotificationFake } from '@cslug/notification'
+import { useT, route, formatDate, formatMoney } from '@cslug/vue'          // in mail templates
+```
+
+| | |
+|---|---|
+| `Mailable` | `build()` with `subject`, `view`, `html`, `text`, `attach`, `from`, `replyTo`, `header`, `tag`; statics `queued`, `preview()` |
+| `Mailer` | Injectable: `to(...)` → `PendingMail` (`cc`, `bcc`, `locale`, `send`, `queue`, `sendNow`) |
+| `Notification` | `via(to)`, `toMail`, `toDatabase`, `toWhatsapp`, `toSms`, `to<Channel>` |
+| `Notifier` | Injectable: `send(to, notification)`, `sendMany`, `extend(name, channel)` |
+| `recipient(value, fn)` | A recipient with explicit routes |
+| `MailFake`, `NotificationFake` | `fakes: ['mail']` → `t.mail`, `fakes: ['notify']` → `t.notify` |

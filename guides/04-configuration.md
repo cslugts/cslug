@@ -39,6 +39,8 @@ Empty values (`FOO=`) count as missing. Values of `v.secret()` variables are nev
 ones from guide 07; for env vars, `v.coerce.int()`, `v.coerce.boolean()` and `v.url()` are the usual ones:
 
 ```ts
+import { v } from '@cslug/validation'
+
 PORT: v.coerce.int().default(3000),
 QUEUE_INLINE: v.coerce.boolean(),                     // '1', 'true', 'yes', 'on' → true
 LOG_LEVEL: v.enum(['debug', 'info', 'warn', 'error']).default('info'),
@@ -71,6 +73,7 @@ Register them once, which also gives `config()` its types:
 import app from './app'
 import database from './database'
 import payments from './payments'
+import type { Typed } from '@cslug/core'
 // …
 export const configs = { app, database, payments /* … */ }
 
@@ -97,8 +100,8 @@ CLI, workers and tests:
 ```ts
 // bootstrap/app.ts
 import { Application } from '@cslug/core'
-import { configs } from '#config/index'
 import { providers } from './providers'
+import { configs } from '#config/index'
 
 export const createApp = () => new Application({ root: `${import.meta.dir}/..`, configs }).useProviders(providers)
 ```
@@ -129,3 +132,13 @@ processes `cslug start` runs (guides 08, 21).
   `testApp({ config: { 'payments.driver': 'fake' } })`, which calls `app.setConfig(path, value)` before start.
 - Packages read config untyped with `app.config<T>(path)`; your code uses the typed `config(path)`.
 - `cslug config:show payments` prints the resolved config with secrets redacted.
+
+## Reference
+
+```ts
+import { defineEnv, defineConfig, config, type Typed, secretKeys, EnvError } from '@cslug/core'
+import { v } from '@cslug/validation'                                   // env schemas (also re-exported by core)
+import { defineCslugConfig } from '@cslug/cli'                          // cslug.config.ts
+```
+
+`cslug config:show [section]` prints the resolved config with secrets hidden.

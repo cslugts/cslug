@@ -49,6 +49,8 @@ Or declare it once:
 
 ```ts
 // cslug.config.ts
+import { defineCslugConfig } from '@cslug/cli'
+
 export default defineCslugConfig({
   processes: {
     web: { instances: 1 },
