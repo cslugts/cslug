@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.10.0 (2026-11-28)
+
+`@cslug/security`: CSP nonces, an IP filter and per-IP limit, `security.txt`, account lockout, the breached-password
+check and an audit log (the second half of the security work).
+
 ### @cslug/security (new)
 - `csp()`: a Content-Security-Policy with a new nonce per request (`ctx.nonce`), on error responses too; directives
   replaced or removed from `config/security.ts`, report-only mode, `upgrade-insecure-requests` in production.
