@@ -138,12 +138,43 @@ const escrow = new EscrowService(fakeDb, new FakePaymentGateway(), Logger.null()
 
 | Lifetime | Meaning | How |
 |---|---|---|
-| **scoped** (default) | One instance per request / job / command | `@inject(...)` |
+| **scoped** (default) | One instance per request / job / command | `@inject(...)` or `app.scoped(X)` |
 | **singleton** | One instance per application | `@inject.singleton(...)` or `app.singleton(X)` |
-| **transient** | New instance each time | `app.bind(X, factory)` |
+| **transient** | New instance each time | `@inject.transient(...)` or `app.bind(X, factory)` |
+
+```ts
+@inject.singleton(Logger)                 // one per app: holds a connection, a cache, a rate table
+export class ExchangeRates {
+  constructor(private log: Logger) {}
+}
+
+@inject.transient()                       // a fresh one per resolve: a builder with state
+export class InvoiceBuilder {}
+```
 
 A singleton that depends on a scoped class throws `ScopeViolationError` at resolve time, because it would capture
 the first request's instance.
+
+### Scopes and cleanup
+
+Each request, job and command runs in its own **scope**, a child container: scoped instances live and die with it.
+When the scope ends, instances that implement `Symbol.asyncDispose` (or `Symbol.dispose`) are disposed, newest
+first, so a per-request resource closes itself:
+
+```ts
+@inject(Storage)
+export class UploadSession {
+  private temp: string[] = []
+  constructor(private storage: Storage) {}
+  // …
+  async [Symbol.asyncDispose]() {
+    for (const path of this.temp) await this.storage.disk('local').delete(path)   // after the response is sent
+  }
+}
+```
+
+Your own code rarely makes scopes; scripts and tests can: `const scope = app.createScope()`, then
+`scope.resolve(X)` and `await scope.dispose()`.
 
 ## `resolve()` outside a constructor
 
@@ -152,6 +183,20 @@ const escrow = resolve(EscrowService)      // uses the current request/job scope
 ```
 
 For base classes, route closures, the REPL and scripts.
+
+## Binding by hand
+
+Providers (guide 03) bind what the container cannot build on its own:
+
+```ts
+this.app.singleton(PaymentGateway, MangopayGateway)                   // a class (built with its @inject list)
+this.app.singleton(PaymentGateway, (c) => new MangopayGateway(config('payments.mangopay'), c.resolve(Logger)))
+this.app.scoped(CurrentOperator, (c) => c.resolve(OperatorResolver).current())   // one per request
+this.app.bind(PdfRenderer, () => new PdfRenderer({ margin: 12 }))     // transient
+this.app.instance(COMMISSION_PERCENT, 8)                              // an existing value
+this.app.has(PaymentGateway)                                          // bound (or an @inject class)?
+this.app.build(ReportExporter)                                        // build one with its deps, without caching it
+```
 
 ## Contextual and tagged bindings
 

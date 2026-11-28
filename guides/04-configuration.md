@@ -24,8 +24,9 @@ export const env = defineEnv({
 })
 ```
 
-Bun loads `.env` / `.env.<APP_ENV>` natively. At boot, cslug validates **all** variables and fails with one
-message listing every problem:
+Bun loads `.env` natively, then `.env.<NODE_ENV>` (`.env.test` under `bun test`, `.env.production`, …) and
+`.env.local`, the later ones winning; variables set in the real environment win over all files. At boot, cslug
+validates **all** variables and fails with one message listing every problem:
 
 ```
 ✖ Invalid environment
@@ -34,7 +35,15 @@ message listing every problem:
   Run `cslug key:generate` to create APP_KEY.
 ```
 
-Empty values (`FOO=`) count as missing. Values of `v.secret()` variables are never printed.
+Empty values (`FOO=`) count as missing. Values of `v.secret()` variables are never printed. The schemas are the
+ones from guide 07; for env vars, `v.coerce.int()`, `v.coerce.boolean()` and `v.url()` are the usual ones:
+
+```ts
+PORT: v.coerce.int().default(3000),
+QUEUE_INLINE: v.coerce.boolean(),                     // '1', 'true', 'yes', 'on' → true
+LOG_LEVEL: v.enum(['debug', 'info', 'warn', 'error']).default('info'),
+APP_PREVIOUS_KEYS: v.string().optional(),            // older keys, comma-separated, during a key rotation (guide 26)
+```
 
 ## 2. Config files
 
@@ -94,8 +103,29 @@ import { providers } from './providers'
 export const createApp = () => new Application({ root: `${import.meta.dir}/..`, configs }).useProviders(providers)
 ```
 
+## The framework's own settings
+
+Each package reads its section; `bun create cslug` writes the files you need, and `cslug add` writes the others.
+
+| Section | Main keys | Guide |
+|---|---|---|
+| `app` | `name`, `env`, `url` (absolute URLs, the origin of `statefulApi`), `key`, `previousKeys`, `timezone` (the `Clock`, `date().future()`, the scheduler) | 26 |
+| `log` | `level`, `format` (`json` / `pretty`), `targets`, `redact` | 23 |
+| `i18n` | `locales`, `default`, `fallback` | 16 |
+| `http` | `port`, `host`, `trustedProxies`, `bodyLimit`, `cors`, `api.stateful`, `groups`, `middleware`, `public` | 05 |
+| `session` | `cookie`, `lifetime`, `sameSite`, `domain` | 06 |
+| `database` | `url`, `pool`, `slowQueryMs` | 09 |
+| `redis`, `cache` | `connections`, `prefix`; `default` / `stores` (`redis` or `memory`) | 10 |
+| `queue` | `connection`, `queues` (concurrency, rate), `failed.keep`, `shutdownTimeout`, `lease` | 11, 12 |
+| `auth`, `mail`, `notification`, `storage`, `webhooks`, `search`, `ai`, `telemetry`, `security` | | 14–25 |
+
+`cslug.config.ts` (not `config/`) holds what the CLI needs before the app boots: the asset entries and the
+processes `cslug start` runs (guides 08, 21).
+
 ## Rules
 
 - `process.env` appears only in `config/env.ts` (lint rule).
-- Config is **read-only** after boot. Tests override with `testApp({ config: { 'payments.driver': 'fake' } })`.
+- Config is **read-only** (deep-frozen) after boot. Tests override with
+  `testApp({ config: { 'payments.driver': 'fake' } })`, which calls `app.setConfig(path, value)` before start.
+- Packages read config untyped with `app.config<T>(path)`; your code uses the typed `config(path)`.
 - `cslug config:show payments` prints the resolved config with secrets redacted.

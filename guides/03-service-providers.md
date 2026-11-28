@@ -8,9 +8,8 @@ connection, or need to run something at boot.
 
 ```ts
 // app/providers/payment-service-provider.ts
-import { ServiceProvider, config } from '@cslug/core'
+import { Logger, ServiceProvider, config } from '@cslug/core'
 import { DatabaseProvider } from '@cslug/database'
-import { HttpClient } from '@cslug/http'
 import { PaymentGateway } from '#app/services/payment-gateway'
 import { MangopayGateway } from '#app/services/mangopay-gateway'
 import { FakePaymentGateway } from '#app/services/fake-gateway'
@@ -23,7 +22,7 @@ export class PaymentServiceProvider extends ServiceProvider {
     this.app.singleton(PaymentGateway, () =>
       config('payments.driver') === 'fake'
         ? new FakePaymentGateway()
-        : new MangopayGateway(config('payments.mangopay'), this.app.resolve(HttpClient)),
+        : new MangopayGateway(config('payments.mangopay'), this.app.resolve(Logger)),   // a factory resolves when first used
     )
   }
 
@@ -55,10 +54,49 @@ export const providers = [
 | `boot()` | After all `register()`s, in dependency order | Resolve services, connect, listen to events, warm caches |
 | `shutdown()` | Reverse boot order | Close connections, flush buffers |
 
-- Order comes from `static dependsOn`. Cycles, duplicates and missing dependencies fail at start-up with the
-  chain printed.
-- If any `boot()` throws, providers that already booted are shut down, then the error is rethrown.
-- Commands can boot fewer providers: a command declares `static providers = 'all' | 'minimal' | [...]`.
+- Order comes from `static dependsOn` (and the list's order where dependencies allow). Cycles, duplicates and
+  dependencies missing from the list fail at start-up with the chain printed.
+- `register()` must not resolve: another provider may not have bound what you need yet (`ProviderError`). Bind a
+  factory instead: it runs when the service is first resolved, after every provider registered.
+- If any `boot()` throws, providers that already booted are shut down in reverse, then the error is rethrown as a
+  `ProviderError` whose `cause` is the original.
+- `shutdown()` runs on SIGTERM / SIGINT (under `cslug serve`, `start` and workers) and on `app.shutdown()`; errors
+  are collected so every provider gets its turn.
+- Commands that need no app (`make:*`, `key:generate`) declare `static boot = false` and start nothing.
+
+## Contributing commands and `describe` sections
+
+A provider is also how a module adds `cslug` commands and a section to `cslug describe` (the app as data for people,
+scripts and AI agents):
+
+```ts
+export class PaymentServiceProvider extends ServiceProvider {
+  register() {
+    this.commands([PaymentsReconcileCommand, PaymentsRefundCommand])   // `cslug payments:reconcile`, …
+    this.describe('payments', () => ({                                 // `cslug describe payments`
+      driver: config('payments.driver'),
+      stages: config('payments.stages'),
+    }))
+  }
+}
+```
+
+App commands in `app/commands/` are found without this (guide 20); `this.commands` is for packages and modules
+that live elsewhere.
+
+## The application
+
+`bootstrap/app.ts` builds it (guide 04); the CLI, the web process, workers and the test kit all start it the same way:
+
+```ts
+const app = createApp()          // new Application({ root, configs }).useProviders(providers)
+await app.start()                // register() all, then boot() in order
+app.resolve(EscrowService)
+await app.shutdown()             // reverse order; idempotent
+```
+
+`app.start({ signals: true })` also installs SIGTERM / SIGINT handlers that shut down and exit (the web process
+and workers do this). `app.isRunning` tells whether it started.
 
 ## Small apps: `AppServiceProvider`
 
