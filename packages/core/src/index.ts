@@ -88,6 +88,7 @@ export {
   type EventInstance,
   type ListenerOptions,
   listener,
+  loadListeners,
   type QueuedListenerDispatcher,
   registeredListeners,
 } from './events'

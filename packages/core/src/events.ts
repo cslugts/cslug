@@ -162,3 +162,20 @@ export class EventBus {
     }
   }
 }
+
+/**
+ * Import every module under `<root>/app/listeners/` (subfolders included, not `*.test.ts`), so their `@listener`
+ * classes are registered in every process: the web server, workers, commands and tests. `Application.start()`
+ * calls it; a folder that does not exist is fine. Returns how many files were imported.
+ */
+export async function loadListeners(rootDir: string): Promise<number> {
+  const { existsSync, readdirSync } = await import('node:fs')
+  const { join } = await import('node:path')
+  const dir = join(rootDir, 'app/listeners')
+  if (!existsSync(dir)) return 0
+  const files = (readdirSync(dir, { recursive: true }) as string[])
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.endsWith('.d.ts'))
+    .sort()
+  for (const file of files) await import(join(dir, file))
+  return files.length
+}

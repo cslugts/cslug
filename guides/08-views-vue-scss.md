@@ -521,6 +521,24 @@ const { nonce } = useRequest()
 
 Vue's `:style` bindings keep working (the default policy allows style attributes).
 
+## Error pages
+
+Pages get the error's status and message in a minimal HTML page; give a status a page of your own with the
+exception handler (guide 06). Apps made with `bun create cslug --web` do it for 404s, with
+`resources/views/errors/404.vue`:
+
+```ts
+// app/providers/app-service-provider.ts
+boot() {
+  this.app.resolve(ExceptionHandler).render((error, ctx) => {
+    if (error instanceof NotFoundError && !ctx.request.wantsJson())
+      return view(NotFound, {}, { status: 404 }).toResponse(ctx)
+  })
+}
+```
+
+API clients keep the JSON problem. The same pattern serves a 403 or a maintenance page.
+
 ## Rendering outside a request
 
 ```ts
