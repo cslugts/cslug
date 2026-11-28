@@ -1,6 +1,6 @@
 {
   "name": "@cslug/storage",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Local and S3 disks, signed URLs, upload type sniffing.",
   "license": "MIT",
   "type": "module",
