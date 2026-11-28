@@ -49,7 +49,9 @@ cslug make:controller admin/Claim --resource  # a folder: app/controllers/admin/
 ```
 
 Names are given in PascalCase (or kebab-case) and may include folders. Generators never overwrite without `--force`
-and print every file they write. Jobs, mailables, notifications, policies, views and components have no generator
+and print every file they write. To change what they write, put your own template in the app's `stubs/` folder
+under the same name (`stubs/service.stub`, `stubs/controller.stub` …): it wins over the package's. Templates use
+`{{ class }}`, `{{ base }}`, `{{ kebab }}`, `{{ snake }}` and `{{ camel }}`. Jobs, mailables, notifications, policies, views and components have no generator
 yet: they are one small file each (guides 11, 14, 15, 08).
 
 ## Adding a package

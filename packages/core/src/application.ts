@@ -16,7 +16,7 @@ import {
 } from './contracts'
 import { Encrypter, parseKeys } from './encrypter'
 import { ProviderError } from './errors'
-import { EventBus } from './events'
+import { EventBus, loadListeners } from './events'
 import { type I18nConfig, Translator } from './i18n'
 import { Logger, type LoggerOptions } from './logger'
 import { dependenciesOf, type ProviderClass, type ProviderHooks, type ServiceProvider } from './provider'
@@ -145,6 +145,8 @@ export class Application extends Container {
     this.registerProviders()
     if (this.state !== 'registered') throw new ProviderError(`Cannot start an application that is ${this.state}.`)
     this.state = 'starting'
+    // @listener classes register when their module is imported: do it here, so every process has them
+    await loadListeners(this.rootDir)
     for (const p of this.instances_) {
       try {
         await p.boot?.()

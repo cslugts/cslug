@@ -100,6 +100,13 @@ describe('generators', () => {
       [['make:provider', 'Payment'], 'app/providers/payment-provider.ts', 'export class PaymentProvider'],
       [['make:event', 'BookingPaid'], 'app/events/booking-paid-event.ts', "('booking_paid')"],
       [['make:service', 'Escrow'], 'app/services/escrow-service.ts', 'export class EscrowService'],
+      // what `bun test` runs: *.test.ts
+      [['make:test', 'Claims'], 'tests/claims.test.ts', "describe('Claims'"],
+      [
+        ['make:test', 'feature/BookingDepositTest'],
+        'tests/feature/booking-deposit.test.ts',
+        "describe('BookingDeposit'",
+      ],
     ]
     for (const [argv, file, contains] of cases) {
       const r = await cli(argv, { root })

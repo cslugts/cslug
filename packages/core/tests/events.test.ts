@@ -153,3 +153,25 @@ describe('events', () => {
     expect(entry.error.message).toBe('partner API down')
   })
 })
+
+describe('listeners in app/listeners/ (guide 13)', () => {
+  test('Application.start() imports them, so a synchronous listener runs in every process', async () => {
+    const { InvoicePaid, seen } = await import('./fixture/listeners-app/events')
+    const app = new Application({ root: `${import.meta.dir}/fixture/listeners-app` })
+    app.singleton(Logger, () => Logger.null())
+    await app.start()
+    try {
+      await runInContext({ app, scope: app.createScope() }, () => InvoicePaid.emit({ invoiceId: 'inv_1' }))
+      expect(seen).toEqual(['inv_1'])
+    } finally {
+      await app.shutdown()
+    }
+  })
+
+  test('an app without the folder starts as before', async () => {
+    const app = new Application({ root: `${import.meta.dir}/fixture/nowhere` })
+    app.singleton(Logger, () => Logger.null())
+    await app.start()
+    await app.shutdown()
+  })
+})

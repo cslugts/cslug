@@ -208,8 +208,10 @@ export function generator(
     static boot = false
     static args = makeArgs
     handle({ name, force }: Command.Args<{ args: typeof makeArgs }>) {
-      const n = names(name, suffix)
-      return this.generate(stubDir, `${kind}.stub`, `${dir}/${n.file}.ts`, { ...n, class: n.class }, force) ? 0 : 1
+      // a test is `claims.test.ts` (what `bun test` runs), the others `escrow-service.ts`
+      const n = kind === 'test' ? names(name.replace(/[-_.]?test$/i, '')) : names(name, suffix)
+      const file = kind === 'test' ? `${n.file}.test` : n.file
+      return this.generate(stubDir, `${kind}.stub`, `${dir}/${file}.ts`, { ...n, class: n.class }, force) ? 0 : 1
     }
   }
 }

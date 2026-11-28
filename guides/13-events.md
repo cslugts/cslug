@@ -59,7 +59,8 @@ export class UpdateReliabilityBadgeListener {
 - One listener may listen to several events: `@listener([ClaimOpened, ClaimEscalated])`; `handle(payload, event)`
   gets the event instance as its second argument to tell them apart (`event instanceof ClaimOpened`).
 - `@inject(...)` and `@listener(...)` can be written in either order; both register on the same class.
-- `cslug make:listener UpdateReliabilityBadge` writes the class in `app/listeners/`, where workers load it.
+- `cslug make:listener UpdateReliabilityBadge` writes the class in `app/listeners/`. Every process (web, workers,
+  commands, tests) imports that folder when the app starts, so a listener needs no other registration.
 
 ## Closures (for small things)
 

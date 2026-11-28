@@ -4,6 +4,14 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### Fixes
+- **core:** `Application.start()` imports `app/listeners/`, so `@listener` classes run in every process. Before, only
+  queue workers imported the folder, and a synchronous listener never ran for events emitted in web requests.
+- **cli:** `cslug make:test Claims` writes `tests/claims.test.ts` (it wrote `claims-test.ts`, which `bun test`
+  skips).
+- **create-cslug:** `--web` apps render `resources/views/errors/404.vue` for unknown pages (it was never used);
+  API clients still get the JSON problem.
+
 ## 0.11.0 (2026-11-28)
 
 State machines (`states()`, `repo.transition()`) and durable workflows with sagas (`@cslug/workflow`).

@@ -10,6 +10,11 @@ test('the home page renders', async () => {
   await app.get('/').assertOk().assertSee('{{title}}')
 })
 
+test('an unknown page renders the app\'s 404 page; API clients get JSON', async () => {
+  await app.get('/no-such-page').assertNotFound().assertSee('Page not found').assertSee('Back to the home page')
+  await app.get('/no-such-page').header('accept', 'application/json').assertProblem(404, 'route.not_found')
+})
+
 test('a visitor can register and lands on the dashboard', async () => {
   await app
     .post('/register')

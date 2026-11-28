@@ -169,6 +169,7 @@ Immutable; integer minor units (`bigint`) + ISO 4217 currency; no floating point
 | queued listeners | Run **after the transaction commits** (`afterCommit`), never on rollback. Without `@cslug/queue`: in-process in a fresh scope, errors logged. With it: `EventBus.dispatchQueued` sends them as jobs |
 | `afterCommit(fn)` | Run once the current transaction commits; outside a transaction, soon after the current task. `@cslug/database` provides the hook (`TransactionHooks`) |
 | `registeredListeners()` | The listener classes registered so far, by event |
+| `loadListeners(rootDir)` | Imports `app/listeners/**` (not `*.test.ts`); `Application.start()` calls it before `boot()`, so `@listener` classes are registered in every process |
 
 ## Logger
 
