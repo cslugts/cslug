@@ -4,6 +4,16 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/core
+- `states(transitions, { name, onEnter, onLeave })`: a state machine in plain TypeScript (`values`, `type`, `is`,
+  `can`, `next`, `final`, `assert` → 409 `<name>.invalid_transition`, `transition()` running the hooks). A target
+  that is not a state is a type error.
+
+### @cslug/database
+- `repo.transition(id, 'status', Status, 'paid', fn?)`: lock the row, return it unchanged when it is already there,
+  check the move, update and run the hooks and `fn`, in the ambient transaction or one of its own. Guide 00's escrow
+  example uses it.
+
 ## 0.10.0 (2026-11-28)
 
 `@cslug/security`: CSP nonces, an IP filter and per-IP limit, `security.txt`, account lockout, the breached-password

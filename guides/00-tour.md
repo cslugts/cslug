@@ -66,9 +66,10 @@ export const BookingStatus = states({
   completed:        [],
   cancelled:        [],
   refunded:         [],
-})
+}, { name: 'booking' })
 export type BookingStatus = typeof BookingStatus.type
-// BookingStatus.assert('accepted', 'completed') → throws ConflictError('booking.invalid_transition')
+// BookingStatus.assert('accepted', 'completed') → throws ConflictError('booking.invalid_transition'), 409
+// BookingStatus.can(from, to), .next('deposit_paid'), .final('completed'); a typo in a target is a type error
 ```
 
 ## 3. The payment partner is an abstract class, bound in a provider
@@ -117,7 +118,6 @@ export class BookingRepository extends Repository(bookings) {
 ```ts
 // app/services/escrow-service.ts
 import { inject, Clock, Money } from '@cslug/core'
-import { Database } from '@cslug/database'
 import { Notifier } from '@cslug/notification'
 import { BookingRepository } from '#app/repositories/booking-repository'
 import { TravellerRepository } from '#app/repositories/traveller-repository'
@@ -126,10 +126,9 @@ import { BookingStatus } from '#app/enums/booking-status'
 import { SendCheckinJob } from '#app/jobs/send-checkin-job'
 import { DepositReceivedNotification } from '#app/notifications/deposit-received-notification'
 
-@inject(Database, BookingRepository, TravellerRepository, LedgerRepository, Notifier, Clock)
+@inject(BookingRepository, TravellerRepository, LedgerRepository, Notifier, Clock)
 export class EscrowService {
   constructor(
-    private db: Database,
     private bookings: BookingRepository,
     private travellers: TravellerRepository,
     private ledger: LedgerRepository,
@@ -139,12 +138,9 @@ export class EscrowService {
 
   /** Called from the webhook job. Safe to call many times for the same hold. */
   async confirmDeposit(bookingId: string, holdId: string, amount: Money) {
-    await this.db.transaction(async () => {
-      const booking = await this.bookings.lockForUpdate(bookingId)        // SELECT … FOR UPDATE
-      if (booking.status === 'deposit_paid') return                        // already done: idempotent
-
-      BookingStatus.assert(booking.status, 'deposit_paid')
-      await this.bookings.update(booking.id, { status: 'deposit_paid' })
+    // one transaction: SELECT … FOR UPDATE, nothing to do if already deposit_paid (idempotent), else
+    // BookingStatus.assert, UPDATE, then the callback; a throw anywhere rolls all of it back
+    await this.bookings.transition(bookingId, 'status', BookingStatus, 'deposit_paid', async (booking) => {
       await this.ledger.record({ bookingId, kind: 'deposit_held', amount, reference: holdId })
 
       // Both are held until COMMIT and dropped if the transaction rolls back.
@@ -366,7 +362,8 @@ test('the pay page works without JavaScript and shows the terms error', async ()
 - **Where the money logic lives:** in one service method, one transaction, one row lock.
 - **What the framework did for you:** DI, typed validation, after-commit dispatch, webhook dedupe and signature
   checks, a durable outbox, redirect-back-with-errors, i18n, a Vue component hydrated as an island, fakes.
-- **What it did *not* hide:** the lock, the state transition, the gateway call.
+- **What it did *not* hide:** the state transition (one named call that locks, checks and updates), the gateway
+  call.
 - **What it depends on:** Bun, plus `vue` and `sass` for the island. Nothing else.
 
 If any line above feels like ceremony, that is exactly the feedback this guide is for.

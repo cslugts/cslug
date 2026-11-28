@@ -150,6 +150,7 @@ export class OperatorRepository extends Repository(operators) {
 | `upsert(values, { conflict: ['email'], update: ['phone'] })` | row |
 | `delete(id)` | soft delete when the table has `deletedAt`; `forceDelete(id)` otherwise |
 | `lockForUpdate(id, { skipLocked?, noWait? })` | row, `SELECT … FOR UPDATE` (inside a transaction) |
+| `transition(id, 'status', Status, 'paid', fn?)` | row; locks it, checks the move against a `states()` machine, updates, runs `fn` (below) |
 | `paginate({ page, perPage, where?, orderBy? })` | `{ data, meta: { page, perPage, total, lastPage } }` |
 | `where(conditions)` | a query (below) |
 | `withTrashed()` / `onlyTrashed()` | include / only soft-deleted rows |
@@ -262,6 +263,28 @@ export class ClaimService {
 - Jobs, queued listeners, mail and notifications dispatched inside are sent **after commit**.
 - Explicit style also works: `db.transaction(async (tx) => this.claims.using(tx).create(…))`.
 - Options: `{ isolation: 'serializable', retry: 3 }` (retries on serialization failure / deadlock).
+
+### State transitions
+
+A status column with rules (`requested → proposed → accepted`, never back) is a `states()` machine from core, and
+`transition()` moves a row through it safely:
+
+```ts
+export const ClaimStatus = states({ open: ['escalated', 'resolved'], escalated: ['resolved'], resolved: [] }, {
+  name: 'claim',
+  onEnter: { escalated: ({ row }) => ClaimEscalated.emit({ claimId: (row as Claim).id }) },
+})
+export const claims = table('claims', { id: id(), status: text().oneOf(ClaimStatus.values).default('open'), … })
+
+await this.claims.transition(claimId, 'status', ClaimStatus, 'escalated', async (claim, from) => {
+  await this.notes.create({ claimId: claim.id, text: `escalated from ${from}` })
+})
+```
+
+In the ambient transaction (or one of its own): it locks the row, returns it unchanged when it is already in that
+state (so retries and duplicate webhooks are harmless), throws `ConflictError('claim.invalid_transition')` (409) on
+a move the machine does not allow, then runs the machine's `onLeave` hook, the update, `onEnter`, and your callback.
+A throw anywhere rolls everything back.
 
 ### Locks and idempotency
 

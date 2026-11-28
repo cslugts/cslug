@@ -105,7 +105,7 @@ export class BookingRepository extends Repository(bookings) { /* domain queries 
 The base resolves `Database` itself. Methods: `find`, `findOrFail` (`NotFoundError`, code `<singular>.not_found`),
 `findBy`, `findByOrFail`, `existsBy`, `count`, `all`, `create` / `createMany` (generated ids, short codes,
 timestamps, defaults; `RETURNING *`), `update(id, values)`, `upsert(values, { conflict, update? })`,
-`delete` (soft if possible), `forceDelete`, `restore`, `lockForUpdate(id, opts)`, `paginate({ page, perPage, where, orderBy, dir })`,
+`delete` (soft if possible), `forceDelete`, `restore`, `lockForUpdate(id, opts)`, `transition(id, field, machine, to, fn?)` (lock, return unchanged if already `to`, `machine.transition` with its hooks, then `fn(row, from)`; ambient or own transaction), `paginate({ page, perPage, where, orderBy, dir })`,
 `where`, `query`, `withTrashed`, `onlyTrashed`, `using(tx)` (explicit transaction), `table`, `db`.
 
 ## `preload`
