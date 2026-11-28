@@ -1,18 +1,25 @@
 import { type AnyEventClass, type Clock, CslugError, type Duration, parseDuration } from '@cslug/core'
 import type { Database } from '@cslug/database'
 import { type Backoff, backoffDelay, Job } from '@cslug/queue'
-import { NondeterminismError, StepFailedError, Suspension } from './errors'
+import { Cancellation, CompensationFailedError, NondeterminismError, StepFailedError, Suspension } from './errors'
 import { errorJson, type Json, toJson } from './json'
 import type { JournalEntry, WorkflowStore } from './store'
 
-export type StepOptions = {
-  /** Attempts in all, the first included (default 3). */
+export type StepOptions<T = unknown> = {
+  /** Attempts in all, the first included (default 3). Also for its compensation. */
   tries?: number
   /** Wait before retry n: a duration, one per retry, or a function (default: 30 s, doubled each time, at most 1 h). */
   backoff?: Backoff
   /** An attempt longer than this fails (and is retried). */
   timeout?: Duration
+  /**
+   * Undo this step (a saga): when the run later fails or is cancelled, the compensations of its finished steps run
+   * in reverse order, each once (journaled, retried like the step), with the step's result.
+   */
+  compensate?: (result: Json<T>) => unknown
 }
+
+type Compensation = { seq: number; name: string; result: unknown; options: StepOptions<never> }
 
 const DEFAULT_BACKOFF = Job.exponential('30s', { max: '1h' })
 
@@ -44,6 +51,8 @@ async function withTimeout<T>(work: Promise<T>, timeout: Duration | undefined, s
 export class WorkflowContext {
   private seq = 0
   private readonly entries: Map<number, JournalEntry>
+  /** The finished steps with a `compensate`, in order, as the replay passes them. */
+  private readonly compensations: Compensation[] = []
 
   constructor(
     /** The run's id. */
@@ -52,6 +61,8 @@ export class WorkflowContext {
     private readonly store: WorkflowStore,
     private readonly db: Database,
     private readonly clock: Clock,
+    /** Replaying a run being cancelled: the first call that has not run stops it. */
+    private readonly cancelling = false,
   ) {
     this.entries = new Map(journal.map((e) => [e.seq, e]))
   }
@@ -60,7 +71,52 @@ export class WorkflowContext {
     const seq = this.seq++
     const entry = this.entries.get(seq)
     if (entry && (entry.name !== name || entry.kind !== kind)) throw new NondeterminismError(seq, entry.name, name)
+    if (this.cancelling && entry?.status !== 'completed') throw new Cancellation()
     return { seq, entry }
+  }
+
+  /** Whether a finished step of this replay has something to undo. */
+  get hasCompensations(): boolean {
+    return this.compensations.length > 0
+  }
+
+  private finished<T>(seq: number, name: string, result: T, options: StepOptions<never>): T {
+    if (options.compensate) this.compensations.push({ seq, name, result, options })
+    return result
+  }
+
+  /**
+   * Run the compensations of the finished steps, last first, each once: journaled at seq `-(step seq + 1)`, in a
+   * transaction with its entry, retried after the step's backoff (the run suspends). Throws
+   * `CompensationFailedError` after the last try.
+   */
+  async compensate(): Promise<void> {
+    for (const c of [...this.compensations].reverse()) {
+      const seq = -(c.seq + 1)
+      const name = `compensate:${c.name}`
+      const entry = this.entries.get(seq)
+      if (entry?.status === 'completed') continue
+      if (entry?.status === 'failed') throw new CompensationFailedError(c.name, entry.error)
+      if (entry?.status === 'retrying' && !this.due(entry.wakeAt)) throw new Suspension('sleeping', entry.wakeAt)
+      const attempts = (entry?.attempts ?? 0) + 1
+      const base = { seq, name, kind: 'compensate' as const, attempts }
+      try {
+        await this.db.transaction(async () => {
+          await withTimeout(Promise.resolve(c.options.compensate?.(c.result as never)), c.options.timeout, name)
+          await this.record({ ...base, status: 'completed', wakeAt: null })
+        })
+      } catch (error) {
+        if (attempts < (c.options.tries ?? 3)) {
+          const wakeAt = new Date(
+            this.clock.now().getTime() + backoffDelay(c.options.backoff ?? DEFAULT_BACKOFF, attempts),
+          )
+          await this.record({ ...base, status: 'retrying', error: errorJson(error), wakeAt })
+          throw new Suspension('sleeping', wakeAt)
+        }
+        await this.record({ ...base, status: 'failed', error: errorJson(error), wakeAt: null })
+        throw new CompensationFailedError(c.name, error)
+      }
+    }
   }
 
   private due(at: Date | null): boolean {
@@ -76,18 +132,24 @@ export class WorkflowContext {
    * Run `fn` once and store its result (as JSON). `fn` runs in a database transaction together with the journal
    * entry. A failure is retried after `backoff` without holding a worker; after `tries`, the run fails.
    */
-  async step<T>(name: string, fn: () => T | Promise<T>, options: StepOptions = {}): Promise<Json<Awaited<T>>> {
+  async step<T>(
+    name: string,
+    fn: () => T | Promise<T>,
+    options: StepOptions<Awaited<T>> = {},
+  ): Promise<Json<Awaited<T>>> {
     const { seq, entry } = this.next(name, 'step')
-    if (entry?.status === 'completed') return entry.result as Json<Awaited<T>>
+    const opts = options as StepOptions<never>
+    if (entry?.status === 'completed') return this.finished(seq, name, entry.result as Json<Awaited<T>>, opts)
     if (entry?.status === 'failed') throw new StepFailedError(name, entry.error)
     if (entry?.status === 'retrying' && !this.due(entry.wakeAt)) throw new Suspension('sleeping', entry.wakeAt)
     const attempts = (entry?.attempts ?? 0) + 1
     try {
-      return await this.db.transaction(async () => {
+      const value = await this.db.transaction(async () => {
         const value = toJson(await withTimeout(Promise.resolve(fn()), options.timeout, name))
         await this.record({ seq, name, kind: 'step', status: 'completed', result: value, attempts, wakeAt: null })
         return value as Json<Awaited<T>>
       })
+      return this.finished(seq, name, value, opts)
     } catch (error) {
       if (error instanceof Suspension) throw error
       if (attempts < (options.tries ?? 3)) {

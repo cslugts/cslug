@@ -1,12 +1,16 @@
 import { CslugError } from '@cslug/core'
 
+/** The message of an error, or of an error stored as JSON. */
+const messageOf = (cause: unknown) =>
+  typeof (cause as { message?: unknown })?.message === 'string' ? (cause as { message: string }).message : String(cause)
+
 /** A step failed on its last try; the run fails with it. */
 export class StepFailedError extends CslugError {
   constructor(
     readonly step: string,
     cause: unknown,
   ) {
-    super('workflow.step_failed', `Step "${step}" failed: ${cause instanceof Error ? cause.message : String(cause)}`, {
+    super('workflow.step_failed', `Step "${step}" failed: ${messageOf(cause)}`, {
       cause,
     })
   }
@@ -35,4 +39,19 @@ export class Suspension {
   ) {}
 }
 
-export const isSuspension = (value: unknown): value is Suspension => value instanceof Suspension
+/** Thrown by `ctx` calls of a run being cancelled, at the first call that has not run yet. */
+export class Cancellation {}
+
+/** A compensation failed on its last try. */
+export class CompensationFailedError extends CslugError {
+  constructor(
+    readonly step: string,
+    cause: unknown,
+  ) {
+    super('workflow.compensation_failed', `Compensating "${step}" failed: ${messageOf(cause)}`, { cause })
+  }
+}
+
+/** True for what `ctx` throws to stop a replay (a suspension or a cancellation): rethrow it from a `catch`. */
+export const isSuspension = (value: unknown): value is Suspension | Cancellation =>
+  value instanceof Suspension || value instanceof Cancellation

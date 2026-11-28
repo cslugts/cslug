@@ -1,7 +1,22 @@
 import { type Database, sql } from '@cslug/database'
 
-export type RunStatus = 'pending' | 'running' | 'sleeping' | 'waiting' | 'completed' | 'failed' | 'cancelled'
-export const FINISHED: readonly RunStatus[] = ['completed', 'failed', 'cancelled']
+export type RunStatus =
+  | 'pending'
+  | 'running'
+  | 'sleeping'
+  | 'waiting'
+  /** Undoing finished steps after a failure (a compensation may be waiting for its retry). */
+  | 'compensating'
+  /** Cancelled, not yet stopped: its next wake-up undoes finished steps, then it is `cancelled`. */
+  | 'cancelling'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  /** Failed, and every compensation ran. */
+  | 'compensated'
+  /** Failed (or cancelled), and a compensation failed on its last try. */
+  | 'compensation_failed'
+export const FINISHED: readonly RunStatus[] = ['completed', 'failed', 'cancelled', 'compensated', 'compensation_failed']
 
 /** A workflow run as stored (`workflows.find(id)`). */
 export type WorkflowRun = {
@@ -24,7 +39,7 @@ export type WorkflowRun = {
 export type JournalEntry = {
   seq: number
   name: string
-  kind: 'step' | 'sleep' | 'wait' | 'now' | 'uuid'
+  kind: 'step' | 'sleep' | 'wait' | 'now' | 'uuid' | 'compensate'
   status: 'completed' | 'pending' | 'retrying' | 'failed'
   result: unknown
   error: unknown
@@ -67,10 +82,11 @@ export class WorkflowStore {
       finished_at = now() where id = ${id}`)
   }
 
-  /** Cancel a run that has not finished; false otherwise. */
+  /** Mark a run that has not finished `cancelling`; false when it had finished or was being cancelled. */
   async cancel(id: string): Promise<boolean> {
-    const n = await this.db().exec(sql`update cslug_workflow_runs set status = 'cancelled', updated_at = now(),
-      finished_at = now(), wake_at = null where id = ${id} and status not in ('completed', 'failed', 'cancelled')`)
+    const n = await this.db().exec(sql`update cslug_workflow_runs set status = 'cancelling', updated_at = now()
+      where id = ${id} and status not in ('completed', 'failed', 'cancelled', 'compensated', 'compensation_failed',
+        'cancelling')`)
     return n > 0
   }
 

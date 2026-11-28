@@ -5,7 +5,7 @@ import { SQL } from 'bun'
 import { findWorkflow, WorkflowResumeJob, Workflows } from '../src'
 import { fixtureApp } from './fixture/app'
 import { OrderPaid } from './fixture/app/events'
-import { FlakyWorkflow, knobs, OrderWorkflow } from './fixture/app/workflows/order-workflow'
+import { BookingSaga, FlakyWorkflow, knobs, OrderWorkflow, saga } from './fixture/app/workflows/order-workflow'
 
 const { DATABASE_URL, REDIS_URL } = process.env
 
@@ -30,7 +30,7 @@ describe.skipIf(!DATABASE_URL || !REDIS_URL)('workflows (guide 25)', () => {
   const workflows = () => t.resolve(Workflows)
   const run = (id: string) => workflows().find(id)
   const effects = (runId: string) =>
-    t.resolve(Database).many<{ name: string }>(sql`select name from effects where run_id = ${runId} order by name`)
+    t.resolve(Database).many<{ name: string }>(sql`select name from effects where run_id = ${runId} order by id`)
   const resumes = () => t.queue.of(WorkflowResumeJob)
 
   test('start: a pending run and one resume job; the same id again is the same run', async () => {
@@ -160,14 +160,99 @@ describe.skipIf(!DATABASE_URL || !REDIS_URL)('workflows (guide 25)', () => {
     knobs.changed = false
   })
 
-  test('cancel: the run stops; a finished run cannot be cancelled', async () => {
+  test('cancel: cancelling until its next wake-up (queued at once), then cancelled; not twice', async () => {
     const { id } = await OrderWorkflow.start({ orderId: 'o6' })
     await workflows().resume(id)
+    const jobs = resumes().length
     expect(await workflows().cancel(id)).toBe(true)
-    t.clock.advance('1d')
-    await workflows().resume(id)
-    expect((await run(id))?.status).toBe('cancelled')
+    expect((await run(id))?.status).toBe('cancelling')
+    expect(resumes()).toHaveLength(jobs + 1)
     expect(await workflows().cancel(id)).toBe(false)
+    await workflows().resume(id)
+    expect(await run(id)).toMatchObject({ status: 'cancelled', error: null })
+    expect(await workflows().cancel(id)).toBe(false)
+
+    const never = await OrderWorkflow.start({ orderId: 'o6b' }) // cancelled before it ran
+    await workflows().cancel(never.id)
+    await workflows().resume(never.id)
+    expect((await run(never.id))?.status).toBe('cancelled')
+    expect(await workflows().store.journal(never.id)).toEqual([])
+  })
+
+  describe('sagas', () => {
+    const toTheEnd = async (bookingId: string) => {
+      const { id } = await BookingSaga.start({ bookingId })
+      await workflows().resume(id)
+      await workflows().signal(id, 'go')
+      await workflows().resume(id)
+      return id
+    }
+
+    test('a step fails for good: the finished steps are undone in reverse, once; the run is compensated', async () => {
+      saga.confirmFails = true
+      saga.refundFailures = 0
+      const id = await toTheEnd('b1')
+      expect(await run(id)).toMatchObject({
+        status: 'compensated',
+        error: { code: 'workflow.step_failed', message: 'Step "confirm" failed: operator unreachable' },
+      })
+      expect((await effects(id)).map((e) => e.name)).toEqual(['note', 'refund attempt c-h-b1', 'release h-b1'])
+      const journal = await workflows().store.journal(id)
+      expect(journal.filter((e) => e.kind === 'compensate').map((e) => `${e.seq} ${e.name} ${e.status}`)).toEqual([
+        '-2 compensate:charge completed',
+        '-1 compensate:hold completed',
+      ])
+      await workflows().resume(id) // finished: nothing runs again
+      expect(await effects(id)).toHaveLength(3)
+    })
+
+    test('a compensation that fails is retried after its backoff (the run is compensating meanwhile)', async () => {
+      saga.confirmFails = true
+      saga.refundFailures = 1
+      const id = await toTheEnd('b2')
+      const r = await run(id)
+      expect(r?.status).toBe('compensating')
+      expect(r?.wakeAt?.getTime()).toBe(t.clock.now().getTime() + 60_000)
+      t.clock.advance('1m')
+      await workflows().resume(id)
+      expect((await run(id))?.status).toBe('compensated')
+      expect((await effects(id)).map((e) => e.name)).toEqual([
+        'note',
+        'refund attempt c-h-b2', // once: the failed attempt's insert rolled back with it
+        'release h-b2',
+      ])
+    })
+
+    test('a compensation that fails on its last try: compensation_failed, the earlier steps are left', async () => {
+      saga.confirmFails = true
+      saga.refundFailures = 10
+      const id = await toTheEnd('b3')
+      for (let i = 0; i < 3; i++) {
+        t.clock.advance('10m')
+        await workflows().resume(id)
+      }
+      expect(await run(id)).toMatchObject({
+        status: 'compensation_failed',
+        error: { code: 'workflow.compensation_failed', message: 'Compensating "charge" failed: refund refused' },
+      })
+      expect((await effects(id)).map((e) => e.name)).toEqual(['note']) // no release: the refund never succeeded
+      saga.refundFailures = 0
+    })
+
+    test('cancelling a run undoes its finished steps; one that succeeds keeps its result', async () => {
+      saga.refundFailures = 0
+      const { id } = await BookingSaga.start({ bookingId: 'b4' })
+      await workflows().resume(id) // waiting for "go"
+      await workflows().cancel(id)
+      await workflows().resume(id)
+      expect(await run(id)).toMatchObject({ status: 'cancelled', error: null })
+      expect((await effects(id)).map((e) => e.name)).toEqual(['note', 'refund attempt c-h-b4', 'release h-b4'])
+
+      saga.confirmFails = false
+      const ok = await toTheEnd('b5')
+      expect(await run(ok)).toMatchObject({ status: 'completed', output: 'done' })
+      expect((await effects(ok)).map((e) => e.name)).toEqual(['note'])
+    })
   })
 
   test('started inside a transaction that rolls back: no run, no job', async () => {
