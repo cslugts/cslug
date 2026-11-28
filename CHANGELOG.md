@@ -4,6 +4,14 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/workflow (new)
+- Durable workflows (guide 25, decision D13): `Workflow` classes with `run(ctx, input)` replayed from a journal in
+  PostgreSQL; `ctx.step` (once, in a transaction with its journal entry, retried after a backoff without holding a
+  worker), `sleep` / `sleepUntil`, `waitFor(Event, match, { timeout })`, `waitForSignal(name)`, `now()`, `uuid()`.
+- `Workflow.start(input, { id })` (idempotent, durable inside a transaction), `workflows.signal()`, `find()`,
+  `cancel()`; one resume at a time per run; `workflow.nondeterministic` when the code no longer matches a run.
+- `cslug add workflow`.
+
 ### @cslug/core
 - `states(transitions, { name, onEnter, onLeave })`: a state machine in plain TypeScript (`values`, `type`, `is`,
   `can`, `next`, `final`, `assert` → 409 `<name>.invalid_transition`, `transition()` running the hooks). A target

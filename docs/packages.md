@@ -23,7 +23,7 @@ installs `@cslug/ai`.
 | `@cslug/ai` | `Agent`, `Tool`, structured output, streaming, MCP server/client, providers (Anthropic, OpenAI-compatible, fake); stored conversations and run records; embedding drivers for search (Voyage, OpenAI-compatible) | core, validation · optional: queue, http, database (conversations, runs), search (embeddings, `searchTool`, recall) | `fetch` |
 | `@cslug/telemetry` | Records the spans and metrics packages report through core's `Tracer` / `Metrics`; OTLP/HTTP export of traces, metrics and logs, `/metrics` (Prometheus), sampling | core · optional: http | `fetch` |
 | `@cslug/security` | CSP nonces (`ctx.nonce`, which `<Assets>` uses), per-IP limit, IP filter, `security.txt`, account lockout (on auth's events), breached-password check, audit log | core, http · optional: database (audit log), auth (lockout, auth events audited) | Web Crypto, `fetch` |
-| `@cslug/workflow` *(planned, M15)* | Durable execution (journaled steps, durable sleeps, waits for events and signals), workflows, sagas with compensations, `workflow:*` commands | core, database, queue | PostgreSQL, Redis Streams |
+| `@cslug/workflow` *(M15: durable execution in; sagas and operations next)* | Durable execution (journaled steps, durable sleeps, waits for events and signals), workflows, sagas with compensations, `workflow:*` commands | core, database, queue | PostgreSQL, Redis Streams |
 | `@cslug/search` | Full-text search over tables (`searchable()`: weighted, per-row language, accent-insensitive; `search()`: ranked, highlights, typos), `searchIndex()` for other documents, `search:reindex`, semantic and hybrid search (pgvector) through an `Embedder` contract | core, database · optional (planned): queue | PostgreSQL full text, `unaccent`, `pg_trgm`, `pgvector` (opt in) |
 | `@cslug/cli` | The `cslug` binary, `Command`, generators, `repl`, `describe`, `mcp:dev`, `dev`, `start` supervisor | core · optional: database (`mcp:dev` query) | `Bun.spawn` |
 | `@cslug/testing` | `testApp()`, HTTP/HTML assertions, DB isolation, fakes, time travel | peers: every package it fakes | `bun test` |
@@ -94,7 +94,7 @@ version, so nothing can drift.
 | `--api` (JSON API) | validation, core, http, database, redis, cli · dev: testing |
 | `--web` (default: pages + islands) | api + vue, auth · peer: `vue` |
 | `--full` | web + queue, mail, storage |
-| add later | `cslug add queue`, `mail`, `storage`, `notification`, `webhook`, `search`, `telemetry`, `security`, `ai`, `tailwind` (several: `cslug add queue,mail`): installs the package, adds its provider and config |
+| add later | `cslug add queue`, `mail`, `storage`, `notification`, `webhook`, `search`, `telemetry`, `security`, `workflow`, `ai`, `tailwind` (several: `cslug add queue,mail`): installs the package, adds its provider and config |
 
 The pilot app uses `--full` + notification + webhook. AI is added after the MVP.
 
@@ -120,7 +120,7 @@ feature needs it. Report the size in the PR; a package far over its budget is a 
 | search | 1,000 |
 | telemetry | 800 |
 | security | 900 |
-| workflow (planned) | 1,200 |
+| workflow | 1,200 |
 | cli + testing | 1,800 |
 | create-cslug (templates not counted) | 200 |
 | **Total** | **~22,000** |

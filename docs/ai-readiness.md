@@ -48,8 +48,8 @@ hard-codes a model ID.
 
 ### What is deferred
 
-Multi-step workflows and durable agent runs (a run that waits for a human and resumes). The seams exist (Postgres,
-queue, `Tool`), but none of it ships until the product needs it.
+Multi-step workflows and durable agent runs were deferred here until 2026-11-28; they are now `@cslug/workflow`
+(D13, guide 25): an agent step can wait for a person's approval and resume days later.
 
 Planned ([implementation plan](./implementation-plan.md)): conversations (history in and out, then stored
 conversations and run records, M9g), and retrieval with pgvector through `@cslug/search` (M10), which also serves

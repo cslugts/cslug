@@ -319,6 +319,19 @@
         "@cslug/http": "workspace:*",
       },
     },
+    "packages/workflow": {
+      "name": "@cslug/workflow",
+      "version": "0.10.0",
+      "devDependencies": {
+        "@cslug/redis": "workspace:*",
+        "@cslug/testing": "workspace:*",
+      },
+      "peerDependencies": {
+        "@cslug/core": "workspace:*",
+        "@cslug/database": "workspace:*",
+        "@cslug/queue": "workspace:*",
+      },
+    },
     "spikes/a-vue-islands": {
       "name": "spike-a-vue-islands",
       "dependencies": {
@@ -398,6 +411,8 @@
     "@cslug/vue": ["@cslug/vue@workspace:packages/vue"],
 
     "@cslug/webhook": ["@cslug/webhook@workspace:packages/webhook"],
+
+    "@cslug/workflow": ["@cslug/workflow@workspace:packages/workflow"],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 

@@ -91,6 +91,11 @@ export const graph: Record<string, PackageSpec> = {
     requires: ['core', 'http'],
     optional: ['database', 'auth'],
   },
+  workflow: {
+    description:
+      'Durable workflows on PostgreSQL and the queue: journaled steps, sleeps, waits for events and signals.',
+    requires: ['core', 'database', 'queue'],
+  },
   ai: {
     description: 'Agents, tools, structured output, conversations and MCP.',
     requires: ['core', 'validation'],
