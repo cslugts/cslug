@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.9.0 (2026-11-28)
+
+Encryption with `APP_KEY` rotation and auth events (the first half of the security work), and hot module
+replacement for islands under `cslug dev`.
+
 ### @cslug/core
 - `Encrypter`: encryption (AES-256-GCM, same `v1.` format) and HMAC signatures with `APP_KEY`, and key rotation:
   values and signatures made with a key in `APP_PREVIOUS_KEYS` still decrypt and verify. `safeEqual`, `hmac`.

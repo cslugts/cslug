@@ -1,6 +1,6 @@
 {
   "name": "@cslug/http",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Router, middleware, HttpContext, sessions, CSRF, error rendering on Bun.serve.",
   "license": "MIT",
   "type": "module",
