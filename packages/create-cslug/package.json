@@ -1,6 +1,6 @@
 {
   "name": "create-cslug",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Create a cslug app: bun create cslug <dir>.",
   "license": "MIT",
   "type": "module",

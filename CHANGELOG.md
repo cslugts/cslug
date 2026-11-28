@@ -4,6 +4,12 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.13.0 (2026-11-28)
+
+Each app renders its own errors: handlers in `app/exceptions/` (HTML and JSON) and error views by convention
+(`resources/views/errors/<status>.vue`); the guides import everything they use and gain setup and reference
+sections.
+
 ### Error pages and handlers
 - **http:** error handlers in `app/exceptions/` (found at boot): `ErrorHandler` classes with `static handles`
   (error classes, statuses, `'4xx'`, `'5xx'`, `'*'`; the nearest class wins) and `html()` / `json()` / `report()`;
