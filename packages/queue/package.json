@@ -1,6 +1,6 @@
 {
   "name": "@cslug/queue",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Jobs and workers on Redis Streams, after-commit and durable dispatch, and the scheduler.",
   "license": "MIT",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@cslug/webhook",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Webhook signature verification and an exactly-once inbox.",
   "license": "MIT",
   "type": "module",
