@@ -4,6 +4,11 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.14.0 (2026-11-28)
+
+HTTPS for local development: `cslug serve` takes a certificate, and `cslug dev:cert` makes a trusted one with
+mkcert.
+
 ### Features
 - **http:** HTTPS in the server for local development. `HttpKernel.listen({ tls: { cert, key } })`; `cslug serve`
   (and so `cslug dev` / `cslug start`) takes the certificate from `--tls-cert` / `--tls-key`, else `http.tls`, else

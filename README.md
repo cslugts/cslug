@@ -34,7 +34,7 @@ export class BookingController {
 
 ## Status
 
-Version **0.13.1** is on npm: HTTP, validation, database, Vue pages with HMR in development, auth, Redis, queue and scheduler, mail,
+Version **0.14.0** is on npm: HTTP, validation, database, Vue pages with HMR in development, auth, Redis, queue and scheduler, mail,
 webhooks, notifications, storage, two-factor authentication, AI (agents, tools, MCP, conversations), search (full text, semantic, hybrid),
 observability (log targets, OpenTelemetry traces and metrics, `/metrics`), encryption with `APP_KEY` rotation, security
 (CSP nonces, IP filter, account lockout, breached-password check, audit log), state machines and durable workflows with sagas,
