@@ -1,6 +1,6 @@
 {
   "name": "@cslug/workflow",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "Durable workflows on PostgreSQL and the queue: journaled steps, durable sleeps, waits for events and signals.",
   "license": "MIT",
   "type": "module",

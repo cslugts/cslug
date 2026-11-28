@@ -1,6 +1,6 @@
 # Implementation plan
 
-> **Status (2026-11-28):** approved. Phase 0, the spikes, M1–M15 and M4c are done; 0.13.1 released (0.10.0: `@cslug/security`; 0.11.0: `states()` and `repo.transition()`, `@cslug/workflow`; 0.11.1: fixes, complete guides; 0.12.0: every generator, `make:crud`; 0.13.0: error handlers and error views; 0.13.1: create-cslug always runs the latest release). Every planned milestone has shipped.
+> **Status (2026-11-28):** approved. Phase 0, the spikes, M1–M15 and M4c are done; 0.14.0 released (0.10.0: `@cslug/security`; 0.11.0: `states()` and `repo.transition()`, `@cslug/workflow`; 0.11.1: fixes, complete guides; 0.12.0: every generator, `make:crud`; 0.13.0: error handlers and error views; 0.13.1: create-cslug always runs the latest release; 0.14.0: HTTPS for local development, `cslug dev:cert`). Every planned milestone has shipped.
 > Progress is tracked in the status table below. Update it as milestones land.
 
 ## Status
