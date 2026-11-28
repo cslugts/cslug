@@ -1,8 +1,8 @@
 import { defineConfig } from '@cslug/core'
 
 /**
- * Content-Security-Policy (a nonce per request, which <Assets> puts on its tags), a per-IP limit, an IP filter and
- * /.well-known/security.txt. Behind a load balancer, set http.trustedProxies, or every visitor shares its address.
+ * Content-Security-Policy (a nonce per request, which <Assets> puts on its tags), a per-IP limit, an IP filter,
+ * /.well-known/security.txt, account lockout and the audit log. Behind a load balancer, set http.trustedProxies, or every visitor shares its address.
  */
 export default defineConfig({
   csp: {
@@ -12,4 +12,6 @@ export default defineConfig({
   limit: '600/min', // every request from one IP, assets included (health checks are not counted); false: off
   ipFilter: { deny: [] }, // addresses and CIDR ranges; allow: [...] lets only those in
   securityTxt: process.env.SECURITY_CONTACT ? { contact: process.env.SECURITY_CONTACT } : false,
+  lockout: { attempts: 5, decay: '15m' }, // per email, with @cslug/auth; listen to AccountLocked to tell the user
+  audit: { keep: '365d' }, // with @cslug/database; schedule audit:prune daily
 })

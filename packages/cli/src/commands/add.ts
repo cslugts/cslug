@@ -57,7 +57,7 @@ export const ADDITIONS: Record<string, Addition> = {
     packages: ['@cslug/security'],
     providers: { from: '@cslug/security', names: ['SecurityProvider'] },
     config: 'security',
-    next: 'set SECURITY_CONTACT (mailto: or https:) for /.well-known/security.txt, and http.trustedProxies behind a load balancer',
+    next: 'cslug migrate (creates cslug_audit_log); set SECURITY_CONTACT for /.well-known/security.txt, and http.trustedProxies behind a load balancer',
   },
   ai: {
     packages: ['@cslug/ai'],

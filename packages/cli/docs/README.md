@@ -28,7 +28,7 @@ under `bun --watch` with `CSLUG_DEV=1`; islands are hot-updated when `.vue` file
 | `storage` | `@cslug/storage` | `StorageProvider`; `config/storage.ts` |
 | `notification` | `@cslug/notification` | `NotificationProvider`; `config/notification.ts`; then `cslug migrate` |
 | `webhook` | `@cslug/webhook` | `WebhookProvider`; `config/webhooks.ts`; then `cslug migrate` |
-| `security` | `@cslug/security` | `SecurityProvider`; `config/security.ts` (CSP, a per-IP limit, IP filter, `security.txt` from `SECURITY_CONTACT`) |
+| `security` | `@cslug/security` | `SecurityProvider`; `config/security.ts` (CSP, a per-IP limit, IP filter, `security.txt` from `SECURITY_CONTACT`, lockout, audit log); then `cslug migrate` |
 | `ai` | `@cslug/ai` | `AiProvider`; `config/ai.ts` (Anthropic, roles `fast` and `smart`) |
 | `tailwind` | `tailwindcss`, `bun-plugin-tailwind` (dev) | `resources/styles/tailwind.css`, its import in `resources/client.ts`, `assets.tailwind: true` |
 

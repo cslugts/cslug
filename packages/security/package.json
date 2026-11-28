@@ -1,7 +1,7 @@
 {
   "name": "@cslug/security",
   "version": "0.9.0",
-  "description": "Content-Security-Policy nonces, a per-IP limit, an IP filter and security.txt for cslug apps.",
+  "description": "Content-Security-Policy nonces, IP filter and per-IP limit, security.txt, account lockout, breached passwords and an audit log for cslug apps.",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -17,13 +17,17 @@
     "security",
     "csp",
     "nonce",
-    "security.txt"
+    "security.txt",
+    "audit-log",
+    "lockout",
+    "haveibeenpwned"
   ],
   "exports": {
     ".": "./src/index.ts"
   },
   "files": [
     "src",
+    "migrations",
     "docs",
     "README.md"
   ],
@@ -32,6 +36,22 @@
   },
   "peerDependencies": {
     "@cslug/core": "workspace:*",
-    "@cslug/http": "workspace:*"
+    "@cslug/http": "workspace:*",
+    "@cslug/database": "workspace:*",
+    "@cslug/auth": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@cslug/database": {
+      "optional": true
+    },
+    "@cslug/auth": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@cslug/auth": "workspace:*",
+    "@cslug/database": "workspace:*",
+    "@cslug/testing": "workspace:*",
+    "@cslug/validation": "workspace:*"
   }
 }

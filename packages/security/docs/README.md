@@ -1,7 +1,8 @@
 # @cslug/security
 
 `SecurityProvider` reads `config/security.ts` and adds global middleware, in this order: the IP filter, the per-IP
-limit, then the Content-Security-Policy. List it after `HttpProvider`. The rest of an app's defences (security
+limit, then the Content-Security-Policy. With `@cslug/auth` it adds account lockout; with `@cslug/database`, the
+audit log (and records auth events). List it after `HttpProvider`. The rest of an app's defences (security
 headers, CSRF, `throttle()`, signed URLs, password hashing) are in `@cslug/http` and `@cslug/auth`.
 
 ## Configuration
@@ -17,6 +18,8 @@ export default defineConfig({
   limit: '600/min', // default: off
   ipFilter: { allow: ['10.0.0.0/8'], deny: ['10.6.6.0/24'] },
   securityTxt: { contact: 'mailto:security@example.com', expires: '2027-06-30', preferredLanguages: ['en', 'fr'] },
+  lockout: { attempts: 5, decay: '15m' }, // default: off
+  audit: { keep: '365d', auth: true }, // default: on with @cslug/database; false: off
 })
 ```
 
@@ -67,3 +70,46 @@ With `securityTxt`, `GET /.well-known/security.txt` answers `text/plain`: `Conta
 `Expires` (default: a year after the process started), then `Encryption`, `Acknowledgments`,
 `Preferred-Languages`, `Policy`, `Hiring` and `Canonical` (default: `app.url`'s). A missing contact or an invalid
 `expires` fails at boot.
+
+## Account lockout
+
+With `lockout` and `@cslug/auth`: a `LoginAttempting` listener refuses a locked email with `AccountLockedError`
+(423 `security.account_locked`, `params.retryAfter`); `LoginFailed` (wrong password, known or unknown email)
+counts a failure; at `attempts` within `decay` the email is locked for `decay` and `AccountLocked`
+`{ email, userId?, ip, until }` is emitted (listen to it to tell the owner). `LoginSucceeded` in the same request
+resets the count. Counts and locks are in the `Cache`.
+
+`Lockout` (injectable): `lockedUntil(email)`, `assertUnlocked(email)`, `failed(email, { userId, ip })`,
+`succeeded(email)`, `unlock(email)`.
+
+## Breached passwords
+
+```ts
+password: v.string().min(12).refineAsync(notBreached(), { message: 'validation.password_breached' })
+```
+
+`notBreached({ threshold = 1, timeout = '2s' })` asks `api.pwnedpasswords.com/range/<first 5 of SHA-1>` with
+`Add-Padding: true` and looks for the rest of the hash in the answer. Down or slow: the password passes and
+`security.breached_passwords_unavailable` is logged. `BreachedPasswords.count(password)` gives the number;
+`BreachedPasswords.fake(['password123'])` in tests (returns a restore function; `{ unavailable: true }` simulates
+an outage).
+
+## Audit log
+
+`cslug_audit_log` (migration `00000000_000700`): `id` (UUIDv7), `action`, `user_id`, `subject_type`, `subject_id`,
+`ip`, `request_id`, `data` (jsonb), `created_at`.
+
+```ts
+await audit.record('booking.refunded', { subject: { type: 'booking', id: booking.id }, data: { amount } })
+await audit.for({ type: 'booking', id: booking.id }) // newest first, { limit } (default 100)
+await audit.byUser(user.id)
+await audit.prune('90d') // default: audit.keep
+```
+
+`record()` takes the user (`userId` overrides it, `null` for none), IP and request id from the context and runs on
+the ambient transaction. `data` is copied JSON-safe (bigint as string, dates as ISO) with keys containing
+`password`, `secret`, `token`, `authorization`, `cookie`, `apikey`, `cardnumber` or `cvv` redacted. Auth events are
+recorded under their event names; a failure to record one is logged, never thrown into the login.
+
+`cslug audit:prune` deletes entries older than `audit.keep`. Without `@cslug/database`, `Audit` throws
+`security.audit_needs_database`.
