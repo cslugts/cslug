@@ -59,6 +59,11 @@ export const ADDITIONS: Record<string, Addition> = {
     config: 'security',
     next: 'cslug migrate (creates cslug_audit_log); set SECURITY_CONTACT for /.well-known/security.txt, and http.trustedProxies behind a load balancer',
   },
+  workflow: {
+    packages: ['@cslug/workflow'],
+    providers: { from: '@cslug/workflow', names: ['WorkflowProvider'] },
+    next: 'cslug migrate (creates cslug_workflow_runs, _steps and _signals); needs the queue (cslug add queue)',
+  },
   ai: {
     packages: ['@cslug/ai'],
     providers: { from: '@cslug/ai', names: ['AiProvider'] },

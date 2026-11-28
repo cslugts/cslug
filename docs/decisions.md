@@ -298,6 +298,23 @@ SPA mode. (Vue state-preserving HMR was here until 2026-11-28: see D5.)
 
 ---
 
+## D13. Workflows and durable runs: in, on Postgres and the queue ✅
+
+Decided 2026-11-28 (M15), reversing the deferral in `ai-readiness.md` and the "workflow, durable" row of the strav
+lessons below. Products built on cslug need multi-day processes (deposits waiting for a partner, refunds waiting
+for a person, durable AI agent runs) and were writing them as chains of jobs with status columns.
+
+- ✅ **`@cslug/workflow`**, replay-based durable execution: a workflow is an `@inject()` class whose `run(ctx, input)`
+  is replayed from a journal (`cslug_workflow_steps`); `ctx.step`, `sleep`, `waitFor`, `waitForSignal`, `now`, `uuid`
+  are journaled by position and name.
+- ✅ **No new infrastructure**: the journal is in Postgres, wake-ups are queue jobs, one resume at a time per run
+  through an advisory lock, events through core's `EventBus`. No Temporal or other server.
+- ✅ **Steps commit with their journal entry** (exactly once for database effects, at least once for external calls:
+  use idempotency keys).
+- ❌ Not a general DAG or BPMN engine, no visual editor, no child workflows in the first version.
+
+---
+
 ## Lessons from strav
 
 | strav did | Cost observed | cslug does |

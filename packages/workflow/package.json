@@ -1,0 +1,43 @@
+{
+  "name": "@cslug/workflow",
+  "version": "0.10.0",
+  "description": "Durable workflows on PostgreSQL and the queue: journaled steps, durable sleeps, waits for events and signals.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cslugts/cslug.git",
+    "directory": "packages/workflow"
+  },
+  "homepage": "https://github.com/cslugts/cslug/tree/main/packages/workflow",
+  "keywords": [
+    "cslug",
+    "bun",
+    "framework",
+    "workflow",
+    "durable-execution",
+    "saga",
+    "postgres"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "migrations",
+    "docs",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.3.14"
+  },
+  "peerDependencies": {
+    "@cslug/core": "workspace:*",
+    "@cslug/database": "workspace:*",
+    "@cslug/queue": "workspace:*"
+  },
+  "devDependencies": {
+    "@cslug/redis": "workspace:*",
+    "@cslug/testing": "workspace:*"
+  }
+}

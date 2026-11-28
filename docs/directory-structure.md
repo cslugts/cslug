@@ -24,6 +24,7 @@ my-app/
 │   ├── tables/                            # table definitions + row types: booking-table.ts
 │   ├── enums/                             # plain TS: booking-status.ts (states + transitions)
 │   ├── jobs/                              # send-checkin-job.ts
+│   ├── workflows/                         # booking-deposit-workflow.ts (@cslug/workflow)
 │   ├── events/                            # booking-deposit-paid.ts
 │   ├── listeners/                         # update-reliability-badge-listener.ts
 │   ├── mail/                              # mailables: booking-confirmed-mail.ts
@@ -73,7 +74,7 @@ my-app/
 ### Rules
 
 - **The folder is the type.** `app/controllers/`, `app/jobs/`, `app/listeners/`, … Discovery (jobs for the
-  worker, commands for the CLI, tables for the migration differ, listeners, tools) scans these folders,
+  worker, workflows, commands for the CLI, tables for the migration differ, listeners, tools) scans these folders,
   including subfolders.
 - **File name = exported class, in kebab-case**, with the role as the last word:
   `BookingRepository` → `booking-repository.ts`, `SendCheckinJob` → `send-checkin-job.ts`,
