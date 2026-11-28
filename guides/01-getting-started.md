@@ -22,7 +22,10 @@ bunx cslug dev                       # the web process with live reload and HMR;
 | `--full` | `--web` + queue, mail, storage | A worker and the scheduler, `routes/schedule.ts`, mail config and a queued `WelcomeMail` with a Vue template, storage config, Mailpit |
 | `--tailwind` (with any) | `tailwindcss`, `bun-plugin-tailwind` | Tailwind 4 through the asset build |
 
-Every `@cslug/*` package is pinned to one version: the packages of a release are released together. Add more later
+Every `@cslug/*` package is pinned to one version: the packages of a release are released together, and a new app
+always gets the latest one. Bun may run a `create-cslug` it cached long ago, so the scaffolder first asks npm for
+the latest release and, when it is older, runs that one instead (`--no-update-check` keeps the one you ran, for
+example offline; `bunx create-cslug@0.13.0 my-app` picks a version on purpose). Add more later
 with `cslug add` (guide 20): `cslug add queue,mail`, `cslug add search`, `cslug add ai`.
 
 The app's scripts: `bun run dev`, `start`, `build`, `typecheck`, `test` and `lint` (Biome). `bunx cslug <command>`

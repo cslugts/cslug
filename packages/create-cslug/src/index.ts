@@ -8,3 +8,4 @@ export {
   scaffold,
   VERSION,
 } from './scaffold'
+export { isNewer, latestRelease, newerRelease } from './update'
