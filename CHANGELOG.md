@@ -4,6 +4,21 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+### @cslug/security (new)
+- `csp()`: a Content-Security-Policy with a new nonce per request (`ctx.nonce`), on error responses too; directives
+  replaced or removed from `config/security.ts`, report-only mode, `upgrade-insecure-requests` in production.
+- `ipFilter({ allow, deny })` with addresses and CIDR ranges (IPv4 and IPv6), globally or on a group; `ipInRange()`.
+- `ipLimit()`: one rate limit over every request from an IP (`limit: '600/min'`), health checks excepted.
+- `/.well-known/security.txt` (RFC 9116) from `securityTxt`.
+- `cslug add security`. Guide 24.
+
+### @cslug/http, @cslug/vue
+- `ctx.nonce`: the request's CSP nonce. `<Assets>` puts it on its `<script>` and `<style>` tags, the component
+  styles and the `cslug dev` client; `useRequest().nonce` for your own inline tags.
+
+### CI
+- `bun audit --audit-level=high` on every build.
+
 ## 0.9.0 (2026-11-28)
 
 Encryption with `APP_KEY` rotation and auth events (the first half of the security work), and hot module

@@ -9,7 +9,7 @@
 | `<Assets entry="client" />` | In the layout `<head>` |
 | `hydrate="load \| idle \| visible \| media:(…) \| none"` | On any component use; `idle` waits at most 2 s; `:ssr="false"` + `<template #fallback>` to skip server rendering |
 | `serialize(value)` / `Serialized<T>` | What an island receives (bigint → string, Date → ISO); type island props per prop: `defineProps<{ day: Serialized<Day> }>()` |
-| `useRequest()` | `locale`, `user`, `csrfToken`, `errors` (first message per field), `old`, `flash`, `url`, `alternates` |
+| `useRequest()` | `locale`, `user`, `csrfToken`, `errors` (first message per field), `old`, `flash`, `url`, `alternates`, `nonce` (the CSP nonce, or `''`) |
 | `useT()` | `t`, `tr`, `locale`, `formatMoney`, `formatDate` in the current locale |
 | `route(name, params?, options?)` | |
 | `formatDuration(minutes)`, `formatMoney`, `formatDate` | |

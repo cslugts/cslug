@@ -50,6 +50,8 @@ jobs:
           for i in $(seq 1 30); do curl -s -o /dev/null http://localhost:9000 && break; sleep 1; done
           curl -sf -X PUT --aws-sigv4 "aws:amz:us-east-1:s3" --user cslug:cslug-secret http://localhost:9000/cslug
       - run: bun install --frozen-lockfile
+      - name: Dependency audit (high and critical advisories fail the build)
+        run: bun audit --audit-level=high
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run check:graph

@@ -227,6 +227,8 @@ export interface HttpContext {
   session: Session
   /** Name of the matched route. */
   readonly routeName?: string
+  /** This request's Content-Security-Policy nonce, when a CSP middleware set one (`csp()` from @cslug/security). */
+  nonce?: string
   /** Resolve from the request scope. */
   resolve<K extends Token>(token: K): Resolved<K>
 }

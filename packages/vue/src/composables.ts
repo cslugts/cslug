@@ -21,6 +21,8 @@ export type RequestInfo = {
   url: string
   /** This page in each supported locale (for `<link rel="alternate" hreflang>`), when its route has `:locale`. */
   alternates: { locale: string; url: string }[]
+  /** The CSP nonce for your own inline `<script>` / `<style>` (`csp()` from @cslug/security), or ''. */
+  nonce: string
 }
 
 /** The current request, read-only, on the server. Inside a hydrated island it throws: pass props instead. */
@@ -36,6 +38,7 @@ export function useRequest(): RequestInfo {
       flash: {},
       url: '',
       alternates: [],
+      nonce: '',
     }
   }
   const hasSession = ctx.session.available
@@ -52,6 +55,7 @@ export function useRequest(): RequestInfo {
     flash: hasSession ? ctx.session.flashed() : {},
     url: url.toString(),
     alternates: alternates(ctx, url),
+    nonce: ctx.nonce ?? '',
   }
 }
 
