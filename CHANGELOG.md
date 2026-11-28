@@ -4,6 +4,10 @@ All `@cslug/*` packages share one version (lockstep). Entries are grouped by pac
 
 ## Unreleased
 
+## 0.11.0 (2026-11-28)
+
+State machines (`states()`, `repo.transition()`) and durable workflows with sagas (`@cslug/workflow`).
+
 ### @cslug/workflow (new)
 - Durable workflows (guide 25, decision D13): `Workflow` classes with `run(ctx, input)` replayed from a journal in
   PostgreSQL; `ctx.step` (once, in a transaction with its journal entry, retried after a backoff without holding a
