@@ -78,7 +78,8 @@ export const aliasPlugin = (root: string): BunPlugin => ({
   },
 })
 
-function vuePlugins(root: string, dev: boolean): BunPlugin[] {
+/** The `.vue` (client output) and `.scss` plugins, after the `@/` alias. */
+export function vuePlugins(root: string, dev: boolean): BunPlugin[] {
   const cache = new SfcCache()
   return [
     aliasPlugin(root),

@@ -21,7 +21,7 @@
 | `buildAssets({ root, entries?, dev?, tailwind? })` | Also at `@cslug/vue/build` with `findIslands` and `aliasPlugin` |
 | `cslug build [--dev]`, `cslug typecheck` | Commands (vue-tsc must be installed for `typecheck`) |
 | `config('vue.routes')` | Name prefixes of the routes sent to the browser (default: all named routes) |
-| `VueProvider` | Registers the `.vue` loader and the commands; dev mode under `cslug dev` |
+| `VueProvider` | Registers the `.vue` loader and the commands; under `cslug dev` (CSLUG_DEV=1, never in production): asset watcher, `/__cslug/live`, HMR unless CSLUG_HMR=0 |
 | `registerVueLoader(root)` | What the provider and `@cslug/vue/register` call |
 | `compileSfc(file, { root, ssr })`, `rewriteIslands(source, file)` | Used by the loader and the build |
 

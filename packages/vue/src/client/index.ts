@@ -70,7 +70,7 @@ type MountOptions = { setup?: (app: App, island: { id: string; element: HTMLElem
 
 /**
  * Hydrate every `<cslug-island>` when its condition is met (load, idle, visible, media:…). Each island is its own
- * Vue app; `setup` installs app-wide plugins. In development, also connects to live reload.
+ * Vue app; `setup` installs app-wide plugins.
  */
 export function mountIslands(options: MountOptions = {}): void {
   const data = pageData()
@@ -111,22 +111,6 @@ export function mountIslands(options: MountOptions = {}): void {
       else mq.addEventListener('change', run, { once: true })
     }
   }
-  if (data.live) liveReload(data.live)
-}
-
-/** Reload when the dev server says so, or when it comes back after a restart. */
-function liveReload(url: string): void {
-  let wasDown = false
-  const source = new EventSource(url)
-  source.addEventListener('reload', () => location.reload())
-  source.addEventListener('css', () => {
-    for (const link of document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))
-      link.href = link.href.replace(/(\?.*)?$/, `?t=${Date.now()}`)
-  })
-  source.onerror = () => {
-    wasDown = true
-  }
-  source.onopen = () => {
-    if (wasDown) location.reload()
-  }
+  // development: let hot modules reuse this page's Vue (the condition is constant, so production drops the chunk)
+  if (process.env.NODE_ENV !== 'production') import('./hmr').catch(() => {})
 }

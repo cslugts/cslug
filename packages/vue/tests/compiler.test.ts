@@ -35,4 +35,20 @@ describe('island rewrite (spike a, finding 1)', () => {
     const client = compileSfc(`${FIXTURE}/resources/components/day-card.vue`, { root: FIXTURE, ssr: false })
     expect(client.code.match(/data-v-[0-9a-f]{8}/)?.[0]).toBe(c.css.match(/data-v-[0-9a-f]{8}/)?.[0]) // same scope id both sides
   })
+
+  test('browser builds in development are ready for HMR; production and server builds are not', () => {
+    const file = `${FIXTURE}/resources/components/counter.vue`
+    const dev = compileSfc(file, { root: FIXTURE, ssr: false }).code
+    expect(dev).toContain('_sfc_main.__hmrId = "components/counter"')
+    expect(dev).toContain('_sfc_main.render = render') // separate from setup: a template change keeps the state
+    expect(dev).toContain('(globalThis.__cslug_components ??= {})["components/counter"] ??= _sfc_main')
+    for (const options of [
+      { ssr: false, production: true },
+      { ssr: true, production: false },
+    ]) {
+      const code = compileSfc(file, { root: FIXTURE, ...options }).code
+      expect(code).not.toContain('__hmrId')
+      expect(code).not.toContain('__cslug_components')
+    }
+  })
 })

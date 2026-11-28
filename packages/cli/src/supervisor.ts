@@ -275,7 +275,10 @@ export class DevCommand extends Command {
   static description = 'Development: web, workers and scheduler, restarted when files change'
   static boot = false
   static longRunning = true
-  static args = roleFlags
+  static args = {
+    ...roleFlags,
+    hmr: flag.boolean().default(true).describe('Hot-update islands when .vue files change (--no-hmr: reload the page)'),
+  }
 
   handle(flags: Command.Args<typeof DevCommand>) {
     return supervise(
@@ -283,7 +286,7 @@ export class DevCommand extends Command {
       flags,
       ['--watch', '--no-clear-screen'],
       'dev',
-      { CSLUG_DEV: '1' },
+      { CSLUG_DEV: '1', CSLUG_HMR: flags.hmr ? '1' : '0' },
       join(this.app.rootDir, DEV_LOG),
     )
   }

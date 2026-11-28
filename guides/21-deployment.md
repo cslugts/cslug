@@ -132,7 +132,7 @@ anyway is not lost: its lease expires and another worker reclaims it (at-least-o
 
 ## Development
 
-`cslug dev` already runs everything in one terminal (web with `--hot`, asset watcher, worker, scheduler), using
+`cslug dev` already runs everything in one terminal (web under `bun --watch`, asset watcher with HMR, worker, scheduler), using
 model 1. Use `cslug dev --isolated` to switch to model 2 when you want to reproduce production behaviour. You
 never need two terminals or two instances in development.
 

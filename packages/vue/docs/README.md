@@ -19,7 +19,13 @@ with `@cslug/validation`'s formatter, the same one the server uses.
 
 **The build** (`cslug build`, or `@cslug/vue/build`) runs `Bun.build` with the client entries plus one entry
 per island component, writing hashed files and `manifest.json` to `public/build/`. Under `cslug dev`, the web
-process builds at start, rebuilds on change and serves live reload at `/__cslug/live`.
+process builds at start, rebuilds on change and serves `/__cslug/live` (SSE) to an inline dev client
+(`live-client.ts`). A changed `.vue` file is recompiled in the server process (`reloadComponent()` patches the
+imported component objects: `bun --watch` does not see plugin-loaded files) and, with HMR on, built alone into
+`public/build/hmr/` with `vue`, `@cslug/vue` and already-loaded components taken from the page; the browser hands
+it to Vue's `__VUE_HMR_RUNTIME__` (`rerender` for template-only changes, `reload` otherwise). Development browser
+builds keep the render function separate from `setup` and set `__hmrId`; production builds do not, and drop
+`client/hmr.ts`. `cslug dev --no-hmr` (CSLUG_HMR=0) keeps live reload only.
 
 Tests that import views statically need the loader from the first line:
 `[test] preload = ["@cslug/vue/register"]` in `bunfig.toml`. Several app roots can register the loader in one process (a test

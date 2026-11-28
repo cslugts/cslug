@@ -81,6 +81,14 @@ describe('serving the build', () => {
     expect(
       (await call('/img/dot.png', { headers: { 'if-modified-since': img.headers.get('last-modified') ?? '' } })).status,
     ).toBe(304)
+    // the ETag wins over If-Modified-Since: a file rewritten within the same second is not "not modified"
+    const etag = img.headers.get('etag') ?? ''
+    expect(etag).toMatch(/^W\/"[a-z0-9]+-[a-z0-9]+"$/)
+    expect((await call('/img/dot.png', { headers: { 'if-none-match': etag } })).status).toBe(304)
+    const since = img.headers.get('last-modified') ?? ''
+    expect(
+      (await call('/img/dot.png', { headers: { 'if-none-match': 'W/"0-0"', 'if-modified-since': since } })).status,
+    ).toBe(200)
     expect((await call('/img/dot.png', { method: 'HEAD' })).headers.get('content-length')).toBe('8')
     expect((await call('/../package.json')).status).toBe(404)
     expect((await call('/%2e%2e/package.json')).status).toBe(404)

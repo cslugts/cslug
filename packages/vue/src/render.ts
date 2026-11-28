@@ -5,7 +5,8 @@ import { type HttpContext, type Responsable, Router } from '@cslug/http'
 import { Comment, type Component, createSSRApp, defineComponent, h, useSSRContext } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import type { PageData } from './client/data'
-import { liveReloadUrl } from './dev'
+import { liveConfig } from './dev'
+import { liveScript } from './live-client'
 import { componentStyles } from './loader'
 import { serialize } from './serialize'
 
@@ -104,8 +105,7 @@ function assetsHtml(entry: string, state: RenderState, root: string): string {
   if (token) out.push(`<meta name="csrf-token" content="${escapeAttr(token)}">`)
   const assets = manifest?.entries[entry]
   for (const css of assets?.css ?? []) out.push(`<link rel="stylesheet" href="${escapeAttr(css)}">`)
-  const styles = [...state.modules].map((m) => componentStyles.get(m)).filter(Boolean)
-  if (styles.length) out.push(`<style data-cslug>${styles.join('\n')}</style>`)
+  out.push(componentCss(state))
   if (state.islands.size) {
     out.push('<style>cslug-island{display:contents}</style>')
     if (assets?.js) {
@@ -124,7 +124,25 @@ function assetsHtml(entry: string, state: RenderState, root: string): string {
       )
     }
   }
+  out.push(devClient(state))
   return out.join('')
+}
+
+/**
+ * The CSS of the components the page rendered: one `<style data-cslug>`, or under `cslug dev` one per component
+ * (`data-cslug="<id>"`) so a change replaces just that one.
+ */
+function componentCss(state: RenderState): string {
+  const ids = [...state.modules].filter((m) => componentStyles.get(m))
+  if (!ids.length) return ''
+  if (!liveConfig()) return `<style data-cslug>${ids.map((m) => componentStyles.get(m)).join('\n')}</style>`
+  return ids.map((m) => `<style data-cslug="${escapeAttr(m)}">${componentStyles.get(m)}</style>`).join('')
+}
+
+/** Under `cslug dev`: the live-reload and HMR client (live-client.ts), told which components the page rendered. */
+function devClient(state: RenderState): string {
+  const live = liveConfig()
+  return live ? liveScript({ ...live, modules: [...state.modules] }) : ''
 }
 
 /** What islands need in the browser: locale, their translation namespaces, named routes, chunk URLs. */
@@ -142,7 +160,6 @@ function pageData(state: RenderState, manifest: AssetManifest): PageData {
   }
   const islands: Record<string, string> = {}
   for (const id of state.islands) if (manifest.islands[id]) islands[id] = manifest.islands[id] as string
-  const live = liveReloadUrl()
   return {
     locale,
     chain: translator.chain(locale),
@@ -150,7 +167,6 @@ function pageData(state: RenderState, manifest: AssetManifest): PageData {
     routes,
     appUrl: app.config<string | undefined>('app.url'),
     islands,
-    ...(live ? { live } : {}),
   }
 }
 
@@ -183,13 +199,12 @@ export async function renderPage(
     placed = true
     return assetsHtml(entry, state, root)
   })
-  // a page without <Assets> still gets its component CSS
-  if (!placed && state.modules.size) {
-    const styles = [...state.modules].map((m) => componentStyles.get(m)).filter(Boolean)
-    if (styles.length)
-      html = html.includes('</head>')
-        ? html.replace('</head>', `<style data-cslug>${styles.join('\n')}</style></head>`)
-        : `<style data-cslug>${styles.join('\n')}</style>${html}`
+  // a page without <Assets> still gets its component CSS (and the dev client)
+  if (!placed) {
+    const head = componentCss(state)
+    if (head) html = html.includes('</head>') ? html.replace('</head>', `${head}</head>`) : `${head}${html}`
+    const client = devClient(state)
+    if (client) html = html.includes('</body>') ? html.replace('</body>', `${client}</body>`) : `${html}${client}`
   }
   return { html: /^\s*<html[\s>]/i.test(html) ? `<!doctype html>${html}` : html, state }
 }
