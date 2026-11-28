@@ -1,0 +1,14 @@
+<script setup lang="ts">
+// an island where you use it with hydrate="visible" (or load, idle, media:…); static HTML without it
+const props = defineProps<{ label: string }>()
+</script>
+
+<template>
+  <div class="{{ kebab }}">{{ props.label }}</div>
+</template>
+
+<style scoped lang="scss">
+.{{ kebab }} {
+  display: block;
+}
+</style>

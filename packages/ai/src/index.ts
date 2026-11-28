@@ -54,6 +54,7 @@ export {
   VoyageEmbedder,
 } from './embedders'
 export { AiFake, type AiFixture, type AiRun, FIXTURES_DIR, installAiFake, setFakeEmbedder } from './fake'
+export { MakeAgentCommand, MakeToolCommand } from './generators'
 export {
   asMcpTools,
   discoverTools,

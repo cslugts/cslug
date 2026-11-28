@@ -1,0 +1,20 @@
+import { inject } from '@cslug/core'
+import { Policy } from '@cslug/auth'
+import type { {{ base }} } from '#app/tables/{{ kebab }}-table'
+import type { User } from '#app/tables/user-table'
+
+/** Only the owner sees, edits and deletes a {{ camel }}. Guests are refused before any ability is checked. */
+@inject()
+export class {{ base }}Policy extends Policy {
+  view(user: User, {{ camel }}: {{ base }}) {
+    return {{ camel }}.userId === user.id
+  }
+
+  update(user: User, {{ camel }}: {{ base }}) {
+    return {{ camel }}.userId === user.id
+  }
+
+  delete(user: User, {{ camel }}: {{ base }}) {
+    return {{ camel }}.userId === user.id
+  }
+}

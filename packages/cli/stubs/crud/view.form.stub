@@ -1,0 +1,30 @@
+<script setup lang="ts">
+import { route, useRequest } from '@cslug/vue'
+import type { {{ base }} } from '#app/tables/{{ kebab }}-table'
+import Layout from '#views/layouts/default.vue'
+
+const props = defineProps<{ {{ camel }}?: {{ base }} }>()
+const { csrfToken, errors, old } = useRequest()
+const action = props.{{ camel }} ? route('{{ plural }}.update', { {{ camel }}: props.{{ camel }}.id }) : route('{{ plural }}.store')
+const value = (field: 'title' | 'body') => (old[field] as string | undefined) ?? props.{{ camel }}?.[field] ?? ''
+</script>
+
+<template>
+  <Layout :title="props.{{ camel }} ? 'Edit' : 'New'">
+    <h1>{{ props.{{ camel }} ? 'Edit' : 'New' }}</h1>
+    <form class="stack" :action="action" method="post">
+      <input type="hidden" name="_token" :value="csrfToken" />
+      <input v-if="props.{{ camel }}" type="hidden" name="_method" value="PATCH" />
+
+      <label for="title">Title</label>
+      <input id="title" name="title" :value="value('title')" :aria-invalid="!!errors.title" required />
+      <p v-if="errors.title" class="error">{{ errors.title }}</p>
+
+      <label for="body">Body</label>
+      <textarea id="body" name="body" :aria-invalid="!!errors.body">{{ value('body') }}</textarea>
+      <p v-if="errors.body" class="error">{{ errors.body }}</p>
+
+      <button>Save</button>
+    </form>
+  </Layout>
+</template>

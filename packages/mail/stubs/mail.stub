@@ -1,0 +1,20 @@
+import { t } from '@cslug/core'
+import { Mailable } from '@cslug/mail'
+import {{ base }}View from '#resources/mail/{{ kebab }}.vue'
+
+export class {{ class }} extends Mailable {
+  // static queued = true
+
+  constructor(private name: string) {
+    super()
+  }
+
+  build() {
+    return this.subject(t('mail.{{ snake }}.subject')).view({{ base }}View, { name: this.name })
+  }
+
+  /** For `cslug mail:preview`. */
+  static preview() {
+    return new {{ class }}('Ada')
+  }
+}

@@ -17,6 +17,7 @@ export {
   TwoFactorDisabled,
   TwoFactorEnabled,
 } from './events'
+export { MakePolicyCommand } from './generators'
 export { Hash } from './hash'
 export { isLocalPath, MagicLinkError, MagicLinks } from './magic-links'
 export { ability, auth, authenticate, can, guest } from './middleware'

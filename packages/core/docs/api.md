@@ -55,6 +55,10 @@ export class XProvider extends ServiceProvider /* implements ProviderHooks */ {
 The hooks and `dependsOn` are not declared on the base class, so apps using `noImplicitOverride` don't need
 `override`. `ProviderHooks` gives the hook signatures for `implements`.
 
+`defineGenerator({ kind, description, stubs, suffix?, files: (n) => [{ stub, target }], vars? })` makes a
+`make:<kind>` command from a package's stub files (the app's `stubs/` win); `names(input, suffix)` gives the name's
+parts (`class`, `file`, `kebab`, `snake`, `camel`, `base`, `dir`).
+
 In `register()`, `this.commands([...])` contributes `cslug` commands (tag `COMMANDS`) and
 `this.describe('routes', () => data)` a `cslug describe` section (tag `DESCRIBE`, `DescribeSection`).
 

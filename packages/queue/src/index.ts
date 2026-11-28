@@ -3,6 +3,7 @@
  * listeners, the failed store and `queue:*` commands; the scheduler (`defineSchedule`, cron, once-per-tick locks).
  */
 export {
+  MakeJobCommand,
   QueueClearCommand,
   QueueFailedCommand,
   QueueForgetCommand,

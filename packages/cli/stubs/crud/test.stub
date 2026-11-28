@@ -1,0 +1,40 @@
+import { test } from 'bun:test'
+import { testApp } from '@cslug/testing'
+import { UserFactory } from '#database/factories/user-factory'
+
+const app = testApp()
+
+test('{{ plural }}: create, list, show, edit, delete', async () => {
+  const me = await UserFactory.create()
+  app.actingAs(me)
+
+  await app.get('/{{ plural }}/create').assertOk()
+  const created = await app.post('/{{ plural }}').form({ title: 'First', body: 'Hello' }).assertRedirect()
+  const location = created.headers.get('location') as string
+  const id = location.split('/').at(-1) as string
+
+  await app.get('/{{ plural }}').assertOk().assertSee('First')
+  await app.get(location).assertOk().assertSee('Hello')
+  await app.get(`${location}/edit`).assertOk()
+  await app.post(location).form({ _method: 'PATCH', title: 'Renamed' }).assertRedirect(location)
+  await app.assertDatabaseHas('{{ tableName }}', { id, title: 'Renamed', body: null })
+
+  await app.post(location).form({ _method: 'DELETE' }).assertRedirect('/{{ plural }}')
+  await app.assertDatabaseMissing('{{ tableName }}', { id })
+})
+
+test('{{ plural }}: a title is required', async () => {
+  app.actingAs(await UserFactory.create())
+  await app.post('/{{ plural }}').form({ title: '' }).assertInvalid({ title: 'at least 1' })
+})
+
+test('{{ plural }}: another user cannot see mine', async () => {
+  const owner = await UserFactory.create()
+  app.actingAs(owner)
+  const created = await app.post('/{{ plural }}').form({ title: 'Mine' })
+  const location = created.headers.get('location') as string
+
+  app.actingAs(await UserFactory.create())
+  await app.get(location).assertForbidden()
+  await app.get('/{{ plural }}').assertOk().assertDontSee('Mine')
+})

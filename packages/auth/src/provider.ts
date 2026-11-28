@@ -3,6 +3,7 @@ import { type Application, Clock, CslugError, Encrypter, Lock, ServiceProvider, 
 import { addMigrations, Database } from '@cslug/database'
 import { API_MIDDLEWARE, type MiddlewareFn, WEB_MIDDLEWARE } from '@cslug/http'
 import { type AuthConfig, isClass, type UserSource } from './config'
+import { MakePolicyCommand } from './generators'
 import { Hash } from './hash'
 import { MagicLinks } from './magic-links'
 import { AUTH_DEPS, authenticate } from './middleware'
@@ -26,6 +27,7 @@ export async function userSource(app: Application): Promise<UserSource> {
  */
 export class AuthProvider extends ServiceProvider {
   register() {
+    this.commands([MakePolicyCommand])
     const configured = this.app.config<AuthConfig | undefined>('auth')
     if (!configured?.users)
       throw new CslugError('auth.no_users', 'config/auth.ts must set `users` (your users repository)')

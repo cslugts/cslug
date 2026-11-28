@@ -120,6 +120,13 @@ describe('generators', () => {
     expect((await cli(['make:service', 'Escrow', '--force'], { root })).code).toBe(0)
   })
 
+  test('make:crud needs the web packages (it writes views, a policy and uses the users table)', async () => {
+    const r = await cli(['make:crud', 'Claim'], { root })
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('make:crud needs @cslug/vue, @cslug/auth, @cslug/database')
+    expect(existsSync(join(root, 'app/tables/claim-table.ts'))).toBe(false)
+  })
+
   test("the app's stubs/ override the package's", async () => {
     mkdirSync(join(root, 'stubs'), { recursive: true })
     writeFileSync(join(root, 'stubs/service.stub'), '// house style\nexport class {{ class }} {}\n')

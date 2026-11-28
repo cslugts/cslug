@@ -1,4 +1,5 @@
-import { arg, Command, flag, parseDuration } from '@cslug/core'
+import { join } from 'node:path'
+import { arg, Command, defineGenerator, flag, parseDuration } from '@cslug/core'
 import { discoverJobs } from './discover'
 import type { QueueConfig } from './provider'
 import { Workers } from './provider'
@@ -154,7 +155,18 @@ export class QueueHealthCommand extends QueueCommand {
   }
 }
 
+const STUBS = join(import.meta.dir, '../stubs')
+
+/** `cslug make:job SendCheckin` → `app/jobs/send-checkin-job.ts`. */
+export const MakeJobCommand = defineGenerator({
+  kind: 'job',
+  description: 'Create a job',
+  stubs: STUBS,
+  files: (n) => [{ stub: 'job.stub', target: `app/jobs/${n.file}.ts` }],
+})
+
 export const queueCommands = [
+  MakeJobCommand,
   QueueHealthCommand,
   QueueWorkCommand,
   QueueFailedCommand,

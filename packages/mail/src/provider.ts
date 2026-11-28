@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { type Application, Command, flag, Logger, resolve, ServiceProvider } from '@cslug/core'
+import { MakeMailCommand } from './generators'
 import { Mailable, type MailableClass } from './mailable'
 import { type MailConfig, Mailer, renderMail } from './mailer'
 import { address, type Message } from './message'
@@ -52,7 +53,7 @@ function sendMailJob(q: QueueModule) {
  */
 export class MailProvider extends ServiceProvider {
   register() {
-    this.commands([MailPreviewCommand])
+    this.commands([MailPreviewCommand, MakeMailCommand])
     this.app.singleton(Mailer, (c) => {
       const config = this.app.config<MailConfig | undefined>('mail') ?? {}
       const name = config.transport ?? 'log'

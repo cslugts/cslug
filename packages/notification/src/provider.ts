@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { type Application, Logger, resolve, ServiceProvider } from '@cslug/core'
+import { MakeNotificationCommand } from './generators'
 import {
   type Delivery,
   LogChannel,
@@ -59,6 +60,7 @@ async function databaseStore(app: Application): Promise<NotificationStore | unde
  */
 export class NotificationProvider extends ServiceProvider {
   register() {
+    this.commands([MakeNotificationCommand])
     this.app.singleton(Notifier, (c) => {
       const config = this.app.config<NotificationConfig | undefined>('notification') ?? {}
       const log = c.resolve(Logger)

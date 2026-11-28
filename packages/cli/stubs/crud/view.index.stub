@@ -1,0 +1,20 @@
+<script setup lang="ts">
+import { route } from '@cslug/vue'
+import type { {{ base }} } from '#app/tables/{{ kebab }}-table'
+import Layout from '#views/layouts/default.vue'
+
+const props = defineProps<{ {{ tableVar }}: {{ base }}[] }>()
+</script>
+
+<template>
+  <Layout title="{{ title }}">
+    <h1>{{ title }}</h1>
+    <p><a :href="route('{{ plural }}.create')">New</a></p>
+    <ul v-if="props.{{ tableVar }}.length">
+      <li v-for="item in props.{{ tableVar }}" :key="item.id">
+        <a :href="route('{{ plural }}.show', { {{ camel }}: item.id })">{{ item.title }}</a>
+      </li>
+    </ul>
+    <p v-else>Nothing yet.</p>
+  </Layout>
+</template>

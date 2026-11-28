@@ -1,0 +1,57 @@
+import { inject } from '@cslug/core'
+import { type HttpContext, redirect } from '@cslug/http'
+import { view } from '@cslug/vue'
+import { {{ base }}Policy } from '#app/policies/{{ kebab }}-policy'
+import { {{ base }}Repository } from '#app/repositories/{{ kebab }}-repository'
+import { Store{{ base }}Validator } from '#app/validators/store-{{ kebab }}-validator'
+import Create from '#views/{{ plural }}/create.vue'
+import Edit from '#views/{{ plural }}/edit.vue'
+import Index from '#views/{{ plural }}/index.vue'
+import Show from '#views/{{ plural }}/show.vue'
+
+/** `r.resource('{{ plural }}', {{ base }}Controller).middleware(auth())` in routes/web.ts. */
+@inject({{ base }}Repository)
+export class {{ base }}Controller {
+  constructor(private {{ tableVar }}: {{ base }}Repository) {}
+
+  async index({ auth }: HttpContext) {
+    return view(Index, { {{ tableVar }}: await this.{{ tableVar }}.forUser(auth.user().id) })
+  }
+
+  async create() {
+    return view(Create, {})
+  }
+
+  async store({ request, auth }: HttpContext) {
+    const data = await request.validate(Store{{ base }}Validator)
+    const {{ camel }} = await this.{{ tableVar }}.create({ ...data, body: data.body ?? null, userId: auth.user().id })
+    return redirect().route('{{ plural }}.show', { {{ camel }}: {{ camel }}.id }).with('success', 'Saved.')
+  }
+
+  async show({ params, auth }: HttpContext) {
+    const {{ camel }} = await this.{{ tableVar }}.findOrFail(params.{{ camel }})
+    await auth.authorize({{ base }}Policy, 'view', {{ camel }})
+    return view(Show, { {{ camel }} })
+  }
+
+  async edit({ params, auth }: HttpContext) {
+    const {{ camel }} = await this.{{ tableVar }}.findOrFail(params.{{ camel }})
+    await auth.authorize({{ base }}Policy, 'update', {{ camel }})
+    return view(Edit, { {{ camel }} })
+  }
+
+  async update({ params, request, auth }: HttpContext) {
+    const {{ camel }} = await this.{{ tableVar }}.findOrFail(params.{{ camel }})
+    await auth.authorize({{ base }}Policy, 'update', {{ camel }})
+    const data = await request.validate(Store{{ base }}Validator)
+    await this.{{ tableVar }}.update({{ camel }}.id, { ...data, body: data.body ?? null })
+    return redirect().route('{{ plural }}.show', { {{ camel }}: {{ camel }}.id }).with('success', 'Saved.')
+  }
+
+  async destroy({ params, auth }: HttpContext) {
+    const {{ camel }} = await this.{{ tableVar }}.findOrFail(params.{{ camel }})
+    await auth.authorize({{ base }}Policy, 'delete', {{ camel }})
+    await this.{{ tableVar }}.delete({{ camel }}.id)
+    return redirect().route('{{ plural }}.index').with('success', 'Deleted.')
+  }
+}

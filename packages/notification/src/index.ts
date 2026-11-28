@@ -3,6 +3,7 @@
  * delivery, delivery records, and a fake for tests.
  */
 export { installNotificationFake, NotificationFake, type SentNotification } from './fake'
+export { MakeNotificationCommand } from './generators'
 export { Notification, type Recipient, recipient, routeOf } from './notification'
 export {
   type Channel,

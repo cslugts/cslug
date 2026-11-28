@@ -2,7 +2,8 @@
  * Check `bun create cslug` end to end: scaffold each preset into a temporary folder, install this repository's
  * packages into its node_modules as npm would (and link the starter kit's vue, sass and compilers), then
  * typecheck it, build its assets (web, full) and run its own tests on a fresh database. A last web app gets the
- * other packages with `cslug add`, which must leave it compiling and passing.
+ * other packages with `cslug add`, which must leave it compiling and passing, then every generator (`make:crud`
+ * included, with its route), whose output must compile, build and pass its own tests too.
  */
 import { cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -83,6 +84,31 @@ try {
       for (const name of add.split(',')) json.dependencies[`@cslug/${name}`] = json.dependencies['@cslug/core']
       await Bun.write(pkgPath, JSON.stringify(json, null, 2))
       await linkAll()
+      // every generator, then the crud resource's route
+      const generators: string[][] = [
+        ['make:job', 'SendReminder'],
+        ['make:mail', 'Welcome'],
+        ['make:notification', 'ReminderDue'],
+        ['make:policy', 'Booking'],
+        ['make:view', 'pages/about'],
+        ['make:component', 'day-card'],
+        ['make:agent', 'Summarizer'],
+        ['make:tool', 'LookupBooking'],
+        ['make:crud', 'Claim'],
+      ]
+      let generated = true
+      for (const argv of generators)
+        generated = (await step(label, `cslug ${argv.join(' ')}`, [process.execPath, cli, ...argv], app)) && generated
+      if (!generated) continue
+      const routes = join(app, 'routes/web.ts')
+      const source = await Bun.file(routes).text()
+      await Bun.write(
+        routes,
+        `import { ClaimController } from '#app/controllers/claim-controller'\n${source.replace(
+          "r.post('/logout'",
+          "r.resource('claims', ClaimController)\n    r.post('/logout'",
+        )}`,
+      )
     }
     const web = preset !== 'api'
     const typecheck = web

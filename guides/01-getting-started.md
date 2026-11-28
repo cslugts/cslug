@@ -134,6 +134,10 @@ export default defineRoutes((r) => {
 })
 ```
 
+```bash
+bunx cslug make:view circuits/show        # resources/views/circuits/show.vue with typed props
+```
+
 ```vue
 <!-- resources/views/circuits/show.vue -->
 <script setup lang="ts">
@@ -160,6 +164,10 @@ guide 09). The page is server-rendered HTML with its CSS, and no JavaScript.
 ## Your first island
 
 Any component becomes an island when you add `hydrate` where you use it.
+
+```bash
+bunx cslug make:component day-map         # resources/components/day-map.vue
+```
 
 ```vue
 <!-- resources/components/day-map.vue -->
