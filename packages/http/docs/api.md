@@ -51,6 +51,19 @@ else → 500, logged with the stack, **no detail in production** (detail + short
 `application/problem+json` (`type`, `title`, `status`, `code`, `requestId`, …); browsers a minimal HTML page.
 Extend with `handler.render(fn)` (first match wins) and `handler.report(fn)` (5xx).
 
+**Error handlers** (`app/exceptions/`, registered by `HttpProvider` at boot; `handler.use(...classes)` otherwise):
+classes extending `ErrorHandler<E>` with `static handles` (error classes, statuses, `'4xx'`, `'5xx'`, `'*'`) and
+optional `html(error, ctx)`, `json(error, ctx)` (a `Response`, a `Responsable`, or a plain object sent as JSON with
+the error's status) and `report(error, ctx)`. The nearest class in the prototype chain wins, then an exact status,
+then `4xx`/`5xx`, then `*`; ties by file order. A `ValidationError` is taken only by a handler listing
+`ValidationError`. Built per request by the container (a handler without dependencies needs no `@inject`); a
+throwing handler is logged (`http.error_handler_failed`) and the default is sent.
+
+Order in `handle(error, ctx)`: reporters (5xx) and the matched handlers' `report` → `render()` hooks → handler
+`html`/`json` → the form redirect → `pages(fn)` (error views, HTML only, set by `@cslug/vue`) → the default.
+`problem(error, ctx, status?)` gives the problem+json body (`Problem`). `cslug make:exception Name` writes
+`app/exceptions/<name>-handler.ts`.
+
 ## Middleware (`@cslug/http/middleware`)
 
 `securityHeaders({ hsts?, csp?, frameOptions? })` (global by default), `bodyLimit(size)` (global `1mb`; also

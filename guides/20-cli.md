@@ -33,6 +33,7 @@ a command declares them.
 |---|---|
 | `make:controller Claim [--resource]` | `app/controllers/claim-controller.ts` (`--resource`: the seven REST actions) |
 | `make:middleware RequireVerifiedOperator` | `app/middleware/require-verified-operator-middleware.ts` |
+| `make:exception PaymentDeclined` | `app/exceptions/payment-declined-handler.ts`: an error handler (guide 06) |
 | `make:validator StoreClaim` | `app/validators/store-claim-validator.ts` |
 | `make:table Claim` | `app/tables/claim-table.ts` (the `claims` table with `id` and timestamps) |
 | `make:repository Claim` | `app/repositories/claim-repository.ts` |

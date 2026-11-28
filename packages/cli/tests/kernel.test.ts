@@ -100,6 +100,11 @@ describe('generators', () => {
       [['make:provider', 'Payment'], 'app/providers/payment-provider.ts', 'export class PaymentProvider'],
       [['make:event', 'BookingPaid'], 'app/events/booking-paid-event.ts', "('booking_paid')"],
       [['make:service', 'Escrow'], 'app/services/escrow-service.ts', 'export class EscrowService'],
+      [
+        ['make:exception', 'PaymentDeclined'],
+        'app/exceptions/payment-declined-handler.ts',
+        'export class PaymentDeclinedHandler extends ErrorHandler',
+      ],
       // what `bun test` runs: *.test.ts
       [['make:test', 'Claims'], 'tests/claims.test.ts', "describe('Claims'"],
       [

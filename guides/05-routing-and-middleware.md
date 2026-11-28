@@ -9,7 +9,8 @@ with a group: `r.group({ … }, admin.routes)`.
 
 `@cslug/http` is in every preset; `HttpProvider` in `bootstrap/providers.ts` loads `routes/web.ts` and `routes/api.ts`.
 Its settings are `config/http.ts` ([below](#configuration)), sessions `config/session.ts`. Generators:
-`cslug make:controller Claim [--resource]` and `cslug make:middleware RequireVerifiedOperator`.
+`cslug make:controller Claim [--resource]`, `cslug make:middleware RequireVerifiedOperator` and
+`cslug make:exception PaymentDeclined` (guide 06).
 
 ## Routes
 

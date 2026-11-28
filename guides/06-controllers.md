@@ -211,23 +211,92 @@ The exception handler picks the format:
 - **500s** say nothing about the cause in production (the request id lets you find the log line); in development
   they show the error and a short stack.
 
-### Rendering and reporting errors yourself
+### Your own error pages and JSON
+
+Two ways, from the simplest:
+
+1. **Error views** (with `@cslug/vue`): `resources/views/errors/<status>.vue` is the page for that status, with
+   `4xx.vue` and `5xx.vue` as fallbacks. No code: drop a `500.vue` in and every unexpected error shows it to browsers
+   (guide 08 § Error pages).
+2. **Error handlers**: a class in `app/exceptions/` that chooses the page and the JSON for some errors.
+
+```bash
+cslug make:exception PaymentDeclined     # app/exceptions/payment-declined-handler.ts
+```
+
+```ts
+// app/exceptions/payment-declined-handler.ts
+import { inject, Logger } from '@cslug/core'
+import { ErrorHandler, type HttpContext } from '@cslug/http'
+import { view } from '@cslug/vue'
+import { PaymentDeclined } from '#app/errors/payment-declined'
+import PaymentFailed from '#views/payments/failed.vue'
+
+@inject(Logger)
+export class PaymentDeclinedHandler extends ErrorHandler<PaymentDeclined> {
+  static handles = [PaymentDeclined]          // error classes and/or statuses: 403, '4xx', '5xx', '*'
+
+  constructor(private log: Logger) {
+    super()
+  }
+
+  /** For browsers: a page (view() keeps the status you give it). */
+  html(error: PaymentDeclined, ctx: HttpContext) {
+    return view(PaymentFailed, { reason: error.reason, bookingId: ctx.params.booking }, { status: 402 })
+  }
+
+  /** For API clients and islands: a plain object is sent as JSON with the error's status. */
+  json(error: PaymentDeclined) {
+    return { code: 'payments.declined', reason: error.reason }
+  }
+
+  /** Optional: runs whenever this handler matches. */
+  report(error: PaymentDeclined, ctx: HttpContext) {
+    this.log.warn('payment declined', { reason: error.reason, requestId: ctx.requestId })
+  }
+}
+```
+
+```ts
+// app/errors/payment-declined.ts: the error itself, thrown by your code
+import { AppError } from '@cslug/core'
+
+export class PaymentDeclined extends AppError {
+  constructor(readonly reason: string) {
+    super('payments.declined', 'The payment was declined.', { status: 402, params: { reason } })
+  }
+}
+```
+
+- **Found on their own:** every class in `app/exceptions/` (subfolders included) that extends `ErrorHandler` is
+  registered at boot, in file order. Outside the app (a package, a test): `exceptionHandler.use(MyHandler)`.
+- **`handles`:** error classes match the error and its subclasses; statuses (`403`), `'4xx'`, `'5xx'` and `'*'`
+  match by status. The nearest class wins (a `PaymentDeclined` handler before an `AppError` one), then an exact
+  status, then `'4xx'` / `'5xx'`, then `'*'`; between equals, file order.
+- **HTML or JSON:** `html()` answers requests whose `Accept` includes `text/html` (browsers send it), `json()` the
+  others: API clients, islands, `curl` (in tests, send `.header('accept', 'text/html')` to get the page). A method that is missing or returns `undefined` leaves the error to the next matching handler,
+  then to the error views, then to the default page or problem+json. `html()` and `json()` may return a `Response`,
+  `view(…)`, or (for JSON) a plain object.
+- **Validation errors** of a form still go back to the form with the errors and old input: only a handler that
+  lists `ValidationError` itself takes them, never a `422`, `'4xx'` or `'*'` one.
+- **Dependencies:** handlers are built by the container per request, so `@inject(…)` works; a handler without
+  dependencies needs no `@inject`.
+- **Failures:** a handler that throws is logged (`http.error_handler_failed`) and the default response is sent.
+
+To be told of every 5xx (an error tracker), and for a one-off rule in code, the exception handler has two hooks:
 
 ```ts
 // app/providers/app-service-provider.ts
 import { ExceptionHandler } from '@cslug/http'
-import { view } from '@cslug/vue'
 
 boot() {
   const handler = this.app.resolve(ExceptionHandler)
-  // a custom response for some errors (the first renderer that returns a Response wins)
-  handler.render((error, ctx) => {
-    if (error instanceof PaymentGatewayDown && !ctx.request.wantsJson()) return view(MaintenancePage, {}, { status: 503 })
-  })
-  // be told of every 5xx (an error tracker)
   handler.report((error, ctx) => this.app.resolve(ErrorTracker).capture(error, { requestId: ctx?.requestId }))
+  handler.render((error, ctx) => (error instanceof MaintenanceMode ? new Response('Back soon', { status: 503 }) : undefined))
 }
 ```
+
+`render()` hooks run before the handler classes; the first that returns a `Response` wins.
 
 ## Single-action controllers
 
@@ -277,12 +346,18 @@ islands with the session when `http.api.stateful` is on (guide 05).
 
 ```ts
 import { type HttpContext, HttpRequest, redirect, Redirect, json, created, accepted, noContent, download, stream, sse,
-  ExceptionHandler, type Responsable } from '@cslug/http'
+  ExceptionHandler, ErrorHandler, type Problem, type Responsable } from '@cslug/http'
 import { view } from '@cslug/vue'                                         // guide 08
 import { AppError, NotFoundError, ForbiddenError, UnauthorizedError, ConflictError, BadRequestError,
   TooManyRequestsError, t } from '@cslug/core'
 import { ValidationError } from '@cslug/validation'
 ```
 
-Generator: `cslug make:controller Claim` (`--resource` for the seven REST actions); `cslug make:crud Claim` writes a
-whole resource around one (guide 20).
+Generators: `cslug make:controller Claim` (`--resource` for the seven REST actions); `cslug make:crud Claim` writes a
+whole resource around one (guide 20); `cslug make:exception PaymentDeclined` an error handler in `app/exceptions/`.
+
+| | |
+|---|---|
+| `ErrorHandler<E>` | Base class of error handlers: `static handles`, optional `html(error, ctx)`, `json(error, ctx)`, `report(error, ctx)` |
+| `ExceptionHandler` | Injectable: `use(...handlers)`, `render(fn)`, `report(fn)`, `pages(fn)` (set by `@cslug/vue`), `problem(error, ctx)` |
+| `Problem` | What `problem()` returns: the problem+json body, and the props of error views |

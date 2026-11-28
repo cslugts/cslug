@@ -544,25 +544,43 @@ Vue's `:style` bindings keep working (the default policy allows style attributes
 
 ## Error pages
 
-Pages get the error's status and message in a minimal HTML page; give a status a page of your own with the
-exception handler (guide 06). Apps made with `bun create cslug --web` do it for 404s, with
-`resources/views/errors/404.vue`:
+A browser that meets an error gets `resources/views/errors/<status>.vue` when it exists, else `4xx.vue` or `5xx.vue`,
+else a minimal built-in page. Nothing to register: `VueProvider` looks for them. The view receives the props it
+declares among these:
 
-```ts
-// app/providers/app-service-provider.ts
-import { NotFoundError } from '@cslug/core'
-import { ExceptionHandler } from '@cslug/http'
-import { view } from '@cslug/vue'
+| Prop | |
+|---|---|
+| `status` | `404`, `500` … |
+| `code` | The error code (`http.not_found`, `auth.forbidden`, `server.error`, yours) |
+| `title` | The message for people, translated (`t(code)`, else the error's message; a generic one for 5xx) |
+| `requestId` | To quote to support; it is on the log lines of the request |
+| `errors`, `params` | A validation error's messages; an `AppError`'s params |
+| `detail`, `stack` | 5xx in development only: the error's message and stack |
 
-boot() {
-  this.app.resolve(ExceptionHandler).render((error, ctx) => {
-    if (error instanceof NotFoundError && !ctx.request.wantsJson())
-      return view(NotFound, {}, { status: 404 }).toResponse(ctx)
-  })
-}
+```vue
+<!-- resources/views/errors/500.vue -->
+<script setup lang="ts">
+import { route, useT } from '@cslug/vue'
+import Layout from '#views/layouts/default.vue'
+
+const props = defineProps<{ requestId: string; detail?: string }>()
+const { t } = useT()
+</script>
+
+<template>
+  <Layout :title="t('errors.server_error')">
+    <h1>{{ t('errors.server_error') }}</h1>
+    <p><small>{{ t('errors.request_id', { id: props.requestId }) }}</small></p>
+    <pre v-if="props.detail">{{ props.detail }}</pre>
+    <p><a :href="route('home')">{{ t('errors.back_home') }}</a></p>
+  </Layout>
+</template>
 ```
 
-API clients keep the JSON problem. The same pattern serves a 403 or a maintenance page.
+Apps made with `bun create cslug --web` ship `404.vue`, `403.vue` and `500.vue`. API clients and islands still get
+problem+json. An error view that itself fails is logged and replaced by the built-in page. For a page that depends
+on the error (a declined payment with its reason) or a JSON shape of your own, write an error handler in
+`app/exceptions/` (guide 06 § Your own error pages and JSON): handlers answer first, error views after.
 
 ## Rendering outside a request
 
@@ -599,7 +617,7 @@ async tripPack({ params, auth }: HttpContext) {
 import { useT, useRequest, useForm, http, csrfHeaders, route, defineStore, formatMoney, formatDate, formatDuration,
   serialize, type Serialized } from '@cslug/vue'
 // server only (controllers, mail)
-import { view, renderPage, renderStandalone, onView, Assets, readManifest } from '@cslug/vue'
+import { view, renderPage, renderStandalone, onView, Assets, readManifest, errorPages } from '@cslug/vue'
 // the browser entry (resources/client.ts)
 import { mountIslands } from '@cslug/vue'
 // build tooling and the test preload

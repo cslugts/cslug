@@ -28,7 +28,14 @@
       "body": "Your account is ready."
     }
   },
-  "errors": { "not_found": "Page not found", "back_home": "Back to the home page" },
+  "errors": {
+    "not_found": "Page not found",
+    "forbidden": "You are not allowed to see this page",
+    "server_error": "Something went wrong",
+    "server_error_body": "We have been told. Please try again in a moment.",
+    "request_id": "Reference: {id}",
+    "back_home": "Back to the home page"
+  },
   "validation": {
     "required": "This field is required.",
     "unique": "This value is already taken.",
