@@ -90,7 +90,7 @@ my-app/
   `import ShowBooking from '#views/bookings/show.vue'`, so `cslug typecheck` (vue-tsc) checks the props.
 - **Components become islands where they are used**: `<DayCard :day="day" hydrate="visible" />`. There is no
   separate islands folder.
-- **Generators know the layout**: `cslug make:job SendCheckin` → `app/jobs/send-checkin-job.ts`;
+- **Generators know the layout**: `cslug make:listener UpdateBadge` → `app/listeners/update-badge-listener.ts`;
   `cslug make:controller admin/Operator` → `app/controllers/admin/operator-controller.ts`.
 
 ## 2. The framework repository (this repo)
@@ -135,7 +135,7 @@ packages/queue/
 │   ├── schedule/…
 │   └── queue-provider.ts
 ├── tests/
-├── stubs/                                 # generator templates this package contributes (make:job, …)
+├── stubs/                                 # generator templates this package contributes (make:table, …)
 ├── docs/                                  # README.md + api.md, shipped in the npm package
 └── package.json                           # "peerDependencies": { "@cslug/core": "0.1.0", "@cslug/redis": "0.1.0" }
 ```
